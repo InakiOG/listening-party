@@ -177,7 +177,7 @@ async function apiGetMyReviews(name) {
   });
 
   if (!response.ok) {
-    throw new Error("No se pudieron cargar tus resenas.");
+    throw new Error("No se pudieron cargar tus reseñas.");
   }
 
   const payload = await response.json();
@@ -275,7 +275,7 @@ function renderMyReviews(reviews) {
   }
 
   if (!reviews.length) {
-    list.innerHTML = "<li class=\"my-review-item\"><p>No tienes resenas todavia.</p></li>";
+    list.innerHTML = "<li class=\"my-review-item\"><p>No tienes reseñas todavia.</p></li>";
     return;
   }
 
@@ -306,7 +306,7 @@ function renderMyReviews(reviews) {
 
 async function openMyReviewsView() {
   if (!sessionState.currentUser?.name) {
-    showAuthOverlay("Inicia sesion para ver tus resenas.");
+    showAuthOverlay("Inicia sesion para ver tus reseñas.");
     return;
   }
 
@@ -325,7 +325,7 @@ async function openMyReviewsView() {
       reviewsView.hidden = false;
     }
   } catch (error) {
-    showReviewStatus(error instanceof Error ? error.message : "No se pudieron cargar tus resenas.");
+    showReviewStatus(error instanceof Error ? error.message : "No se pudieron cargar tus reseñas.");
   }
 }
 
@@ -657,7 +657,7 @@ async function fetchCurrentSongReviews() {
     renderReviewBubbles(hydratedReviewItems, `${songKey}|${albumKey}|${reviewScope}`);
   } catch {
     renderReviewBubbles([], `${songKey}|${albumKey}|${reviewScope}`);
-    showReviewStatus("No se pudieron cargar las resenas.");
+    showReviewStatus("No se pudieron cargar las reseñas.");
   }
 }
 
@@ -972,12 +972,12 @@ async function saveCurrentReview() {
   const userName = normalizeUserName(sessionState.currentUser?.name || "");
 
   if (!userName) {
-    showReviewStatus("Inicia sesion para guardar una resena.");
+    showReviewStatus("Inicia sesion para guardar una reseña.");
     return;
   }
 
   if (!currentNowPlaying || !key) {
-    showReviewStatus("No hay objetivo de resena activo.");
+    showReviewStatus("No hay objetivo de reseña activo.");
     return;
   }
 
@@ -1008,16 +1008,16 @@ async function saveCurrentReview() {
     });
 
     if (!response.ok) {
-      throw new Error("No se pudo guardar la resena");
+      throw new Error("No se pudo guardar la reseña");
     }
 
     await response.json();
-    showReviewStatus("Resena guardada.");
+    showReviewStatus("Reseña guardada.");
     await fetchCurrentSongReviews();
     resetReviewInputs();
     closeReviewPanel();
   } catch {
-    showReviewStatus("No se pudo guardar la resena.");
+    showReviewStatus("No se pudo guardar la reseña.");
   }
 }
 
@@ -1056,7 +1056,7 @@ function updateReviewTargetCopy(nowPlaying) {
   }
 
   if (reviewLabel) {
-    reviewLabel.textContent = reviewScope === "album" ? "Resena del album" : "Resena de la cancion";
+    reviewLabel.textContent = reviewScope === "album" ? "Reseña del album" : "Reseña de la cancion";
   }
 }
 

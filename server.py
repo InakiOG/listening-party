@@ -32,28 +32,31 @@ def ensure_users_db():
         json.dump({}, handle, indent=2)
 
 
+def read_json_dict_or_reset(path):
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        payload = {}
+
+    if not isinstance(payload, dict):
+        payload = {}
+
+    # Persist normalized content so future reads stay valid.
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+
+    return payload
+
+
 def read_reviews_store():
     ensure_reviews_db()
-
-    with REVIEWS_DB_PATH.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
-
-    if isinstance(payload, dict):
-        return payload
-
-    return {}
+    return read_json_dict_or_reset(REVIEWS_DB_PATH)
 
 
 def read_users_store():
     ensure_users_db()
-
-    with USERS_DB_PATH.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
-
-    if isinstance(payload, dict):
-        return payload
-
-    return {}
+    return read_json_dict_or_reset(USERS_DB_PATH)
 
 
 def write_reviews_store(store):
