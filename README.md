@@ -10,4 +10,4 @@ From the repository root:
 python3 -m http.server 8000
 ```
 
-Then open `http://localhost:8000` from a phone on the same network.
+Then open `http://localhost:8000` on the same device, or `http://<your-local-ip>:8000` from a phone on the same network.

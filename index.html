@@ -46,13 +46,21 @@
     </main>
     <script>
       (function restrictAccess() {
-        const isPhone = /Android.+Mobile|iPhone|iPod|Windows Phone|Mobile/i.test(navigator.userAgent);
+        const isMobileDevice =
+          /Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent) ||
+          (navigator.userAgent.includes("iPad") && navigator.maxTouchPoints > 1);
+        const host = window.location.hostname;
+        const isPrivateIpv4 =
+          /^10\./.test(host) ||
+          /^192\.168\./.test(host) ||
+          /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+          /^169\.254\./.test(host);
         const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-        const isLocal = localHosts.has(window.location.hostname);
+        const isLocal = localHosts.has(host) || isPrivateIpv4 || host.endsWith(".local");
         const title = document.getElementById("title");
         const message = document.getElementById("message");
 
-        if (!isPhone || !isLocal) {
+        if (!isMobileDevice || !isLocal) {
           title.textContent = "Access Restricted";
           message.textContent = "This page is available only on phones from a local address.";
         }
