@@ -341,10 +341,6 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "name is required"}, status_code=400)
             return
 
-        if not text:
-            self._send_json({"error": "text is required"}, status_code=400)
-            return
-
         if rating < 0.5 or rating > 5:
             self._send_json({"error": "rating must be between 0.5 and 5"}, status_code=400)
             return

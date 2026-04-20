@@ -285,7 +285,8 @@ function renderMyReviews(reviews) {
       const albumTitle = escapeHtml(entry.albumTitle || "Album desconocido");
       const songTitle = escapeHtml(entry.songTitle || "");
       const rating = Number(entry.rating || 0).toFixed(1);
-      const text = escapeHtml(entry.text || "Sin texto");
+      const text = String(entry.text || "").trim();
+      const textMarkup = text ? `<p>${escapeHtml(text)}</p>` : "";
       const createdAt = escapeHtml(formatReviewDate(entry.createdAt || ""));
       const target = entry.scope === "album"
         ? albumTitle
@@ -294,7 +295,7 @@ function renderMyReviews(reviews) {
       return `
         <li class="my-review-item">
           <p class="my-review-meta">${scope}: ${target}</p>
-          <p>${text}</p>
+          ${textMarkup}
           <p>${rating} / 5</p>
           <p class="my-review-date">${createdAt}</p>
         </li>
@@ -804,14 +805,16 @@ function renderReviewBubbles(reviews, signature = "") {
           `;
       const historyMarkup = group.reviews
         .map((entry) => {
-          const safeText = escapeHtml(entry.text || (group.scope === "album" ? "Puntuacion del album" : ""));
+          const entryText = String(entry.text || "").trim();
+          const safeText = entryText ? escapeHtml(entryText) : "";
           const safeRating = Number(entry.rating || 0).toFixed(1);
           const safeDate = escapeHtml(formatReviewDate(entry.createdAt));
+          const textMarkup = safeText ? `<p class="review-history-text">${safeText}</p>` : "";
 
           return `
             <li class="review-history-item">
               <p class="review-history-meta">${safeDate} - ${safeRating} / 5</p>
-              <p class="review-history-text">${safeText}</p>
+              ${textMarkup}
             </li>
           `;
         })
@@ -979,11 +982,6 @@ async function saveCurrentReview() {
   }
 
   const text = (reviewInput?.value || "").trim();
-
-  if (!text) {
-    showReviewStatus("Escribe tu resena primero.");
-    return;
-  }
 
   if (selectedRating <= 0) {
     showReviewStatus("Selecciona una puntuacion entre 0.5 y 5.");
