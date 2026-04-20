@@ -15,13 +15,16 @@
         min-height: 100vh;
         display: grid;
         place-items: center;
+        padding-top: 4.25rem;
         background: #0f172a;
         color: #e2e8f0;
       }
 
       main {
-        width: min(90vw, 420px);
-        padding: 2rem;
+        position: relative;
+        z-index: 10;
+        width: min(96vw, 420px);
+        padding: clamp(0.75rem, 3vw, 2rem);
         border-radius: 1rem;
         background: #1e293b;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -37,33 +40,384 @@
         margin: 0;
         line-height: 1.5;
       }
+
+      .now-playing {
+        position: fixed;
+        top: 0.6rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(96vw, 420px);
+        z-index: 20;
+        border-radius: 0.75rem;
+        border: 1px solid #334155;
+        background: #0b1220;
+        padding: 0.5rem;
+      }
+
+      .now-playing[hidden] {
+        display: none;
+      }
+
+      .now-playing img {
+        width: 46px;
+        height: 46px;
+        border-radius: 0.4rem;
+        object-fit: cover;
+      }
+
+      .now-playing-toggle {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .now-playing-copy {
+        flex: 1;
+      }
+
+      .now-playing-hint {
+        color: #94a3b8;
+        font-size: 0.72rem;
+      }
+
+      .now-playing-label {
+        color: #7dd3fc;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .now-playing-text {
+        color: #e2e8f0;
+        font-size: 0.85rem;
+      }
+
+      .review-panel {
+        margin-top: 0.55rem;
+        border-top: 1px solid #334155;
+        padding-top: 0.55rem;
+      }
+
+      .review-panel[hidden] {
+        display: none;
+      }
+
+      .review-panel label {
+        display: block;
+        text-align: left;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin: 0.4rem 0 0.2rem;
+      }
+
+      .review-panel input,
+      .review-panel textarea {
+        width: 100%;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        padding: 0.45rem;
+        box-sizing: border-box;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-size: 0.8rem;
+      }
+
+      .review-panel textarea {
+        min-height: 64px;
+        resize: vertical;
+      }
+
+      .rating-label {
+        display: block;
+        text-align: left;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin: 0.5rem 0 0.2rem;
+      }
+
+      .star-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.15rem;
+      }
+
+      .star-button {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        font-size: 1.4rem;
+        line-height: 1;
+        color: #334155;
+      }
+
+      .star-button.full {
+        color: #facc15;
+      }
+
+      .star-button.half {
+        background: linear-gradient(90deg, #facc15 50%, #334155 50%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .rating-value {
+        margin-top: 0.2rem;
+        text-align: left;
+        font-size: 0.72rem;
+        color: #cbd5e1;
+      }
+
+      .review-actions {
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+
+      .save-review-button {
+        border: 1px solid #0ea5e9;
+        background: #0284c7;
+        color: #f8fafc;
+        border-radius: 0.5rem;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+
+      .review-status {
+        font-size: 0.72rem;
+        color: #93c5fd;
+      }
+
+      .bubble-layer {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 60;
+      }
+
+      .review-bubble {
+        position: absolute;
+        max-width: min(45vw, 220px);
+        padding: 0.55rem 0.65rem;
+        border-radius: 0.9rem;
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        background: rgba(15, 23, 42, 0.58);
+        color: #e2e8f0;
+        font-size: 0.72rem;
+        line-height: 1.35;
+        pointer-events: auto;
+        user-select: none;
+        touch-action: none;
+        cursor: grab;
+        animation: floatBubble var(--duration, 22s) ease-in-out var(--delay, 0s) infinite alternate;
+      }
+
+      .review-bubble.dragging {
+        cursor: grabbing;
+        animation-play-state: paused;
+      }
+
+      .review-bubble-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem;
+      }
+
+      .review-bubble-name {
+        color: #7dd3fc;
+        font-size: 0.68rem;
+        margin: 0;
+      }
+
+      .review-bubble-rating {
+        margin: 0;
+        color: #facc15;
+      }
+
+      .review-bubble-text {
+        display: none;
+        margin-top: 0.35rem;
+      }
+
+      .review-bubble.expanded {
+        background: rgba(15, 23, 42, 0.8);
+      }
+
+      .review-bubble.expanded .review-bubble-text {
+        display: block;
+      }
+
+      .review-history-list {
+        margin: 0.4rem 0 0;
+        padding-left: 1rem;
+        max-height: 150px;
+        overflow: auto;
+      }
+
+      .review-history-item + .review-history-item {
+        margin-top: 0.38rem;
+      }
+
+      .review-history-meta {
+        margin: 0;
+        font-size: 0.66rem;
+        color: #93c5fd;
+      }
+
+      .review-history-text {
+        margin: 0.1rem 0 0;
+      }
+
+      @keyframes floatBubble {
+        0% {
+          transform: translate(0, 0) rotate(-1deg);
+        }
+        33% {
+          transform: translate(calc(var(--drift-x, 32px) * 0.6), calc(var(--drift-y, -26px) * 0.6)) rotate(1deg);
+        }
+        66% {
+          transform: translate(calc(var(--drift-x, 32px) * 0.95), calc(var(--drift-y, -26px) * 0.95)) rotate(-0.8deg);
+        }
+        100% {
+          transform: translate(var(--drift-x, 32px), var(--drift-y, -26px)) rotate(1.2deg);
+        }
+      }
+
+      .albums {
+        margin-top: 1.5rem;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.4rem;
+        text-align: left;
+      }
+
+      .album-card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+        background: #0f172a;
+        border: 1px solid #334155;
+        transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+        transform-origin: center center;
+      }
+
+      .album-card.expanded {
+        border-color: #7dd3fc;
+        box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.18);
+        transform: scale(1.02);
+        grid-column: 1 / -1;
+      }
+
+      .cover-button {
+        width: 100%;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        display: block;
+        cursor: pointer;
+      }
+
+      .cover-button img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        display: block;
+        object-fit: cover;
+      }
+
+      .album-details {
+        max-height: 0;
+        opacity: 0;
+        transform: translateY(-6px);
+        overflow: hidden;
+        transition: max-height 220ms ease, opacity 220ms ease, transform 220ms ease;
+      }
+
+      .album-card.expanded .album-details {
+        max-height: 360px;
+        opacity: 1;
+        transform: translateY(0);
+        padding: 0.6rem 0.65rem 0.75rem;
+      }
+
+      .album-card h2 {
+        margin: 0 0 0.25rem;
+        font-size: 0.9rem;
+      }
+
+      .meta {
+        color: #94a3b8;
+        font-size: 0.82rem;
+      }
+
+      .notes {
+        margin-top: 0.35rem;
+        font-size: 0.82rem;
+      }
+
+      .track-list {
+        margin: 0.5rem 0 0;
+        padding-left: 1.05rem;
+        color: #cbd5e1;
+        font-size: 0.8rem;
+      }
+
+      .track-list li + li {
+        margin-top: 0.15rem;
+      }
+
     </style>
   </head>
   <body>
+    <section id="now-playing" class="now-playing" hidden>
+      <button id="now-playing-toggle" class="now-playing-toggle" type="button" aria-expanded="false" aria-controls="review-panel">
+        <img id="now-playing-cover" src="" alt="Currently playing album cover" />
+        <div class="now-playing-copy">
+          <p class="now-playing-label">Currently Playing</p>
+          <p id="now-playing-text" class="now-playing-text"></p>
+          <p class="now-playing-hint">Tap to review this album</p>
+        </div>
+      </button>
+
+      <div id="review-panel" class="review-panel" hidden>
+        <label for="reviewer-name">Name</label>
+        <input id="reviewer-name" type="text" placeholder="Your name" />
+
+        <label for="album-review">Album review</label>
+        <textarea id="album-review" placeholder="Write your review"></textarea>
+
+        <p class="rating-label">Rating</p>
+        <div id="star-rating" class="star-rating" role="radiogroup" aria-label="Album rating">
+          <button type="button" class="star-button" data-star="1" aria-label="1 star">★</button>
+          <button type="button" class="star-button" data-star="2" aria-label="2 stars">★</button>
+          <button type="button" class="star-button" data-star="3" aria-label="3 stars">★</button>
+          <button type="button" class="star-button" data-star="4" aria-label="4 stars">★</button>
+          <button type="button" class="star-button" data-star="5" aria-label="5 stars">★</button>
+        </div>
+        <p id="rating-value" class="rating-value">Rating: 0 / 5</p>
+        <div class="review-actions">
+          <button id="save-review" class="save-review-button" type="button">Save review</button>
+          <p id="review-status" class="review-status"></p>
+        </div>
+      </div>
+    </section>
+    <section id="bubble-layer" class="bubble-layer" aria-hidden="true"></section>
     <main>
       <h1 id="title">Listening Party</h1>
       <p id="message">Welcome to the main page.</p>
+      <section id="albums" class="albums" aria-live="polite"></section>
     </main>
-    <script>
-      (function restrictAccess() {
-        const isMobileDevice =
-          /Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent) ||
-          (navigator.userAgent.includes("iPad") && navigator.maxTouchPoints > 1);
-        const host = window.location.hostname;
-        const isPrivateIpv4 =
-          /^10\./.test(host) ||
-          /^192\.168\./.test(host) ||
-          /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-        const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-        const isLocal = localHosts.has(host) || isPrivateIpv4;
-        const title = document.getElementById("title");
-        const message = document.getElementById("message");
-
-        if (!isMobileDevice || !isLocal) {
-          title.textContent = "Access Restricted";
-          message.textContent = "This page is available only on phones from a local address.";
-        }
-      })();
-    </script>
+    <script src="./app.js"></script>
   </body>
 </html>

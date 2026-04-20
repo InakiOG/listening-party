@@ -1,0 +1,52 @@
+{
+  "albums": [
+    {
+      "id": 1,
+      "title": "Random Access Memories",
+      "artist": "Daft Punk",
+      "year": 2013,
+      "genre": "Electronic / Disco",
+      "coverUrl": "https://upload.wikimedia.org/wikipedia/en/a/a7/Random_Access_Memories.jpg",
+      "notes": "Warm analog synths and clean, high-dynamic mixes.",
+      "tracks": [
+        "Give Life Back to Music",
+        "The Game of Love",
+        "Giorgio by Moroder",
+        "Get Lucky",
+        "Contact"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Abbey Road",
+      "artist": "The Beatles",
+      "year": 1969,
+      "genre": "Rock",
+      "coverUrl": "https://upload.wikimedia.org/wikipedia/en/4/42/Beatles_-_Abbey_Road.jpg",
+      "notes": "Side B medley is great for uninterrupted listening.",
+      "tracks": [
+        "Come Together",
+        "Something",
+        "Oh! Darling",
+        "Here Comes the Sun",
+        "The End"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Discovery",
+      "artist": "Daft Punk",
+      "year": 2001,
+      "genre": "French house",
+      "coverUrl": "https://upload.wikimedia.org/wikipedia/en/a/ae/Daft_Punk_-_Discovery.jpg",
+      "notes": "A punchy, dance-first album for group sessions.",
+      "tracks": [
+        "One More Time",
+        "Aerodynamic",
+        "Digital Love",
+        "Harder, Better, Faster, Stronger",
+        "Face to Face"
+      ]
+    }
+  ]
+}
