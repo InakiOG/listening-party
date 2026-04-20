@@ -10,6 +10,7 @@ from discogs_scraper import update_collection_cache
 
 ROOT = Path(__file__).resolve().parent
 REVIEWS_DB_PATH = ROOT / "reviews-db.json"
+NOW_PLAYING_PATH = ROOT / "now-playing.json"
 REVIEWS_LOCK = threading.Lock()
 
 
@@ -36,6 +37,11 @@ def read_reviews_store():
 def write_reviews_store(store):
     with REVIEWS_DB_PATH.open("w", encoding="utf-8") as handle:
         json.dump(store, handle, indent=2)
+
+
+def clear_now_playing():
+    if NOW_PLAYING_PATH.exists():
+        NOW_PLAYING_PATH.unlink()
 
 
 class ListeningPartyHandler(SimpleHTTPRequestHandler):
@@ -137,6 +143,8 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
 
 def run_server(port=8000):
+    clear_now_playing()
+
     try:
         collection_payload = update_collection_cache()
         print(f"Discogs collection cache refreshed: {collection_payload.get('totalItems', 0)} items")

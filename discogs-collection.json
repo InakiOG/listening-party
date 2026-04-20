@@ -1,7 +1,7 @@
 {
   "source": "Discogs public collection API",
   "profile": "InakiOG",
-  "updatedAt": "2026-04-20T03:17:07.326429+00:00",
+  "updatedAt": "2026-04-20T03:39:14.777947+00:00",
   "items": [
     {
       "title": "Doolittle",
@@ -16,7 +16,24 @@
       "discogsId": 28590850,
       "instanceId": 1884984291,
       "dateAdded": "2025-01-03T00:13:19-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Debaser",
+        "Tame",
+        "Wave Of Mutilation",
+        "I Bleed",
+        "Here Comes Your Man",
+        "Dead",
+        "Monkey Gone To Heaven",
+        "Mr. Grieves",
+        "Crackity Jones",
+        "La La Love You",
+        "Number 13 Baby",
+        "There Goes My Gun",
+        "Hey",
+        "Silver",
+        "Gouge Away"
+      ]
     },
     {
       "title": "Fun And Games",
@@ -31,7 +48,15 @@
       "discogsId": 13447300,
       "instanceId": 1884958896,
       "dateAdded": "2025-01-02T23:06:28-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Give It All You Got - 6:12",
+        "You're The Best There Is - 7:30",
+        "Pina Colada - 8:14",
+        "I Never Missed Someone Before - 9:32",
+        "Give It All You Got, But Slowly - 4:20",
+        "Fun And Games - 7:14"
+      ]
     },
     {
       "title": "Discovery",
@@ -46,7 +71,23 @@
       "discogsId": 29277010,
       "instanceId": 1884960759,
       "dateAdded": "2025-01-02T23:11:44-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "One More Time",
+        "Aerodynamic",
+        "Digital Love",
+        "Harder, Better, Faster, Stronger",
+        "Crescendolls",
+        "Nightvision",
+        "Superheroes",
+        "High Life",
+        "Something About Us",
+        "Voyager",
+        "Veridis Quo",
+        "Short Circuit",
+        "Face To Face",
+        "Too Long"
+      ]
     },
     {
       "title": "Hypnotize",
@@ -61,7 +102,21 @@
       "discogsId": 12642716,
       "instanceId": 1884981393,
       "dateAdded": "2025-01-03T00:06:25-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Attack",
+        "Dreaming",
+        "Kill Rock 'N Roll",
+        "Hypnotize",
+        "Stealing Society",
+        "Tentative",
+        "U-Fig",
+        "Holy Mountains",
+        "Vicinity Of Obscenity",
+        "She's Like Heroin",
+        "Lonely Day",
+        "Soldier Side"
+      ]
     },
     {
       "title": "Selected Ambient Works 85-92",
@@ -76,7 +131,22 @@
       "discogsId": 17164261,
       "instanceId": 1884955386,
       "dateAdded": "2025-01-02T22:56:33-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Xtal - 4:51",
+        "Tha - 9:01",
+        "Pulsewidth - 3:47",
+        "Ageispolis - 5:21",
+        "I - 1:13",
+        "Green Calx - 6:02",
+        "Heliosphan - 4:51",
+        "We Are The Music Makers - 7:42",
+        "Schottkey 7th Path - 5:07",
+        "Ptolemy - 7:12",
+        "Hedphelym - 6:02",
+        "Delphium - 5:36",
+        "Actium - 7:35"
+      ]
     },
     {
       "title": "Abbey Road",
@@ -91,7 +161,26 @@
       "discogsId": 30834342,
       "instanceId": 1884956223,
       "dateAdded": "2025-01-02T22:59:02-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Come Together - 4:21",
+        "Something - 3:03",
+        "Maxwell's Silver Hammer - 3:27",
+        "Oh! Darling - 3:27",
+        "Octopus's Garden - 2:51",
+        "I Want You (She's So Heavy) - 7:47",
+        "Here Comes The Sun - 3:05",
+        "Because - 2:46",
+        "You Never Give Me Your Money - 4:02",
+        "Sun King - 2:27",
+        "Mean Mr. Mustard - 1:06",
+        "Polythene Pam - 1:13",
+        "She Came In Through The Bathroom Window - 1:57",
+        "Golden Slumbers - 1:32",
+        "Carry That Weight - 1:37",
+        "The End - 2:20",
+        "Her Majesty - 0:23"
+      ]
     },
     {
       "title": "Eye In The Sky",
@@ -106,7 +195,19 @@
       "discogsId": 10036282,
       "instanceId": 1884954333,
       "dateAdded": "2025-01-02T22:53:24-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Sirius - Instrumental - 1:48",
+        "Eye In The Sky - 4:33",
+        "Children Of The Moon - 4:49",
+        "Gemini - 2:09",
+        "Silence And I - 7:17",
+        "You're Gonna Get Your Fingers Burned - 4:19",
+        "Psychobabble - 4:50",
+        "Mammagamma - Instrumental - 3:34",
+        "Step By Step - 3:52",
+        "Old And Wise - 4:52"
+      ]
     },
     {
       "title": "So Tonight That I Might See",
@@ -121,7 +222,19 @@
       "discogsId": 22643276,
       "instanceId": 1884978045,
       "dateAdded": "2025-01-02T23:57:35-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Fade Into You",
+        "Bells Ring",
+        "Mary Of Silence",
+        "Five String Serenade",
+        "Blue Light",
+        "She's My Baby",
+        "Unreflected",
+        "Wasted",
+        "Into Dust",
+        "So Tonight That I Might See"
+      ]
     },
     {
       "title": "(III)",
@@ -136,7 +249,21 @@
       "discogsId": 29889358,
       "instanceId": 1884959865,
       "dateAdded": "2025-01-02T23:09:07-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Plague - 4:56",
+        "Kerosene - 3:12",
+        "Wrath Of God - 3:07",
+        "Affection - 2:37",
+        "Pale Flesh - 3:00",
+        "Sad Eyes - 3:27",
+        "Insulin - 1:47",
+        "Transgender - 3:05",
+        "Violent Youth - 4:22",
+        "Telepath - 3:55",
+        "Mercenary - 2:39",
+        "Child I Will Hurt You - 3:33"
+      ]
     },
     {
       "title": "Igor",
@@ -151,7 +278,21 @@
       "discogsId": 32292255,
       "instanceId": 1884982275,
       "dateAdded": "2025-01-03T00:08:32-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Igor's Theme - 3:21",
+        "Earfquake - 3:10",
+        "I Think - 3:32",
+        "Boyfriend - 4:00",
+        "Running Out Of Time - 2:57",
+        "New Magic Wand - 3:15",
+        "A Boy Is A Gun - 3:30",
+        "Puppet - 2:59",
+        "What's Good - 3:26",
+        "Gone, Gone / Thank You - 6:15",
+        "I Don't Love You Anymore - 2:41",
+        "Are We Still Friends? - 4:25"
+      ]
     },
     {
       "title": "The Soul Of Italy - L'Anima D'Italia",
@@ -166,7 +307,21 @@
       "discogsId": 7820175,
       "instanceId": 1884972237,
       "dateAdded": "2025-01-02T23:41:14-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Ciribiribin",
+        "'O Sole Mio",
+        "Santa Lucia",
+        "O Mari",
+        "Tra Veglia E Sonno",
+        "I Milioni D'Arlecchino",
+        "Dicitencello Vuie",
+        "Mattinata",
+        "Rimpianto",
+        "Torna A Surriento",
+        "Funiculi Funicula",
+        "Tarantella Siciliana"
+      ]
     },
     {
       "title": "Random Access Memories",
@@ -181,7 +336,22 @@
       "discogsId": 26724584,
       "instanceId": 1884961686,
       "dateAdded": "2025-01-02T23:14:14-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Give Life Back To Music - 4:35",
+        "The Game Of Love - 5:22",
+        "Giorgio By Moroder - 9:04",
+        "Within - 3:48",
+        "Instant Crush - 5:37",
+        "Lose Yourself To Dance - 5:53",
+        "Touch - 8:18",
+        "Get Lucky - 6:09",
+        "Beyond - 4:50",
+        "Motherboard - 5:41",
+        "Fragments Of Time - 4:39",
+        "Doin' It Right - 4:11",
+        "Contact - 6:23"
+      ]
     },
     {
       "title": "Call Me If You Get Lost",
@@ -196,7 +366,25 @@
       "discogsId": 22786961,
       "instanceId": 1884981687,
       "dateAdded": "2025-01-03T00:07:07-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Sir Baudelaire - 1:28",
+        "Corso - 2:26",
+        "Lemonhead - 2:10",
+        "Wusyaname - 2:01",
+        "Lumberjack - 2:18",
+        "Hot Wind Blows - 2:35",
+        "Massa - 3:43",
+        "Runitup - 3:49",
+        "Manifesto - 2:55",
+        "Sweet / I Thought You Wanted To Dance - 9:48",
+        "Momma Talk - 1:10",
+        "Rise! - 3:23",
+        "Blessed - 0:57",
+        "Juggernaut - 2:56",
+        "Wilshire - 8:35",
+        "Safari - 2:57"
+      ]
     },
     {
       "title": "Kind Of Blue",
@@ -211,7 +399,14 @@
       "discogsId": 23454821,
       "instanceId": 1948466937,
       "dateAdded": "2025-02-27T19:26:44-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "So What - 8:56",
+        "Freddie Freeloader - 9:32",
+        "Blue in Green - 5:27",
+        "Flamenco Sketches - 9:32",
+        "All Blues - 11:34"
+      ]
     },
     {
       "title": "Favourite Worst Nightmare",
@@ -226,7 +421,21 @@
       "discogsId": 20924029,
       "instanceId": 1938299244,
       "dateAdded": "2025-02-18T21:06:45-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Brianstorm - 2:50",
+        "Teddy Picker - 2:43",
+        "D Is For Dangerous - 2:16",
+        "Balaclava - 2:49",
+        "Fluorescent Adolescent - 2:57",
+        "Only Ones Who Know - 3:02",
+        "Do Me A Favour - 3:27",
+        "This House Is A Circus - 3:09",
+        "If You Were There, Beware - 4:34",
+        "The Bad Thing - 2:23",
+        "Old Yellow Bricks - 3:11",
+        "505 - 4:13"
+      ]
     },
     {
       "title": "Farewell To The First Golden Era",
@@ -241,7 +450,21 @@
       "discogsId": 15328938,
       "instanceId": 1884976902,
       "dateAdded": "2025-01-02T23:54:35-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Dedicated To The One I Love - 2:56",
+        "Go Where You Wanna Go - 2:32",
+        "Words Of Love - 2:13",
+        "Look Through My Window - 3:05",
+        "Dancing In The Street - 3:00",
+        "Monday, Monday - 3:03",
+        "Creeque Alley - 3:45",
+        "Got A Feelin' - 2:44",
+        "Twelve-Thirty (Young Girls Are Coming To The Canyon) - 3:20",
+        "I Call Your Name - 2:32",
+        "I Saw Her Again Last Night - 2:50",
+        "California Dreamin' - 2:32"
+      ]
     },
     {
       "title": "Hotel California",
@@ -256,7 +479,18 @@
       "discogsId": 2429304,
       "instanceId": 1884966996,
       "dateAdded": "2025-01-02T23:27:33-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": [
+        "Hotel California - 6:30",
+        "New Kid In Town = El Nuevo Chico Del Pueblo - 5:04",
+        "Life In The Fast Lane = La Vida En El Carril Rapido - 4:46",
+        "Wasted Time = Tiempo Perdido - 4:55",
+        "Wasted Time (Reprise) = Tiempo Perdido - 1:22",
+        "Victim Of Love = Victima Del Amor - 4:07",
+        "Pretty Maids All In A Row = Hermosas Doncellas, Todas En Fila - 4:00",
+        "Try And Love Again = Trata de Amar Otra Vez - 5:10",
+        "The Last Resort = El Último Lugar - 7:25"
+      ]
     },
     {
       "title": "The Very Best Of Electric Light Orchestra - All Over The World",
@@ -271,7 +505,8 @@
       "discogsId": 22200253,
       "instanceId": 2046926058,
       "dateAdded": "2025-08-01T18:23:19-07:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Melody's Echo Chamber",
@@ -286,7 +521,8 @@
       "discogsId": 13572963,
       "instanceId": 1884978489,
       "dateAdded": "2025-01-02T23:58:42-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Nirvana",
@@ -301,7 +537,8 @@
       "discogsId": 8243898,
       "instanceId": 1884988212,
       "dateAdded": "2025-01-03T00:22:45-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Minecraft Volume Alpha",
@@ -316,7 +553,8 @@
       "discogsId": 30580669,
       "instanceId": 1902653487,
       "dateAdded": "2025-01-17T19:27:11-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Dummy",
@@ -331,7 +569,8 @@
       "discogsId": 15820,
       "instanceId": 1884988386,
       "dateAdded": "2025-01-03T00:23:12-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "The Rise & Fall Of A Midwest Princess",
@@ -346,7 +585,8 @@
       "discogsId": 31833650,
       "instanceId": 1884957930,
       "dateAdded": "2025-01-02T23:04:02-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Los 3 Grandes",
@@ -361,7 +601,8 @@
       "discogsId": 5777037,
       "instanceId": 1884969288,
       "dateAdded": "2025-01-02T23:32:59-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Point Of Know Return",
@@ -376,7 +617,8 @@
       "discogsId": 14662264,
       "instanceId": 1884973569,
       "dateAdded": "2025-01-02T23:45:17-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "One Fine Day = Un Día Fino",
@@ -391,7 +633,8 @@
       "discogsId": 17651677,
       "instanceId": 1884979530,
       "dateAdded": "2025-01-03T00:01:27-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Saturday Night Wrist",
@@ -406,7 +649,8 @@
       "discogsId": 30322481,
       "instanceId": 1884963405,
       "dateAdded": "2025-01-02T23:18:39-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "White Pony",
@@ -421,7 +665,8 @@
       "discogsId": 27355728,
       "instanceId": 1884964017,
       "dateAdded": "2025-01-02T23:20:12-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Greatest Hits",
@@ -436,7 +681,8 @@
       "discogsId": 5918431,
       "instanceId": 1884968301,
       "dateAdded": "2025-01-02T23:30:45-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "TV Animation Bleach Original Soundtrack Vol 1-2",
@@ -451,7 +697,8 @@
       "discogsId": 27316986,
       "instanceId": 1884956649,
       "dateAdded": "2025-01-02T23:00:21-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Humanz",
@@ -466,7 +713,8 @@
       "discogsId": 16074392,
       "instanceId": 1884987804,
       "dateAdded": "2025-01-03T00:21:48-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Demon Days",
@@ -481,7 +729,8 @@
       "discogsId": 12738364,
       "instanceId": 1884986805,
       "dateAdded": "2025-01-03T00:19:23-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "G Sides",
@@ -496,7 +745,8 @@
       "discogsId": 12770594,
       "instanceId": 1884987297,
       "dateAdded": "2025-01-03T00:20:33-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Gorillaz",
@@ -511,7 +761,8 @@
       "discogsId": 12770620,
       "instanceId": 1884986685,
       "dateAdded": "2025-01-03T00:19:07-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "The Singles Collection 2001-2011",
@@ -526,7 +777,8 @@
       "discogsId": 30325919,
       "instanceId": 1884987420,
       "dateAdded": "2025-01-03T00:20:48-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Plastic Beach",
@@ -541,7 +793,8 @@
       "discogsId": 12635776,
       "instanceId": 1884988752,
       "dateAdded": "2025-01-03T00:24:18-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Album De Coleccion Homenaje A Pedro Infante",
@@ -556,7 +809,8 @@
       "discogsId": 14881102,
       "instanceId": 1884983106,
       "dateAdded": "2025-01-03T00:10:21-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Meddle",
@@ -571,7 +825,8 @@
       "discogsId": 9063908,
       "instanceId": 1884983778,
       "dateAdded": "2025-01-03T00:12:05-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "The Dark Side Of The Moon",
@@ -586,7 +841,8 @@
       "discogsId": 25676449,
       "instanceId": 1884983436,
       "dateAdded": "2025-01-03T00:11:15-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Is This It",
@@ -601,7 +857,8 @@
       "discogsId": 6925275,
       "instanceId": 1884979989,
       "dateAdded": "2025-01-03T00:02:46-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Room On Fire",
@@ -616,7 +873,8 @@
       "discogsId": 12609004,
       "instanceId": 1884980853,
       "dateAdded": "2025-01-03T00:04:56-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "The New Abnormal",
@@ -631,7 +889,8 @@
       "discogsId": 15063478,
       "instanceId": 1884981219,
       "dateAdded": "2025-01-03T00:05:56-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Melophobia",
@@ -646,7 +905,8 @@
       "discogsId": 28952755,
       "instanceId": 1884957402,
       "dateAdded": "2025-01-02T23:02:36-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Koi No Yokan",
@@ -661,7 +921,8 @@
       "discogsId": 23162270,
       "instanceId": 1884962757,
       "dateAdded": "2025-01-02T23:16:53-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "15 Grandes De Frank Sinatra",
@@ -676,7 +937,8 @@
       "discogsId": 3304009,
       "instanceId": 1884971436,
       "dateAdded": "2025-01-02T23:38:40-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Torches",
@@ -691,7 +953,8 @@
       "discogsId": 2900877,
       "instanceId": 1938298425,
       "dateAdded": "2025-02-18T21:04:52-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "崖の上のポニョ (サウンドトラック)",
@@ -706,7 +969,8 @@
       "discogsId": 27361662,
       "instanceId": 1884972639,
       "dateAdded": "2025-01-02T23:42:25-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Bloom",
@@ -721,7 +985,8 @@
       "discogsId": 26706254,
       "instanceId": 1884955722,
       "dateAdded": "2025-01-02T22:57:32-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "TRON: El Legado (Soundtrack Original)",
@@ -736,7 +1001,8 @@
       "discogsId": 21098977,
       "instanceId": 1884988020,
       "dateAdded": "2025-01-03T00:22:19-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Discovery",
@@ -751,7 +1017,8 @@
       "discogsId": 6657381,
       "instanceId": 1884987945,
       "dateAdded": "2025-01-03T00:22:08-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "D-Sides",
@@ -766,7 +1033,8 @@
       "discogsId": 16827522,
       "instanceId": 1884987012,
       "dateAdded": "2025-01-03T00:19:51-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Meteora",
@@ -781,7 +1049,8 @@
       "discogsId": 31311138,
       "instanceId": 1884975522,
       "dateAdded": "2025-01-02T23:50:52-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Californication",
@@ -796,7 +1065,8 @@
       "discogsId": 31323387,
       "instanceId": 1884979305,
       "dateAdded": "2025-01-03T00:00:49-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "Rumours",
@@ -811,7 +1081,8 @@
       "discogsId": 30771153,
       "instanceId": 1884970743,
       "dateAdded": "2025-01-02T23:36:49-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     },
     {
       "title": "In Rainbows",
@@ -826,7 +1097,8 @@
       "discogsId": 29986885,
       "instanceId": 1884979104,
       "dateAdded": "2025-01-03T00:00:12-08:00",
-      "rating": 0
+      "rating": 0,
+      "tracks": []
     }
   ],
   "totalItems": 55

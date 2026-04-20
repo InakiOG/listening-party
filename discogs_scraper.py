@@ -28,6 +28,20 @@ def fetch_collection_page(page_number):
         return json.loads(response.read().decode(charset, errors="replace"))
 
 
+def fetch_release_details(release_id):
+    request = Request(
+        f"https://api.discogs.com/releases/{release_id}",
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json"
+        }
+    )
+
+    with urlopen(request, timeout=30) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return json.loads(response.read().decode(charset, errors="replace"))
+
+
 def load_existing_output():
     if not OUTPUT_PATH.exists():
         return None
@@ -84,6 +98,28 @@ def summarize_genres(genres, styles):
             values.append(text)
 
     return ", ".join(values)
+
+
+def summarize_tracklist(tracklist):
+    tracks = []
+
+    for entry in tracklist or []:
+        if not isinstance(entry, dict):
+            continue
+
+        title = str(entry.get("title", "")).strip()
+        if not title:
+            continue
+
+        duration = str(entry.get("duration", "")).strip()
+        parts = [title]
+
+        if duration:
+            parts.append(duration)
+
+        tracks.append(" - ".join(parts))
+
+    return tracks
 
 
 def map_release(release, page_number):
@@ -165,7 +201,23 @@ def update_collection_cache(max_pages=100):
                 continue
 
             seen_release_ids.add(release_id)
-            collected_items.append(map_release(release, page_number))
+            mapped_release = map_release(release, page_number)
+
+            try:
+                release_details = fetch_release_details(release_id)
+                mapped_release["tracks"] = summarize_tracklist(release_details.get("tracklist"))
+                if not mapped_release.get("year"):
+                    year = release_details.get("year")
+                    if isinstance(year, int) and year > 0:
+                        mapped_release["year"] = year
+                if not mapped_release.get("rawText"):
+                    release_genres = release_details.get("genres") or []
+                    release_styles = release_details.get("styles") or []
+                    mapped_release["rawText"] = summarize_genres(release_genres, release_styles)
+            except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+                mapped_release["tracks"] = []
+
+            collected_items.append(mapped_release)
 
     payload = {
         "source": "Discogs public collection API",

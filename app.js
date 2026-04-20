@@ -3,6 +3,13 @@ const appState = {
   expandedAlbumId: null
 };
 
+const coverFallbackUrl = "./mi%20dise%C3%B1o.png";
+
+function normalizeTrackLabel(value) {
+  const text = String(value || "").trim();
+  return text.replace(/^[A-Z]{1,3}\d+[A-Z]?\s*-\s*/i, "");
+}
+
 let lastNowPlayingSignature = "";
 let selectedRating = 0;
 let currentNowPlaying = null;
@@ -31,8 +38,11 @@ function renderAlbums() {
       const detailListMarkup = (album.details || [])
         .map((detail) => `<li>${escapeHtml(detail)}</li>`)
         .join("");
-      const releaseLinkMarkup = album.releaseUrl
-        ? `<p class="meta"><a href="${escapeHtml(album.releaseUrl)}" target="_blank" rel="noreferrer">Open Discogs release</a></p>`
+      const spotifyButtonMarkup = album.spotifyUrl
+        ? `<a class="album-action-button" href="${escapeHtml(album.spotifyUrl)}" target="_blank" rel="noreferrer">Open on Spotify</a>`
+        : "";
+      const linksMarkup = spotifyButtonMarkup
+        ? `<div class="album-links">${spotifyButtonMarkup}</div>`
         : "";
 
       return `
@@ -44,14 +54,14 @@ function renderAlbums() {
             aria-expanded="${isExpanded}"
             aria-controls="album-details-${album.id}"
           >
-            <img src="${safeCoverUrl}" alt="${safeTitle} album cover" loading="lazy" />
+            <img src="${safeCoverUrl}" alt="${safeTitle} album cover" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />
           </button>
           <div id="album-details-${album.id}" class="album-details">
             <h2>${safeTitle}</h2>
             <p class="meta">${safeArtist} • ${safeYear}</p>
             <p class="meta">${safeGenre}</p>
             <p class="notes">${safeNotes}</p>
-            ${releaseLinkMarkup}
+            ${linksMarkup}
             <ol class="track-list">${detailListMarkup}</ol>
           </div>
         </article>
@@ -89,21 +99,39 @@ async function loadAlbums() {
   const items = Array.isArray(payload.items) ? payload.items : [];
 
   return items.map((item, index) => {
+    const tracks = Array.isArray(item.tracks)
+      ? item.tracks
+          .map((track) => normalizeTrackLabel(track))
+          .filter((track) => track)
+      : [];
+    const details = tracks.length
+      ? tracks
+      : [
+          `Source page: ${item.sourcePage || "?"}`,
+          `Discogs artist page: ${item.artistUrl ? "Available" : "n/a"}`,
+          item.imageUrl ? "Cover image cached from Discogs" : "No cover image found",
+          `Collection record: ${item.rawText ? item.rawText.slice(0, 120) : ""}`
+        ].filter(Boolean);
+
+    const spotifyQuery = [item.artist, item.title]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(" ");
+    const spotifyUrl = spotifyQuery
+      ? `https://open.spotify.com/search/${encodeURIComponent(spotifyQuery)}`
+      : "";
+
     return {
       id: item.releaseUrl || `${item.title}-${item.artist}-${index}`,
       title: item.title || "Untitled release",
       artist: item.artist || "Unknown artist",
       year: item.year || "Unknown year",
       genre: item.rawText || "Discogs collection item",
-      notes: `Release page ${item.sourcePage || "?"}`,
+      notes: tracks.length ? `${tracks.length} songs` : `Release page ${item.sourcePage || "?"}`,
       releaseUrl: item.releaseUrl || "",
-      coverUrl: item.imageUrl || "https://via.placeholder.com/150?text=No+Image",
-      details: [
-        `Source page: ${item.sourcePage || "?"}`,
-        `Discogs artist page: ${item.artistUrl ? "Available" : "n/a"}`,
-        item.imageUrl ? "Cover image cached from Discogs" : "No cover image found",
-        `Collection record: ${item.rawText ? item.rawText.slice(0, 120) : ""}`
-      ].filter(Boolean)
+      spotifyUrl,
+      coverUrl: item.imageUrl || coverFallbackUrl,
+      details
     };
   });
 }
@@ -617,6 +645,10 @@ function renderNowPlaying(nowPlaying) {
 
   if (signature !== lastNowPlayingSignature || section.hidden) {
     text.textContent = `${nowPlaying.albumTitle} - ${nowPlaying.songTitle}`;
+    cover.onerror = () => {
+      cover.onerror = null;
+      cover.src = coverFallbackUrl;
+    };
     cover.src = nowPlaying.coverUrl;
     cover.alt = `${nowPlaying.albumTitle} album cover`;
     section.hidden = false;
@@ -684,7 +716,7 @@ function startNowPlayingPolling() {
 
   loadAlbums()
     .then((albumDatabase) => {
-      appState.albums = albumDatabase.albums || [];
+      appState.albums = Array.isArray(albumDatabase) ? albumDatabase : (albumDatabase.albums || []);
       renderAlbums();
     })
     .catch(() => {
