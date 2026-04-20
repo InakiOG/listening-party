@@ -202,11 +202,11 @@ def choose_album_for_artist(artist_name, albums):
 def choose_song(album, allow_online_fetch=True):
     tracks = album.get("tracks", [])
 
-    if not tracks and allow_online_fetch:
+    if not tracks:
         print("Loading songs from Discogs...")
         tracks = fetch_album_tracks(album)
 
-    if not tracks and allow_online_fetch:
+    if not tracks:
         print("Discogs has no songs for this release. Trying Spotify...")
         tracks = fetch_spotify_tracks(album)
 
