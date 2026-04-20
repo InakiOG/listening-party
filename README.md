@@ -51,3 +51,11 @@ The frontend saves and loads reviews through these local API endpoints:
 - GET /api/reviews?songKey=<album-and-song-key>
 - POST /api/reviews
 
+## Discogs collection cache
+
+Every time the server starts, it refreshes a local Discogs collection cache from the public InakiOG collection pages and writes it to:
+
+discogs-collection.json
+
+The scraper is implemented in [discogs_scraper.py](discogs_scraper.py) and uses the public Discogs collection API.
+

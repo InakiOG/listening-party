@@ -6,6 +6,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from discogs_scraper import update_collection_cache
+
 ROOT = Path(__file__).resolve().parent
 REVIEWS_DB_PATH = ROOT / "reviews-db.json"
 REVIEWS_LOCK = threading.Lock()
@@ -135,6 +137,12 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
 
 def run_server(port=8000):
+    try:
+        collection_payload = update_collection_cache()
+        print(f"Discogs collection cache refreshed: {collection_payload.get('totalItems', 0)} items")
+    except Exception as error:
+        print(f"Discogs collection refresh skipped: {error}")
+
     ensure_reviews_db()
     handler = partial(ListeningPartyHandler, directory=str(ROOT))
     server = ThreadingHTTPServer(("", port), handler)

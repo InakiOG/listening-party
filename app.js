@@ -22,9 +22,18 @@ function renderAlbums() {
   container.innerHTML = appState.albums
     .map((album) => {
       const isExpanded = appState.expandedAlbumId === album.id;
-      const trackListMarkup = (album.tracks || [])
-        .map((track) => `<li>${track}</li>`)
+      const safeTitle = escapeHtml(album.title);
+      const safeArtist = escapeHtml(album.artist);
+      const safeYear = escapeHtml(album.year);
+      const safeGenre = escapeHtml(album.genre);
+      const safeNotes = escapeHtml(album.notes);
+      const safeCoverUrl = escapeHtml(album.coverUrl);
+      const detailListMarkup = (album.details || [])
+        .map((detail) => `<li>${escapeHtml(detail)}</li>`)
         .join("");
+      const releaseLinkMarkup = album.releaseUrl
+        ? `<p class="meta"><a href="${escapeHtml(album.releaseUrl)}" target="_blank" rel="noreferrer">Open Discogs release</a></p>`
+        : "";
 
       return `
         <article class="album-card ${isExpanded ? "expanded" : ""}">
@@ -35,14 +44,15 @@ function renderAlbums() {
             aria-expanded="${isExpanded}"
             aria-controls="album-details-${album.id}"
           >
-            <img src="${album.coverUrl}" alt="${album.title} album cover" loading="lazy" />
+            <img src="${safeCoverUrl}" alt="${safeTitle} album cover" loading="lazy" />
           </button>
           <div id="album-details-${album.id}" class="album-details">
-            <h2>${album.title}</h2>
-            <p class="meta">${album.artist} • ${album.year}</p>
-            <p class="meta">${album.genre}</p>
-            <p class="notes">${album.notes}</p>
-            <ol class="track-list">${trackListMarkup}</ol>
+            <h2>${safeTitle}</h2>
+            <p class="meta">${safeArtist} • ${safeYear}</p>
+            <p class="meta">${safeGenre}</p>
+            <p class="notes">${safeNotes}</p>
+            ${releaseLinkMarkup}
+            <ol class="track-list">${detailListMarkup}</ol>
           </div>
         </article>
       `;
@@ -60,20 +70,42 @@ function setupAlbumInteractions() {
       return;
     }
 
-    const albumId = Number(trigger.dataset.albumId);
+    const albumId = trigger.dataset.albumId;
     appState.expandedAlbumId = appState.expandedAlbumId === albumId ? null : albumId;
     renderAlbums();
   });
 }
 
 async function loadAlbums() {
-  const response = await fetch("./albums.json");
+  const response = await fetch(`./discogs-collection.json?t=${Date.now()}`, {
+    cache: "no-store"
+  });
 
   if (!response.ok) {
-    throw new Error("Could not load albums.json");
+    throw new Error("Could not load discogs-collection.json");
   }
 
-  return response.json();
+  const payload = await response.json();
+  const items = Array.isArray(payload.items) ? payload.items : [];
+
+  return items.map((item, index) => {
+    return {
+      id: item.releaseUrl || `${item.title}-${item.artist}-${index}`,
+      title: item.title || "Untitled release",
+      artist: item.artist || "Unknown artist",
+      year: item.year || "Unknown year",
+      genre: item.rawText || "Discogs collection item",
+      notes: `Release page ${item.sourcePage || "?"}`,
+      releaseUrl: item.releaseUrl || "",
+      coverUrl: item.imageUrl || "https://via.placeholder.com/150?text=No+Image",
+      details: [
+        `Source page: ${item.sourcePage || "?"}`,
+        `Discogs artist page: ${item.artistUrl ? "Available" : "n/a"}`,
+        item.imageUrl ? "Cover image cached from Discogs" : "No cover image found",
+        `Collection record: ${item.rawText ? item.rawText.slice(0, 120) : ""}`
+      ].filter(Boolean)
+    };
+  });
 }
 
 function hideNowPlaying() {
