@@ -538,6 +538,84 @@ def save_temporary_album_to_collection(album):
     return True
 
 
+def backfill_collection_tracks(allow_online_fetch=True):
+    try:
+        with COLLECTION_PATH.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {
+            "checked": 0,
+            "updated": 0,
+            "missing": 0,
+            "saved": False
+        }
+
+    items = payload.get("items", []) if isinstance(payload, dict) else []
+    if not isinstance(items, list):
+        return {
+            "checked": 0,
+            "updated": 0,
+            "missing": 0,
+            "saved": False
+        }
+
+    checked = 0
+    updated = 0
+    missing = 0
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        checked += 1
+        existing_tracks = item.get("tracks", [])
+        normalized_existing = [str(track).strip() for track in existing_tracks if str(track).strip()]
+
+        if normalized_existing:
+            item["tracks"] = normalized_existing
+            continue
+
+        album = {
+            "title": str(item.get("title") or "").strip(),
+            "artist": str(item.get("artist") or "").strip(),
+            "discogsId": item.get("discogsId")
+        }
+
+        tracks = []
+        if allow_online_fetch:
+            tracks = fetch_album_tracks(album)
+            if not tracks:
+                tracks = fetch_spotify_tracks(album)
+
+        if tracks:
+            item["tracks"] = tracks
+            updated += 1
+        else:
+            item["tracks"] = []
+            missing += 1
+
+    payload["items"] = items
+    payload["updatedAt"] = datetime.now(timezone.utc).isoformat()
+
+    try:
+        with COLLECTION_PATH.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=False)
+    except OSError:
+        return {
+            "checked": checked,
+            "updated": updated,
+            "missing": missing,
+            "saved": False
+        }
+
+    return {
+        "checked": checked,
+        "updated": updated,
+        "missing": missing,
+        "saved": True
+    }
+
+
 def choose_temporary_album_and_song(allow_online_fetch):
     print("\nTemporary album mode")
     artist_name = input("Artist name (or q to cancel): ").strip()
@@ -600,6 +678,13 @@ def main(allow_online_fetch=False, refresh_discogs=False):
             print(f"Discogs collection refreshed: {payload.get('totalItems', 0)} items")
         except Exception as error:
             print(f"Discogs refresh failed, using local database: {error}")
+
+        print("Filling missing tracks after Discogs refresh...")
+        stats = backfill_collection_tracks(allow_online_fetch=True)
+        print(
+            f"Track fill done: checked={stats['checked']}, updated={stats['updated']}, "
+            f"missing={stats['missing']}, saved={stats['saved']}"
+        )
     elif allow_online_fetch:
         print("Using local discogs-collection.json with online fallback enabled.")
     else:
@@ -670,7 +755,22 @@ if __name__ == "__main__":
         action="store_true",
         help="Allow Discogs/Spotify online fetch for missing songs without startup refresh"
     )
+    parser.add_argument(
+        "--backfill-all-tracks",
+        action="store_true",
+        help="Fetch missing songs for all albums in discogs-collection.json and save them"
+    )
     args = parser.parse_args()
 
     online_fetch_enabled = args.allow_online_fetch or args.refresh_discogs
+
+    if args.backfill_all_tracks:
+        print("Backfilling missing tracks for the full collection...")
+        stats = backfill_collection_tracks(allow_online_fetch=True)
+        print(
+            f"Backfill done: checked={stats['checked']}, updated={stats['updated']}, "
+            f"missing={stats['missing']}, saved={stats['saved']}"
+        )
+        raise SystemExit(0)
+
     main(allow_online_fetch=online_fetch_enabled, refresh_discogs=args.refresh_discogs)

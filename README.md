@@ -53,11 +53,13 @@ It will:
 ```bash
 python controller.py --allow-online-fetch
 python controller.py --refresh-discogs
+python controller.py --backfill-all-tracks
 ```
 
 - Without flags, the controller uses local cache only.
 - --allow-online-fetch enables online Discogs/Spotify fallback for missing tracks.
-- --refresh-discogs refreshes collection cache first and enables online fetch.
+- --refresh-discogs refreshes collection cache first, then automatically fills any albums that still have missing tracks.
+- --backfill-all-tracks runs a one-shot full collection pass to fill missing tracks, saves discogs-collection.json, and exits.
 
 ### Temporary album mode
 
@@ -80,11 +82,17 @@ Script parameters:
 powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -RefreshServerDiscogs
 powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -RefreshControllerDiscogs
 powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -AllowControllerOnlineFetch
+powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -BackfillControllerTracks
 ```
 
 - -RefreshServerDiscogs passes --refresh-discogs to server.py.
 - -RefreshControllerDiscogs passes --refresh-discogs to controller.py.
 - -AllowControllerOnlineFetch passes --allow-online-fetch to controller.py.
+- -BackfillControllerTracks passes --backfill-all-tracks to controller.py.
+
+Notes:
+- If you run -RefreshControllerDiscogs, controller.py already performs automatic track filling after refresh.
+- Use -BackfillControllerTracks when you want only the one-shot fill operation.
 
 ## Reviews database
 

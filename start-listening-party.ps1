@@ -1,7 +1,8 @@
 param(
   [switch]$RefreshServerDiscogs,
   [switch]$RefreshControllerDiscogs,
-  [switch]$AllowControllerOnlineFetch
+  [switch]$AllowControllerOnlineFetch,
+  [switch]$BackfillControllerTracks
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,6 +21,9 @@ if ($RefreshControllerDiscogs) {
 }
 if ($AllowControllerOnlineFetch) {
   $controllerArgs += "--allow-online-fetch"
+}
+if ($BackfillControllerTracks) {
+  $controllerArgs += "--backfill-all-tracks"
 }
 $controllerArgsText = $controllerArgs -join " "
 
