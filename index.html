@@ -10,12 +10,21 @@
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
-        display: grid;
-        place-items: center;
-        padding-top: 4.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 5.5rem;
         background: #0f172a;
         color: #e2e8f0;
       }
@@ -24,6 +33,9 @@
         position: relative;
         z-index: 10;
         width: min(96vw, 420px);
+        margin-top: 0.35rem;
+        max-height: calc(100vh - 6.25rem);
+        overflow: auto;
         padding: clamp(0.75rem, 3vw, 2rem);
         border-radius: 1rem;
         background: #1e293b;
@@ -199,6 +211,217 @@
         color: #93c5fd;
       }
 
+      .auth-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 120;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(2, 6, 23, 0.9);
+      }
+
+      .auth-overlay[hidden] {
+        display: none;
+      }
+
+      .auth-card {
+        width: min(92vw, 360px);
+        border: 1px solid #334155;
+        border-radius: 0.9rem;
+        padding: 0.9rem;
+        background: #0f172a;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        text-align: left;
+      }
+
+      .auth-card h2 {
+        margin: 0 0 0.45rem;
+        font-size: 1rem;
+      }
+
+      .auth-help {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 0.77rem;
+      }
+
+      .auth-field-label {
+        display: block;
+        margin: 0.65rem 0 0.2rem;
+        color: #94a3b8;
+        font-size: 0.75rem;
+      }
+
+      .auth-card input[type="text"],
+      .auth-card input[type="file"] {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        padding: 0.48rem;
+        background: #111827;
+        color: #e2e8f0;
+        font-size: 0.82rem;
+      }
+
+      .auth-actions {
+        margin-top: 0.7rem;
+        display: flex;
+        gap: 0.45rem;
+      }
+
+      .auth-button {
+        border: 1px solid #334155;
+        background: #1e293b;
+        color: #f8fafc;
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+
+      .auth-button.primary {
+        border-color: #0ea5e9;
+        background: #0284c7;
+      }
+
+      .auth-status {
+        margin: 0.5rem 0 0;
+        min-height: 1rem;
+        color: #93c5fd;
+        font-size: 0.74rem;
+      }
+
+      .profile-hub {
+        position: fixed;
+        right: 0.65rem;
+        bottom: 0.7rem;
+        z-index: 80;
+      }
+
+      .profile-hub[hidden] {
+        display: none;
+      }
+
+      .profile-avatar-button {
+        width: 54px;
+        height: 54px;
+        border-radius: 999px;
+        border: 2px solid #38bdf8;
+        padding: 0;
+        background: #0f172a;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        cursor: pointer;
+      }
+
+      .profile-avatar-button img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .profile-menu {
+        position: absolute;
+        right: 0;
+        bottom: 62px;
+        min-width: 180px;
+        border: 1px solid #334155;
+        border-radius: 0.7rem;
+        background: #0f172a;
+        padding: 0.45rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .profile-menu[hidden] {
+        display: none;
+      }
+
+      .profile-menu button {
+        border: 1px solid #334155;
+        border-radius: 0.45rem;
+        background: #1e293b;
+        color: #f8fafc;
+        padding: 0.34rem 0.45rem;
+        text-align: left;
+        font-size: 0.76rem;
+        cursor: pointer;
+      }
+
+      .profile-menu-user {
+        margin: 0;
+        color: #7dd3fc;
+        font-size: 0.74rem;
+      }
+
+      .profile-menu input[type="file"] {
+        display: none;
+      }
+
+      .reviews-view {
+        text-align: left;
+      }
+
+      .reviews-view[hidden] {
+        display: none;
+      }
+
+      .reviews-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.55rem;
+      }
+
+      .reviews-header h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .back-button {
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        background: #1e293b;
+        color: #f8fafc;
+        padding: 0.3rem 0.55rem;
+        font-size: 0.76rem;
+        cursor: pointer;
+      }
+
+      .my-reviews-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+      }
+
+      .my-review-item {
+        border: 1px solid #334155;
+        border-radius: 0.6rem;
+        padding: 0.5rem;
+        background: #0f172a;
+      }
+
+      .my-review-item p {
+        margin: 0.1rem 0;
+        font-size: 0.8rem;
+      }
+
+      .my-review-meta {
+        color: #7dd3fc;
+      }
+
+      .my-review-date {
+        color: #94a3b8;
+        font-size: 0.72rem;
+      }
+
       .bubble-layer {
         position: fixed;
         inset: 0;
@@ -224,6 +447,16 @@
         animation: floatBubble var(--duration, 22s) ease-in-out var(--delay, 0s) infinite alternate;
       }
 
+      .review-bubble.song-review {
+        border-color: rgba(56, 189, 248, 0.45);
+        background: rgba(15, 23, 42, 0.58);
+      }
+
+      .review-bubble.album-review {
+        border-color: rgba(251, 191, 36, 0.55);
+        background: rgba(44, 27, 4, 0.6);
+      }
+
       .review-bubble.dragging {
         cursor: grabbing;
         animation-play-state: paused;
@@ -232,14 +465,56 @@
       .review-bubble-summary {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 0.4rem;
+        justify-content: flex-start;
+        gap: 0.25rem 0.4rem;
+        flex-wrap: wrap;
+      }
+
+      .review-avatar-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
+        border-radius: 999px;
+        padding: 0.1rem 0.38rem 0.1rem 0.12rem;
+        border: 1px solid rgba(125, 211, 252, 0.7);
+        background: rgba(15, 23, 42, 0.75);
+      }
+
+      .review-bubble.album-review .review-avatar-badge {
+        border-color: rgba(251, 191, 36, 0.8);
+        background: rgba(69, 26, 3, 0.58);
+      }
+
+      .review-avatar-image {
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+      }
+
+      .review-avatar-score {
+        color: #f8fafc;
+        font-size: 0.67rem;
+        white-space: nowrap;
       }
 
       .review-bubble-name {
         color: #7dd3fc;
         font-size: 0.68rem;
         margin: 0;
+      }
+
+      .review-bubble.album-review .review-bubble-name {
+        color: #fbbf24;
+      }
+
+      .review-bubble-scope {
+        margin: 0;
+        font-size: 0.62rem;
+        color: #cbd5e1;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
 
       .review-bubble-rating {
@@ -254,6 +529,10 @@
 
       .review-bubble.expanded {
         background: rgba(15, 23, 42, 0.8);
+      }
+
+      .review-bubble.album-review.expanded {
+        background: rgba(44, 27, 4, 0.82);
       }
 
       .review-bubble.expanded .review-bubble-text {
@@ -336,6 +615,10 @@
         object-fit: cover;
       }
 
+      .cover-button img.not-owned {
+        filter: grayscale(1) brightness(0.72);
+      }
+
       .album-details {
         max-height: 0;
         opacity: 0;
@@ -364,6 +647,12 @@
       .notes {
         margin-top: 0.35rem;
         font-size: 0.82rem;
+      }
+
+      .gifted-by {
+        margin-top: 0.28rem;
+        font-size: 0.78rem;
+        color: #cbd5e1;
       }
 
       .album-links {
@@ -402,46 +691,94 @@
         margin-top: 0.15rem;
       }
 
+      .guest-label {
+        margin: 0 0 0.45rem;
+        color: #fbbf24;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
     </style>
   </head>
   <body>
+    <section id="auth-overlay" class="auth-overlay">
+      <div class="auth-card">
+        <h2>Entrar o registrarte</h2>
+        <p class="auth-help">Escribe tu nombre. Si ya existe, entraras a ese perfil sin contrasena.</p>
+        <label class="auth-field-label" for="auth-name">Nombre</label>
+        <input id="auth-name" type="text" placeholder="Tu nombre" />
+        <label class="auth-field-label" for="auth-photo">Foto (solo al crear usuario)</label>
+        <input id="auth-photo" type="file" accept="image/*" />
+        <div class="auth-actions">
+          <button id="auth-login" class="auth-button" type="button">Entrar</button>
+          <button id="auth-register" class="auth-button primary" type="button">Crear usuario</button>
+        </div>
+        <p id="auth-status" class="auth-status"></p>
+      </div>
+    </section>
+
     <section id="now-playing" class="now-playing" hidden>
       <button id="now-playing-toggle" class="now-playing-toggle" type="button" aria-expanded="false" aria-controls="review-panel">
         <img id="now-playing-cover" src="" alt="Currently playing album cover" />
         <div class="now-playing-copy">
-          <p class="now-playing-label">Currently Playing</p>
+          <p class="now-playing-label">Reproduciendo ahora</p>
           <p id="now-playing-text" class="now-playing-text"></p>
-          <p class="now-playing-hint">Tap to review this album</p>
+          <p class="now-playing-hint">Toca para calificar</p>
         </div>
       </button>
 
       <div id="review-panel" class="review-panel" hidden>
-        <label for="reviewer-name">Name</label>
-        <input id="reviewer-name" type="text" placeholder="Your name" />
+        <label for="reviewer-name">Usuario</label>
+        <input id="reviewer-name" type="text" placeholder="Usuario" readonly />
 
-        <label for="album-review">Album review</label>
-        <textarea id="album-review" placeholder="Write your review"></textarea>
+        <label for="album-review">Resena</label>
+        <textarea id="album-review" placeholder="Escribe tu resena"></textarea>
 
-        <p class="rating-label">Rating</p>
-        <div id="star-rating" class="star-rating" role="radiogroup" aria-label="Album rating">
+        <p class="rating-label">Puntuacion</p>
+        <div id="star-rating" class="star-rating" role="radiogroup" aria-label="Puntuacion del album">
           <button type="button" class="star-button" data-star="1" aria-label="1 star">★</button>
           <button type="button" class="star-button" data-star="2" aria-label="2 stars">★</button>
           <button type="button" class="star-button" data-star="3" aria-label="3 stars">★</button>
           <button type="button" class="star-button" data-star="4" aria-label="4 stars">★</button>
           <button type="button" class="star-button" data-star="5" aria-label="5 stars">★</button>
         </div>
-        <p id="rating-value" class="rating-value">Rating: 0 / 5</p>
+        <p id="rating-value" class="rating-value">Puntuacion: 0 / 5</p>
         <div class="review-actions">
-          <button id="save-review" class="save-review-button" type="button">Save review</button>
+          <button id="save-review" class="save-review-button" type="button">Guardar resena</button>
           <p id="review-status" class="review-status"></p>
         </div>
       </div>
     </section>
     <section id="bubble-layer" class="bubble-layer" aria-hidden="true"></section>
+
+    <section id="profile-hub" class="profile-hub" hidden>
+      <div id="profile-menu" class="profile-menu" hidden>
+        <p id="profile-menu-user" class="profile-menu-user"></p>
+        <button id="change-photo" type="button">Cambiar foto</button>
+        <input id="change-photo-input" type="file" accept="image/*" />
+        <button id="view-reviews" type="button">Ver reseñas</button>
+        <button id="logout-profile" type="button">Cerrar sesion</button>
+      </div>
+      <button id="profile-avatar-button" class="profile-avatar-button" type="button" aria-expanded="false" aria-controls="profile-menu">
+        <img id="profile-avatar" src="./mi%20dise%C3%B1o.png" alt="Foto de perfil" />
+      </button>
+    </section>
+
     <main>
-      <h1 id="title">Listening Party</h1>
-      <p id="message">Welcome to the main page.</p>
-      <section id="albums" class="albums" aria-live="polite"></section>
+      <section id="main-view">
+        <p class="guest-label">invitados</p>
+        <h1 id="title">Listening Party</h1>
+        <p id="message">Bienvenido a la pagina principal.</p>
+        <section id="albums" class="albums" aria-live="polite"></section>
+      </section>
+      <section id="reviews-view" class="reviews-view" hidden>
+        <div class="reviews-header">
+          <h2>Mis resenas</h2>
+          <button id="reviews-back" class="back-button" type="button">Volver</button>
+        </div>
+        <ul id="my-reviews-list" class="my-reviews-list"></ul>
+      </section>
     </main>
     <script src="./app.js"></script>
   </body>

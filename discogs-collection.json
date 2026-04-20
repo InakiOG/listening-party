@@ -1,7 +1,7 @@
 {
   "source": "Discogs public collection API",
   "profile": "InakiOG",
-  "updatedAt": "2026-04-20T03:39:14.777947+00:00",
+  "updatedAt": "2026-04-20T04:34:04.292394+00:00",
   "items": [
     {
       "title": "Doolittle",
@@ -506,7 +506,28 @@
       "instanceId": 2046926058,
       "dateAdded": "2025-08-01T18:23:19-07:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "Mr. Blue Sky",
+        "Evil Woman",
+        "Don't Bring Me Down",
+        "Sweet Talkin' Woman",
+        "Shine A Little Love",
+        "Turn To Stone",
+        "The Diary Of Horace Wimp",
+        "Confusion",
+        "Hold On Tight",
+        "Livin' Thing",
+        "Telephone Line",
+        "All Over The World",
+        "Wild West Hero",
+        "Showdown",
+        "Ma-Ma-Ma-Belle",
+        "Xanadu",
+        "Rockaria!",
+        "Strange Magic",
+        "Alright",
+        "Rock 'N' Roll Is King"
+      ]
     },
     {
       "title": "Melody's Echo Chamber",
@@ -522,7 +543,18 @@
       "instanceId": 1884978489,
       "dateAdded": "2025-01-02T23:58:42-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "I Follow You - 3:34",
+        "Crystallized - 4:01",
+        "You Won't Be Missing That Part Of Me - 4:16",
+        "Some Time Alone, Alone - 3:46",
+        "Bisou Magique - 4:09",
+        "Endless Shore - 4:55",
+        "Quand Vas Tu Rentrer? - 4:21",
+        "Mount Hopeless - 4:32",
+        "Snowcapped Andes Crash - 5:16",
+        "Be Proud Of Your Kids - 3:09"
+      ]
     },
     {
       "title": "Nirvana",
@@ -538,7 +570,23 @@
       "instanceId": 1884988212,
       "dateAdded": "2025-01-03T00:22:45-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "You Know You're Right",
+        "About A Girl",
+        "Been A Son",
+        "Sliver",
+        "Smells Like Teen Spirit",
+        "Come As You Are",
+        "Lithium",
+        "In Bloom",
+        "Heart-Shaped Box",
+        "Pennyroyal Tea",
+        "Rape Me",
+        "Dumb",
+        "All Apologies",
+        "The Man Who Sold The World",
+        "Where Did You Sleep Last Night"
+      ]
     },
     {
       "title": "Minecraft Volume Alpha",
@@ -554,7 +602,20 @@
       "instanceId": 1902653487,
       "dateAdded": "2025-01-17T19:27:11-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "Subwoofer Lullaby - 3:28",
+        "Living Mice - 2:57",
+        "Moog City - 2:40",
+        "Haggstrom - 3:24",
+        "Minecraft - 4:14",
+        "Clark - 3:11",
+        "Mice On Venus - 4:41",
+        "Dry Hands - 1:08",
+        "Wet Hands - 1:30",
+        "Sweden - 3:35",
+        "Cat - 3:06",
+        "Danny - 4:14"
+      ]
     },
     {
       "title": "Dummy",
@@ -570,7 +631,19 @@
       "instanceId": 1884988386,
       "dateAdded": "2025-01-03T00:23:12-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "Mysterons - 5:02",
+        "Sour Times - 4:11",
+        "Strangers - 3:55",
+        "It Could Be Sweet - 4:16",
+        "Wandering Star - 4:51",
+        "It's A Fire - 3:48",
+        "Numb - 3:54",
+        "Roads - 5:02",
+        "Pedestal - 3:39",
+        "Biscuit - 5:01",
+        "Glory Box - 5:06"
+      ]
     },
     {
       "title": "The Rise & Fall Of A Midwest Princess",
@@ -586,7 +659,22 @@
       "instanceId": 1884957930,
       "dateAdded": "2025-01-02T23:04:02-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "Femininomenon",
+        "Red Wine Supernova",
+        "After Midnight",
+        "Coffee",
+        "Casual",
+        "Super Graphic Ultra Modern Girl",
+        "Hot-To-Go",
+        "My Kink Is Karma",
+        "Picture You",
+        "Kaleidoscope",
+        "Pink Pony Club",
+        "Naked In Manhattan",
+        "California",
+        "Guilty Pleasure"
+      ]
     },
     {
       "title": "Los 3 Grandes",
@@ -602,7 +690,16 @@
       "instanceId": 1884969288,
       "dateAdded": "2025-01-02T23:32:59-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "Neblina Morada = Purple Haze",
+        "El Brillo De Tu Amor = Sunshine Of Your Love",
+        "Piloto Espacial = Sky Pilot",
+        "Madre Rigurosa = Lawdy Mama",
+        "Cuarto Blanco= White Room",
+        "Trafico Citadino = Crosstown Traffic",
+        "Amar A Alguien = To Love Somebody",
+        "Vudu = Voodoo Chile, Part 2"
+      ]
     },
     {
       "title": "Point Of Know Return",
@@ -618,7 +715,18 @@
       "instanceId": 1884973569,
       "dateAdded": "2025-01-02T23:45:17-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "Point Of Know Return - 3:11",
+        "Paradox - 3:49",
+        "The Spider - 2:08",
+        "Portrait (He Knew) - 4:32",
+        "Closet Chronicles - 6:30",
+        "Lightning's Hand - 4:21",
+        "Dust In The Wind - 3:26",
+        "Sparks Of The Tempest - 4:15",
+        "Nobody's Home - 4:37",
+        "Hopelessly Human - 7:10"
+      ]
     },
     {
       "title": "One Fine Day = Un Día Fino",
@@ -634,7 +742,18 @@
       "instanceId": 1884979530,
       "dateAdded": "2025-01-03T00:01:27-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [
+        "Mujer Enamorada = Woman In Love - 4:14",
+        "Un Día Fino = One Fine Day - 3:00",
+        "La Sombra De Un Vals = Shadow Waltz - 3:09",
+        "Fama = Fame - 3:56",
+        "En Broadway = On Broadway - 3:15",
+        "Quédate Junto A Mi = Stand By Me - 3:22",
+        "Reminiscencia = Reminiscing - 3:48",
+        "Lágrimas De Otoño = Autumn Tears - 3:22",
+        "Mágico = Magic - 4:03",
+        "Tonada De Romeo = Romeo's Tune - 3:29"
+      ]
     },
     {
       "title": "Saturday Night Wrist",
@@ -826,7 +945,8 @@
       "instanceId": 1884983778,
       "dateAdded": "2025-01-03T00:12:05-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [],
+      "giftedBy": "Mi abuelo Ildefonso por mi cumpleaños 23"
     },
     {
       "title": "The Dark Side Of The Moon",
@@ -890,7 +1010,8 @@
       "instanceId": 1884981219,
       "dateAdded": "2025-01-03T00:05:56-08:00",
       "rating": 0,
-      "tracks": []
+      "tracks": [],
+      "giftedBy": "Pe y Arce, navidad 2024!"
     },
     {
       "title": "Melophobia",
