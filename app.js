@@ -1,6 +1,8 @@
 const appState = {
   albums: [],
-  expandedAlbumId: null
+  expandedAlbumId: null,
+  sortBy: "date",
+  sortDirection: "desc"
 };
 
 const sessionState = {
@@ -17,6 +19,8 @@ const bubbleUiState = new Map();
 let activeBubbleDrag = null;
 let lastBubbleSignature = "";
 const userPhotoCache = new Map();
+const activeUserBubbleColorCache = new Map();
+let lastActiveUsersSignature = "";
 
 const VINYL_COLOR_RULES = [
   { key: "grape", color: "#7e22ce" },
@@ -31,6 +35,17 @@ const VINYL_COLOR_RULES = [
   { key: "white", color: "#f8fafc" },
   { key: "gold", color: "#ca8a04" },
   { key: "silver", color: "#94a3b8" }
+];
+
+const ACTIVE_USER_BUBBLE_COLORS = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#06b6d4",
+  "#3b82f6",
+  "#a855f7",
+  "#ec4899"
 ];
 
 function isAdminUser() {
@@ -322,6 +337,19 @@ async function apiGetMyReviews(name) {
   return Array.isArray(payload.reviews) ? payload.reviews : [];
 }
 
+async function apiGetActiveUsers() {
+  const response = await fetch(`/api/users/active?t=${Date.now()}`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudieron cargar los usuarios activos.");
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload.users) ? payload.users : [];
+}
+
 async function apiSetNowPlaying(nowPlayingPayload) {
   const response = await fetch("/api/now-playing", {
     method: "POST",
@@ -382,6 +410,101 @@ function getProfilePhotoUrl(user) {
   return photo || coverFallbackUrl;
 }
 
+function getActiveUserKey(user) {
+  return normalizeUserName(user?.name || "").toLowerCase();
+}
+
+function getActiveUserBubbleColor(user) {
+  const key = getActiveUserKey(user);
+  if (!key) {
+    return ACTIVE_USER_BUBBLE_COLORS[0];
+  }
+
+  if (!activeUserBubbleColorCache.has(key)) {
+    const randomIndex = Math.floor(Math.random() * ACTIVE_USER_BUBBLE_COLORS.length);
+    activeUserBubbleColorCache.set(key, ACTIVE_USER_BUBBLE_COLORS[randomIndex]);
+  }
+
+  return activeUserBubbleColorCache.get(key) || ACTIVE_USER_BUBBLE_COLORS[0];
+}
+
+function getActiveUserLetter(user) {
+  const trimmed = normalizeUserName(user?.name || "");
+  if (!trimmed) {
+    return "?";
+  }
+
+  return Array.from(trimmed)[0].toUpperCase();
+}
+
+function renderActiveUserBubbles(users) {
+  const layer = document.getElementById("active-users-layer");
+  if (!layer) {
+    return;
+  }
+
+  const normalizedUsers = Array.isArray(users) ? users : [];
+  const signature = JSON.stringify(
+    normalizedUsers.map((user) => ({
+      name: String(user?.name || ""),
+      photoDataUrl: String(user?.photoDataUrl || "")
+    }))
+  );
+
+  if (signature === lastActiveUsersSignature) {
+    return;
+  }
+
+  if (!normalizedUsers.length) {
+    layer.innerHTML = "";
+    lastActiveUsersSignature = signature;
+    return;
+  }
+
+  layer.innerHTML = normalizedUsers
+    .slice(0, 14)
+    .map((user, index) => {
+      const safeName = escapeHtml(String(user?.name || "Usuario"));
+      const photoUrl = String(user?.photoDataUrl || "").trim();
+      const hasPhoto = Boolean(photoUrl);
+      const safePhotoUrl = escapeHtml(photoUrl);
+      const letter = escapeHtml(getActiveUserLetter(user));
+      const color = escapeHtml(getActiveUserBubbleColor(user));
+      const left = 4 + ((index * 17) % 88);
+      const top = 10 + ((index * 23) % 80);
+      const delay = (index % 5) * -1.25;
+      const duration = 14 + (index % 6) * 2;
+      const driftX = 14 + (index % 7) * 5;
+      const driftY = -10 - (index % 5) * 4;
+
+      return `
+        <article class="active-user-bubble" title="${safeName}" style="left:${left}%;top:${top}%;--delay:${delay}s;--duration:${duration}s;--drift-x:${driftX}px;--drift-y:${driftY}px;">
+          ${hasPhoto
+            ? `<img src="${safePhotoUrl}" alt="Foto de ${safeName}" loading="lazy" />`
+            : `<span class="active-user-letter" style="background:${color};">${letter}</span>`}
+        </article>
+      `;
+    })
+    .join("");
+
+  lastActiveUsersSignature = signature;
+}
+
+function startActiveUsersPolling() {
+  const refresh = () => {
+    apiGetActiveUsers()
+      .then((users) => {
+        renderActiveUserBubbles(users);
+      })
+      .catch(() => {
+        renderActiveUserBubbles([]);
+      });
+  };
+
+  refresh();
+  window.setInterval(refresh, 7000);
+}
+
 function setCurrentUser(user) {
   sessionState.currentUser = user || null;
   const profileHub = document.getElementById("profile-hub");
@@ -433,6 +556,58 @@ function setCurrentUser(user) {
 
 function getAlbumById(albumId) {
   return appState.albums.find((album) => String(album.id) === String(albumId)) || null;
+}
+
+function getAlbumDateValue(album) {
+  const parsed = Date.parse(String(album?.dateAdded || ""));
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getAlbumScoreValue(album) {
+  const parsed = Number(album?.score);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getSortedAlbums() {
+  const direction = appState.sortDirection === "asc" ? 1 : -1;
+  const sortBy = appState.sortBy;
+
+  return appState.albums
+    .slice()
+    .sort((a, b) => {
+      if (sortBy === "artist") {
+        const value = String(a.artist || "").localeCompare(String(b.artist || ""), undefined, { sensitivity: "base" });
+        if (value !== 0) {
+          return value * direction;
+        }
+      } else if (sortBy === "title") {
+        const value = String(a.title || "").localeCompare(String(b.title || ""), undefined, { sensitivity: "base" });
+        if (value !== 0) {
+          return value * direction;
+        }
+      } else if (sortBy === "score") {
+        const value = getAlbumScoreValue(a) - getAlbumScoreValue(b);
+        if (value !== 0) {
+          return value * direction;
+        }
+      } else {
+        const value = getAlbumDateValue(a) - getAlbumDateValue(b);
+        if (value !== 0) {
+          return value * direction;
+        }
+      }
+
+      const artistTieBreak = String(a.artist || "").localeCompare(String(b.artist || ""), undefined, { sensitivity: "base" });
+      if (artistTieBreak !== 0) {
+        return artistTieBreak;
+      }
+
+      return String(a.title || "").localeCompare(String(b.title || ""), undefined, { sensitivity: "base" });
+    });
+}
+
+function sortAlbumsInState() {
+  appState.albums = getSortedAlbums();
 }
 
 function findAlbumByNowPlaying(nowPlaying) {
@@ -751,6 +926,44 @@ function renderAlbums() {
     .join("");
 }
 
+function updateSortDirectionButtonLabel() {
+  const directionButton = document.getElementById("album-sort-direction");
+  if (!directionButton) {
+    return;
+  }
+
+  directionButton.textContent = appState.sortDirection === "asc" ? "Ascendente" : "Descendente";
+}
+
+function setupAlbumSortControls() {
+  const sortBySelect = document.getElementById("album-sort-by");
+  const directionButton = document.getElementById("album-sort-direction");
+
+  if (!sortBySelect || !directionButton) {
+    return;
+  }
+
+  sortBySelect.value = appState.sortBy;
+  updateSortDirectionButtonLabel();
+
+  const applySortBySelection = () => {
+    const selected = String(sortBySelect.value || "date");
+    appState.sortBy = ["date", "score", "artist", "title"].includes(selected) ? selected : "date";
+    sortAlbumsInState();
+    renderAlbums();
+  };
+
+  sortBySelect.addEventListener("change", applySortBySelection);
+  sortBySelect.addEventListener("input", applySortBySelection);
+
+  directionButton.addEventListener("click", () => {
+    appState.sortDirection = appState.sortDirection === "asc" ? "desc" : "asc";
+    updateSortDirectionButtonLabel();
+    sortAlbumsInState();
+    renderAlbums();
+  });
+}
+
 function setupAlbumInteractions() {
   const container = document.getElementById("albums");
 
@@ -814,6 +1027,13 @@ function setupAlbumInteractions() {
     const albumId = trigger.dataset.albumId;
     appState.expandedAlbumId = appState.expandedAlbumId === albumId ? null : albumId;
     renderAlbums();
+
+    if (appState.expandedAlbumId) {
+      const expandedCard = container.querySelector(".album-card.expanded");
+      if (expandedCard && typeof expandedCard.scrollIntoView === "function") {
+        expandedCard.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      }
+    }
   });
 }
 
@@ -872,6 +1092,8 @@ async function loadAlbums() {
       title: item.title || "Untitled release",
       artist: item.artist || "Unknown artist",
       year: item.year || "Unknown year",
+      dateAdded: item.dateAdded || "",
+      score: Number(item.rating || 0),
       genre: item.rawText || "Discogs collection item",
       notes: tracks.length ? `${tracks.length} canciones` : `Release page ${item.sourcePage || "?"}`,
       releaseUrl: item.releaseUrl || "",
@@ -1824,15 +2046,18 @@ async function bootSession() {
   }
 
   setupAlbumInteractions();
+  setupAlbumSortControls();
   setupNowPlayingInteractions();
   setupBubbleInteractions();
   setupAuthInteractions();
   startNowPlayingPolling();
+  startActiveUsersPolling();
   void bootSession();
 
   loadAlbums()
     .then((albumDatabase) => {
       appState.albums = Array.isArray(albumDatabase) ? albumDatabase : (albumDatabase.albums || []);
+      sortAlbumsInState();
       renderAlbums();
     })
     .catch(() => {

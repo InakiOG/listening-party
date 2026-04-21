@@ -8,23 +8,28 @@
       :root {
         color-scheme: dark;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --layout-top-space: 5.5rem;
+        --layout-bottom-space: 0.65rem;
       }
 
       html,
       body {
         width: 100%;
-        height: 100%;
+        min-height: 100%;
         overflow: hidden;
       }
 
       body {
         margin: 0;
-        min-height: 100vh;
+        height: 100dvh;
+        min-height: 100dvh;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        padding-top: 5.5rem;
+        box-sizing: border-box;
+        padding-top: var(--layout-top-space);
+        padding-bottom: var(--layout-bottom-space);
         background: #0f172a;
         color: #e2e8f0;
       }
@@ -33,8 +38,9 @@
         position: relative;
         z-index: 10;
         width: min(96vw, 420px);
-        margin-top: 0.35rem;
-        max-height: calc(100vh - 6.25rem);
+        height: calc(100dvh - var(--layout-top-space) - var(--layout-bottom-space));
+        max-height: calc(100dvh - var(--layout-top-space) - var(--layout-bottom-space));
+        flex: 0 0 auto;
         overflow: auto;
         padding: clamp(0.75rem, 3vw, 2rem);
         border-radius: 1rem;
@@ -543,6 +549,56 @@
         z-index: 60;
       }
 
+      .active-users-layer {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 55;
+      }
+
+      .active-user-bubble {
+        position: absolute;
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        border: 2px solid rgba(226, 232, 240, 0.82);
+        overflow: hidden;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.45);
+        animation: floatUserBubble var(--duration, 18s) ease-in-out var(--delay, 0s) infinite alternate;
+      }
+
+      .active-user-bubble img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .active-user-letter {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f8fafc;
+        font-size: 1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      @keyframes floatUserBubble {
+        0% {
+          transform: translate(0, 0);
+        }
+        50% {
+          transform: translate(calc(var(--drift-x, 22px) * 0.6), calc(var(--drift-y, -18px) * 0.6));
+        }
+        100% {
+          transform: translate(var(--drift-x, 22px), var(--drift-y, -18px));
+        }
+      }
+
       .review-bubble {
         position: absolute;
         max-width: min(45vw, 220px);
@@ -694,6 +750,35 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0.4rem;
         text-align: left;
+      }
+
+      .album-sort-controls {
+        margin-top: 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        font-size: 0.76rem;
+      }
+
+      .album-sort-controls label {
+        color: #94a3b8;
+      }
+
+      .album-sort-controls select,
+      .album-sort-controls button {
+        border: 1px solid #334155;
+        border-radius: 0.45rem;
+        background: #0b1220;
+        color: #e2e8f0;
+        padding: 0.28rem 0.45rem;
+        font-size: 0.76rem;
+      }
+
+      .album-sort-controls button {
+        cursor: pointer;
+        min-width: 110px;
       }
 
       .album-card {
@@ -1020,6 +1105,7 @@
         </div>
       </div>
     </section>
+    <section id="active-users-layer" class="active-users-layer" aria-hidden="true"></section>
     <section id="bubble-layer" class="bubble-layer" aria-hidden="true"></section>
 
     <section id="profile-hub" class="profile-hub" hidden>
@@ -1040,6 +1126,16 @@
         <p class="guest-label">invitados</p>
         <h1 id="title">Listening Party</h1>
         <p id="message">Bienvenido a la pagina principal.</p>
+        <div class="album-sort-controls" aria-label="Orden de albumes">
+          <label for="album-sort-by">Ordenar por</label>
+          <select id="album-sort-by" aria-label="Campo de orden">
+            <option value="date">Fecha</option>
+            <option value="score">Score</option>
+            <option value="artist">Artista</option>
+            <option value="title">Titulo</option>
+          </select>
+          <button id="album-sort-direction" type="button" aria-label="Cambiar direccion de orden">Descendente</button>
+        </div>
         <section id="albums" class="albums" aria-live="polite"></section>
       </section>
       <section id="reviews-view" class="reviews-view" hidden>
@@ -1050,6 +1146,6 @@
         <ul id="my-reviews-list" class="my-reviews-list"></ul>
       </section>
     </main>
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260421-3"></script>
   </body>
 </html>

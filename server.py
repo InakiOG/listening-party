@@ -394,6 +394,33 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             })
             return
 
+        if parsed.path == "/api/users/active":
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+
+                active_users = []
+                for user_key, credentials_entry in credentials_store.items():
+                    token = read_session_token(credentials_entry)
+                    if not token:
+                        continue
+
+                    profile = sanitize_user_profile(users_store.get(user_key))
+                    if not profile:
+                        continue
+
+                    active_users.append(profile)
+
+                active_users.sort(key=lambda user: str(user.get("name", "")).lower())
+
+            self._send_json({
+                "users": active_users
+            })
+            return
+
         if parsed.path == "/api/reviews":
             params = parse_qs(parsed.query)
             song_key = (params.get("songKey", [""])[0] or "").strip()
