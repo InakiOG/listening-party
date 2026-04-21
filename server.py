@@ -1,19 +1,28 @@
 import json
 import argparse
+import secrets
 import threading
 from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from discogs_scraper import update_collection_cache
 
 ROOT = Path(__file__).resolve().parent
 REVIEWS_DB_PATH = ROOT / "reviews-db.json"
 USERS_DB_PATH = ROOT / "users-db.json"
+CREDENTIALS_DB_PATH = ROOT / "user-credentials.local.json"
 NOW_PLAYING_PATH = ROOT / "now-playing.json"
 REVIEWS_LOCK = threading.Lock()
+ADMIN_USER_KEY = "iñaki"
+ADMIN_DEFAULT_NAME = "Iñaki"
+ADMIN_DEFAULT_PASSWORD = "14agosto"
+ADMIN_ACCOUNT_NAME = "administrador"
+SESSION_COOKIE_NAME = "listening_party_session"
+SESSION_USER_COOKIE_NAME = "listening_party_user"
+SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 10
 
 
 def ensure_reviews_db():
@@ -29,6 +38,14 @@ def ensure_users_db():
         return
 
     with USERS_DB_PATH.open("w", encoding="utf-8") as handle:
+        json.dump({}, handle, indent=2)
+
+
+def ensure_credentials_db():
+    if CREDENTIALS_DB_PATH.exists():
+        return
+
+    with CREDENTIALS_DB_PATH.open("w", encoding="utf-8") as handle:
         json.dump({}, handle, indent=2)
 
 
@@ -59,6 +76,11 @@ def read_users_store():
     return read_json_dict_or_reset(USERS_DB_PATH)
 
 
+def read_credentials_store():
+    ensure_credentials_db()
+    return read_json_dict_or_reset(CREDENTIALS_DB_PATH)
+
+
 def write_reviews_store(store):
     with REVIEWS_DB_PATH.open("w", encoding="utf-8") as handle:
         json.dump(store, handle, indent=2)
@@ -66,6 +88,11 @@ def write_reviews_store(store):
 
 def write_users_store(store):
     with USERS_DB_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(store, handle, indent=2)
+
+
+def write_credentials_store(store):
+    with CREDENTIALS_DB_PATH.open("w", encoding="utf-8") as handle:
         json.dump(store, handle, indent=2)
 
 
@@ -80,8 +107,141 @@ def sanitize_user_profile(profile):
     return {
         "name": str(profile.get("name", "")).strip(),
         "photoDataUrl": str(profile.get("photoDataUrl", "")).strip(),
-        "createdAt": str(profile.get("createdAt", "")).strip()
+        "createdAt": str(profile.get("createdAt", "")).strip(),
+        "accountName": str(profile.get("accountName", "usuario")).strip() or "usuario"
     }
+
+
+def read_plaintext_password(credentials_entry):
+    if not isinstance(credentials_entry, dict):
+        return ""
+
+    return str(credentials_entry.get("password", "")).strip()
+
+
+def read_session_token(credentials_entry):
+    if not isinstance(credentials_entry, dict):
+        return ""
+
+    return str(credentials_entry.get("sessionToken", "")).strip()
+
+
+def build_session_cookie(token):
+    return (
+        f"{SESSION_COOKIE_NAME}={token}; Path=/; Max-Age={SESSION_COOKIE_MAX_AGE}; "
+        "HttpOnly; SameSite=Lax"
+    )
+
+
+def build_clear_session_cookie():
+    return f"{SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
+
+
+def build_user_cookie(user_key):
+    encoded_user_key = quote(str(user_key or ""), safe="")
+    return f"{SESSION_USER_COOKIE_NAME}={encoded_user_key}; Path=/; Max-Age={SESSION_COOKIE_MAX_AGE}; SameSite=Lax"
+
+
+def build_clear_user_cookie():
+    return f"{SESSION_USER_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax"
+
+
+def parse_cookie_header(cookie_header):
+    values = {}
+
+    for part in str(cookie_header or "").split(";"):
+        key, sep, value = part.strip().partition("=")
+        if not sep:
+            continue
+        values[key.strip()] = value.strip()
+
+    return values
+
+
+def create_session_token():
+    return secrets.token_urlsafe(48)
+
+
+def find_user_key_by_session_token(credentials_store, session_token):
+    if not session_token:
+        return ""
+
+    for user_key, entry in credentials_store.items():
+        if read_session_token(entry) == session_token:
+            return str(user_key)
+
+    return ""
+
+
+def reconcile_auth_stores(users_store, credentials_store):
+    normalized_users = {}
+    normalized_credentials = {}
+
+    for user_key, raw_profile in users_store.items():
+        if not isinstance(raw_profile, dict):
+            continue
+
+        password = read_plaintext_password(credentials_store.get(user_key))
+        if not password:
+            continue
+
+        sanitized_profile = sanitize_user_profile(raw_profile)
+        if not sanitized_profile:
+            continue
+
+        profile_name = sanitized_profile.get("name") or str(user_key).strip()
+        profile_created_at = sanitized_profile.get("createdAt") or datetime.now(timezone.utc).isoformat()
+
+        normalized_users[user_key] = {
+            "name": profile_name,
+            "photoDataUrl": sanitized_profile.get("photoDataUrl", ""),
+            "createdAt": profile_created_at,
+            "accountName": "usuario"
+        }
+
+        raw_credentials = credentials_store.get(user_key) if isinstance(credentials_store.get(user_key), dict) else {}
+        normalized_credentials[user_key] = {
+            "name": str(raw_credentials.get("name", profile_name)).strip() or profile_name,
+            "password": password,
+            "createdAt": str(raw_credentials.get("createdAt", profile_created_at)).strip() or profile_created_at,
+            "sessionToken": str(raw_credentials.get("sessionToken", "")).strip(),
+            "sessionCreatedAt": str(raw_credentials.get("sessionCreatedAt", "")).strip()
+        }
+
+    admin_profile = normalized_users.get(ADMIN_USER_KEY)
+    if not isinstance(admin_profile, dict):
+        admin_profile = {}
+
+    admin_credentials = normalized_credentials.get(ADMIN_USER_KEY)
+    if not isinstance(admin_credentials, dict):
+        admin_credentials = {}
+
+    admin_name = str(admin_profile.get("name", ADMIN_DEFAULT_NAME)).strip() or ADMIN_DEFAULT_NAME
+    admin_photo = str(admin_profile.get("photoDataUrl", "")).strip()
+    admin_created_at = str(admin_profile.get("createdAt", "")).strip() or datetime.now(timezone.utc).isoformat()
+
+    normalized_users[ADMIN_USER_KEY] = {
+        "name": admin_name,
+        "photoDataUrl": admin_photo,
+        "createdAt": admin_created_at,
+        "accountName": ADMIN_ACCOUNT_NAME
+    }
+    normalized_credentials[ADMIN_USER_KEY] = {
+        "name": str(admin_credentials.get("name", admin_name)).strip() or admin_name,
+        "password": ADMIN_DEFAULT_PASSWORD,
+        "createdAt": str(admin_credentials.get("createdAt", admin_created_at)).strip() or admin_created_at,
+        "sessionToken": str(admin_credentials.get("sessionToken", "")).strip(),
+        "sessionCreatedAt": str(admin_credentials.get("sessionCreatedAt", "")).strip()
+    }
+
+    for user_key, profile in normalized_users.items():
+        if user_key == ADMIN_USER_KEY:
+            profile["accountName"] = ADMIN_ACCOUNT_NAME
+            continue
+
+        profile["accountName"] = "usuario"
+
+    return normalized_users, normalized_credentials
 
 
 def build_user_reviews(store, user_name):
@@ -137,12 +297,19 @@ def clear_now_playing():
         NOW_PLAYING_PATH.unlink()
 
 
+def write_now_playing_payload(payload):
+    with NOW_PLAYING_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+
+
 class ListeningPartyHandler(SimpleHTTPRequestHandler):
-    def _send_json(self, payload, status_code=200):
+    def _send_json(self, payload, status_code=200, extra_headers=None):
         response = json.dumps(payload).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(response)))
+        for key, value in (extra_headers or []):
+            self.send_header(key, value)
         self.end_headers()
         self.wfile.write(response)
 
@@ -162,6 +329,51 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 "exists": bool(user_profile),
                 "user": user_profile
             })
+            return
+
+        if parsed.path == "/api/users/me":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+            user_cookie_key = unquote(cookies.get(SESSION_USER_COOKIE_NAME, "")).strip()
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                user_key = find_user_key_by_session_token(credentials_store, session_token)
+                if not user_key and user_cookie_key:
+                    fallback_key = normalize_user_key(user_cookie_key)
+                    if fallback_key in users_store:
+                        user_key = fallback_key
+
+                user_profile = sanitize_user_profile(users_store.get(user_key)) if user_key else None
+
+                restored_headers = []
+                if user_profile and user_key and not session_token:
+                    restored_token = create_session_token()
+                    credentials_entry = credentials_store.get(user_key)
+                    if not isinstance(credentials_entry, dict):
+                        credentials_entry = {}
+                    credentials_entry["sessionToken"] = restored_token
+                    credentials_entry["sessionCreatedAt"] = datetime.now(timezone.utc).isoformat()
+                    credentials_store[user_key] = credentials_entry
+                    write_credentials_store(credentials_store)
+                    restored_headers = [
+                        ("Set-Cookie", build_session_cookie(restored_token)),
+                        ("Set-Cookie", build_user_cookie(user_key))
+                    ]
+                elif user_profile and user_key:
+                    restored_headers = [("Set-Cookie", build_user_cookie(user_key))]
+
+            self._send_json(
+                {
+                    "exists": bool(user_profile),
+                    "user": user_profile
+                },
+                extra_headers=restored_headers
+            )
             return
 
         if parsed.path == "/api/users/reviews":
@@ -201,6 +413,113 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
 
+        if parsed.path == "/api/now-playing/clear":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            actor_name = str(payload.get("actorName", "")).strip()
+
+            if not actor_name:
+                self._send_json({"error": "actorName is required"}, status_code=400)
+                return
+
+            actor_key = normalize_user_key(actor_name)
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                actor_profile = sanitize_user_profile(users_store.get(actor_key))
+
+                if not actor_profile:
+                    self._send_json({"error": "actor user not found"}, status_code=404)
+                    return
+
+                if actor_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                    self._send_json({"error": "only administrador can clear now playing"}, status_code=403)
+                    return
+
+                clear_now_playing()
+
+            self._send_json({"ok": True})
+            return
+
+        if parsed.path == "/api/now-playing":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            actor_name = str(payload.get("actorName", "")).strip()
+            album_title = str(payload.get("albumTitle", "")).strip()
+            album_artist = str(payload.get("albumArtist", "")).strip()
+            song_title = str(payload.get("songTitle", "")).strip()
+            cover_url = str(payload.get("coverUrl", "")).strip()
+            review_scope = str(payload.get("reviewScope", "song")).strip().lower()
+            review_scope = "album" if review_scope == "album" else "song"
+
+            if not actor_name:
+                self._send_json({"error": "actorName is required"}, status_code=400)
+                return
+
+            if not album_title:
+                self._send_json({"error": "albumTitle is required"}, status_code=400)
+                return
+
+            if not cover_url:
+                self._send_json({"error": "coverUrl is required"}, status_code=400)
+                return
+
+            if review_scope == "song" and not song_title:
+                self._send_json({"error": "songTitle is required for song scope"}, status_code=400)
+                return
+
+            actor_key = normalize_user_key(actor_name)
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                actor_profile = sanitize_user_profile(users_store.get(actor_key))
+
+                if not actor_profile:
+                    self._send_json({"error": "actor user not found"}, status_code=404)
+                    return
+
+                if actor_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                    self._send_json({"error": "only administrador can control now playing"}, status_code=403)
+                    return
+
+                now_playing_payload = {
+                    "albumNumber": 0,
+                    "songNumber": 0,
+                    "albumTitle": album_title,
+                    "albumArtist": album_artist,
+                    "songTitle": song_title,
+                    "reviewScope": review_scope,
+                    "coverUrl": cover_url,
+                    "updatedAt": datetime.now(timezone.utc).isoformat(),
+                    "updatedBy": actor_profile.get("name", actor_name)
+                }
+                write_now_playing_payload(now_playing_payload)
+
+            self._send_json({"nowPlaying": now_playing_payload})
+            return
+
         if parsed.path == "/api/users/register":
             content_length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(content_length) if content_length > 0 else b""
@@ -212,33 +531,55 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 return
 
             name = str(payload.get("name", "")).strip()
+            password = str(payload.get("password", "")).strip()
             photo_data_url = str(payload.get("photoDataUrl", "")).strip()
 
             if not name:
                 self._send_json({"error": "name is required"}, status_code=400)
                 return
 
+            if not password:
+                self._send_json({"error": "password is required"}, status_code=400)
+                return
+
             user_key = normalize_user_key(name)
 
             with REVIEWS_LOCK:
                 users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
 
-                if user_key in users_store:
+                if user_key in users_store or user_key in credentials_store:
                     self._send_json({"error": "name already exists"}, status_code=409)
                     return
 
                 profile = {
                     "name": name,
                     "photoDataUrl": photo_data_url,
-                    "createdAt": datetime.now(timezone.utc).isoformat()
+                    "createdAt": datetime.now(timezone.utc).isoformat(),
+                    "accountName": "usuario"
                 }
 
                 users_store[user_key] = profile
+                session_token = create_session_token()
+                credentials_store[user_key] = {
+                    "name": name,
+                    "password": password,
+                    "createdAt": datetime.now(timezone.utc).isoformat(),
+                    "sessionToken": session_token,
+                    "sessionCreatedAt": datetime.now(timezone.utc).isoformat()
+                }
                 write_users_store(users_store)
+                write_credentials_store(credentials_store)
 
             self._send_json({
                 "user": sanitize_user_profile(profile)
-            })
+            }, extra_headers=[
+                ("Set-Cookie", build_session_cookie(session_token)),
+                ("Set-Cookie", build_user_cookie(user_key))
+            ])
             return
 
         if parsed.path == "/api/users/login":
@@ -252,22 +593,83 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 return
 
             name = str(payload.get("name", "")).strip()
+            password = str(payload.get("password", "")).strip()
 
             if not name:
                 self._send_json({"error": "name is required"}, status_code=400)
+                return
+
+            if not password:
+                self._send_json({"error": "password is required"}, status_code=400)
                 return
 
             user_key = normalize_user_key(name)
 
             with REVIEWS_LOCK:
                 users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
                 user_profile = sanitize_user_profile(users_store.get(user_key))
+                stored_password = read_plaintext_password(credentials_store.get(user_key))
 
             if not user_profile:
                 self._send_json({"error": "user not found"}, status_code=404)
                 return
 
-            self._send_json({"user": user_profile})
+            if not stored_password:
+                self._send_json({"error": "password not set for user"}, status_code=403)
+                return
+
+            if stored_password != password:
+                self._send_json({"error": "invalid password"}, status_code=401)
+                return
+
+            session_token = create_session_token()
+
+            with REVIEWS_LOCK:
+                credentials_store = read_credentials_store()
+                credentials_entry = credentials_store.get(user_key)
+                if not isinstance(credentials_entry, dict):
+                    credentials_entry = {}
+                credentials_entry["sessionToken"] = session_token
+                credentials_entry["sessionCreatedAt"] = datetime.now(timezone.utc).isoformat()
+                credentials_store[user_key] = credentials_entry
+                write_credentials_store(credentials_store)
+
+            self._send_json(
+                {"user": user_profile},
+                extra_headers=[
+                    ("Set-Cookie", build_session_cookie(session_token)),
+                    ("Set-Cookie", build_user_cookie(user_key))
+                ]
+            )
+            return
+
+        if parsed.path == "/api/users/logout":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+
+            with REVIEWS_LOCK:
+                credentials_store = read_credentials_store()
+                user_key = find_user_key_by_session_token(credentials_store, session_token)
+                if user_key:
+                    entry = credentials_store.get(user_key)
+                    if not isinstance(entry, dict):
+                        entry = {}
+                    entry["sessionToken"] = ""
+                    entry["sessionCreatedAt"] = ""
+                    credentials_store[user_key] = entry
+                    write_credentials_store(credentials_store)
+
+            self._send_json(
+                {"ok": True},
+                extra_headers=[
+                    ("Set-Cookie", build_clear_session_cookie()),
+                    ("Set-Cookie", build_clear_user_cookie())
+                ]
+            )
             return
 
         if parsed.path == "/api/users/photo":
@@ -295,6 +697,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
             with REVIEWS_LOCK:
                 users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
                 profile = users_store.get(user_key)
 
                 if not isinstance(profile, dict):
@@ -391,6 +797,14 @@ def run_server(port=8000, refresh_discogs=False):
 
     ensure_reviews_db()
     ensure_users_db()
+    ensure_credentials_db()
+
+    users_store = read_users_store()
+    credentials_store = read_credentials_store()
+    users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+    write_users_store(users_store)
+    write_credentials_store(credentials_store)
+
     handler = partial(ListeningPartyHandler, directory=str(ROOT))
     server = ThreadingHTTPServer(("", port), handler)
     print(f"Listening Party server running on http://0.0.0.0:{port}")

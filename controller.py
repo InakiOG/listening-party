@@ -690,61 +690,12 @@ def main(allow_online_fetch=False, refresh_discogs=False):
     else:
         print("Using local discogs-collection.json without online fetch.")
 
-    artist_names, artists = load_artists_with_albums()
-
-    if not artist_names:
-        print("No artists found in discogs-collection.json")
-        return
-
-    print("Listening Party Controller")
-    print("Select an artist, then an album, then a song. The webpage will update automatically.")
-
-    while True:
-        artist_choice = choose_artist(artist_names)
-        if artist_choice is None:
-            print("Goodbye.")
-            return
-
-        if artist_choice == 0:
-            result = choose_temporary_album_and_song(allow_online_fetch=allow_online_fetch)
-            if result == "quit":
-                print("Goodbye.")
-                return
-            continue
-
-        artist_name = artist_names[artist_choice - 1]
-        albums = artists.get(artist_name, [])
-        album_choice = choose_album_for_artist(artist_name, albums)
-
-        if album_choice == "quit":
-            print("Goodbye.")
-            return
-
-        if album_choice == "back" or album_choice is None:
-            continue
-
-        album = albums[album_choice - 1]
-        song_choice = choose_song(album, allow_online_fetch=allow_online_fetch)
-
-        if song_choice == "quit":
-            print("Goodbye.")
-            return
-
-        if song_choice == "album":
-            write_now_playing(album, "", album_choice, 0, "album")
-            print(f"\nCurrently selected for album review: {album.get('title', 'Unknown Album')}")
-            continue
-
-        if song_choice == "back" or song_choice is None:
-            continue
-
-        song_title = album["tracks"][song_choice - 1]
-        write_now_playing(album, song_title, album_choice, song_choice, "song")
-        print(f"\nCurrently playing: {album.get('title', 'Unknown Album')} - {song_title}")
+    print("Terminal selection for now-playing is disabled.")
+    print("Use the administrador account in the web app to start album/song currently listening.")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Listening Party terminal controller")
+    parser = argparse.ArgumentParser(description="Listening Party maintenance utility")
     parser.add_argument(
         "--refresh-discogs",
         action="store_true",
@@ -753,7 +704,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--allow-online-fetch",
         action="store_true",
-        help="Allow Discogs/Spotify online fetch for missing songs without startup refresh"
+        help="Allow Discogs/Spotify online fetch for maintenance operations"
     )
     parser.add_argument(
         "--backfill-all-tracks",

@@ -35,38 +35,14 @@ python server.py --port 8000
 - --refresh-discogs refreshes discogs-collection.json at startup.
 - --port chooses the HTTP server port.
 
-## Terminal controller
+## Current listening control (administrador)
 
-In a second terminal, run:
+The terminal selection flow was removed.
 
-```bash
-python controller.py
-```
-
-It will:
-- Print artist names with numbers.
-- Let you choose an album and then a song.
-- Update now-playing for the webpage.
-
-### Controller flags
-
-```bash
-python controller.py --allow-online-fetch
-python controller.py --refresh-discogs
-python controller.py --backfill-all-tracks
-```
-
-- Without flags, the controller uses local cache only.
-- --allow-online-fetch enables online Discogs/Spotify fallback for missing tracks.
-- --refresh-discogs refreshes collection cache first, then automatically fills any albums that still have missing tracks.
-- --backfill-all-tracks runs a one-shot full collection pass to fill missing tracks, saves discogs-collection.json, and exits.
-
-### Temporary album mode
-
-In artist selection, choose:
-- 0. Add temporary album/song
-
-This allows entering artist and album names manually, fetching image and tracks, and saving as a non-owned temporary entry in discogs-collection.json.
+Now, only the `administrador` account can control current listening directly from the web UI:
+- Each expanded album shows an extra button: `Escuchar album`.
+- Clicking it creates a currently listening entry for album review.
+- Clicking a song asks for confirmation to start currently listening for that specific song.
 
 ## Start both in one command
 
@@ -80,19 +56,21 @@ Script parameters:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -RefreshServerDiscogs
-powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -RefreshControllerDiscogs
-powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -AllowControllerOnlineFetch
-powershell -ExecutionPolicy Bypass -File .\start-listening-party.ps1 -BackfillControllerTracks
 ```
 
 - -RefreshServerDiscogs passes --refresh-discogs to server.py.
-- -RefreshControllerDiscogs passes --refresh-discogs to controller.py.
-- -AllowControllerOnlineFetch passes --allow-online-fetch to controller.py.
-- -BackfillControllerTracks passes --backfill-all-tracks to controller.py.
 
-Notes:
-- If you run -RefreshControllerDiscogs, controller.py already performs automatic track filling after refresh.
-- Use -BackfillControllerTracks when you want only the one-shot fill operation.
+### Optional maintenance utility
+
+`controller.py` remains available only for maintenance tasks:
+
+```bash
+python controller.py --refresh-discogs
+python controller.py --backfill-all-tracks
+python controller.py --allow-online-fetch --backfill-all-tracks
+```
+
+- It no longer controls now-playing.
 
 ## Reviews database
 
@@ -102,13 +80,22 @@ Reviews are stored in:
 Users are stored in:
 - users-db.json
 
+Passwords are stored in:
+- user-credentials.local.json (plaintext, local-only, gitignored)
+
+Login session is stored in:
+- Persistent HTTP cookie (auto-login, no repeated manual login required)
+
 Local API endpoints include:
 - GET /api/reviews?songKey=<album-and-song-key>
 - POST /api/reviews
+- POST /api/now-playing (administrador only)
 - GET /api/users?name=<name>
+- GET /api/users/me (current user from cookie session)
 - GET /api/users/reviews?name=<name>
-- POST /api/users/register
-- POST /api/users/login
+- POST /api/users/register (requires name + password)
+- POST /api/users/login (requires name + password)
+- POST /api/users/logout
 - POST /api/users/photo
 
 ## Discogs collection cache

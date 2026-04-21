@@ -66,15 +66,116 @@
         padding: 0.5rem;
       }
 
+      .now-playing-controls {
+        position: absolute;
+        top: 0.45rem;
+        right: 0.45rem;
+        z-index: 30;
+      }
+
+      .now-playing-stop-button {
+        border: 1px solid #ef4444;
+        background: #7f1d1d;
+        color: #fee2e2;
+        border-radius: 0.4rem;
+        padding: 0.2rem 0.45rem;
+        font-size: 0.68rem;
+        cursor: pointer;
+      }
+
       .now-playing[hidden] {
         display: none;
       }
 
+      .now-playing-artwork {
+        position: relative;
+        width: 76px;
+        height: 46px;
+        flex: 0 0 76px;
+      }
+
       .now-playing img {
+        position: relative;
+        z-index: 3;
         width: 46px;
         height: 46px;
         border-radius: 0.4rem;
         object-fit: cover;
+      }
+
+      .now-playing-disc {
+        --disc-color: #0b0b0b;
+        position: absolute;
+        top: 50%;
+        right: 0;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        transform: translateY(-50%);
+        background:
+          radial-gradient(circle at center, #0f172a 0 8%, #d4d4d8 8.5% 10.5%, transparent 11%),
+          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0 2px, rgba(0, 0, 0, 0.08) 2px 4px),
+          radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.3), transparent 45%),
+          var(--disc-color);
+        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.7), 0 5px 14px rgba(0, 0, 0, 0.45);
+        z-index: 1;
+        animation: spinNowPlayingDisc var(--np-spin-primary, 2.2s) linear infinite;
+      }
+
+      .now-playing-disc.clear-vinyl {
+        background:
+          radial-gradient(circle at center, #f8fafc 0 8.2%, #cbd5e1 8.5% 10.2%, transparent 10.6%),
+          radial-gradient(circle at center, transparent 0 74%, rgba(255, 255, 255, 0.78) 74.4% 76.2%, transparent 76.6%),
+          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.28) 0 2px, rgba(203, 213, 225, 0.18) 2px 4px),
+          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.86), transparent 47%),
+          var(--disc-color);
+      }
+
+      .now-playing-disc.cd-disc {
+        background:
+          radial-gradient(circle at center, transparent 0 8%, rgba(220, 225, 235, 0.95) 8.5% 11.5%, transparent 12%),
+          radial-gradient(circle at center, transparent 0 42%, rgba(148, 163, 184, 0.22) 42.5% 43.5%, transparent 44%),
+          conic-gradient(
+            from 10deg,
+            rgba(255, 170, 170, 0.45),
+            rgba(255, 240, 160, 0.45),
+            rgba(170, 255, 215, 0.45),
+            rgba(170, 210, 255, 0.45),
+            rgba(220, 170, 255, 0.45),
+            rgba(255, 170, 170, 0.45)
+          ),
+          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.52), transparent 46%),
+          linear-gradient(145deg, #d8e1ea, #a8b4c3 35%, #e6edf6 65%, #95a1b0);
+      }
+
+      .now-playing-disc.secondary {
+        right: -8px;
+        transform: translateY(-50%) scale(0.92);
+        z-index: 0;
+        opacity: 0;
+        animation: spinNowPlayingDiscSecondary var(--np-spin-secondary, 2.9s) linear infinite reverse;
+      }
+
+      .now-playing-disc.secondary.visible {
+        opacity: 0.96;
+      }
+
+      @keyframes spinNowPlayingDisc {
+        from {
+          transform: translateY(-50%) rotate(0deg);
+        }
+        to {
+          transform: translateY(-50%) rotate(360deg);
+        }
+      }
+
+      @keyframes spinNowPlayingDiscSecondary {
+        from {
+          transform: translateY(-50%) scale(0.92) rotate(0deg);
+        }
+        to {
+          transform: translateY(-50%) scale(0.92) rotate(360deg);
+        }
       }
 
       .now-playing-toggle {
@@ -194,12 +295,23 @@
         display: flex;
         align-items: center;
         gap: 0.45rem;
+        flex-wrap: wrap;
       }
 
       .save-review-button {
         border: 1px solid #0ea5e9;
         background: #0284c7;
         color: #f8fafc;
+        border-radius: 0.5rem;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+
+      .open-album-button {
+        border: 1px solid #38bdf8;
+        background: #075985;
+        color: #e0f2fe;
         border-radius: 0.5rem;
         padding: 0.35rem 0.6rem;
         font-size: 0.78rem;
@@ -255,6 +367,7 @@
       }
 
       .auth-card input[type="text"],
+      .auth-card input[type="password"],
       .auth-card input[type="file"] {
         width: 100%;
         box-sizing: border-box;
@@ -584,6 +697,7 @@
       }
 
       .album-card {
+        position: relative;
         border-radius: 0.75rem;
         overflow: hidden;
         background: #0f172a;
@@ -597,6 +711,7 @@
         box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.18);
         transform: scale(1.02);
         grid-column: 1 / -1;
+        overflow: visible;
       }
 
       .cover-button {
@@ -606,6 +721,14 @@
         background: transparent;
         display: block;
         cursor: pointer;
+        position: relative;
+        overflow: visible;
+        isolation: isolate;
+      }
+
+      .album-card.expanded .cover-button {
+        width: 70%;
+        margin-right: auto;
       }
 
       .cover-button img {
@@ -613,10 +736,130 @@
         aspect-ratio: 1 / 1;
         display: block;
         object-fit: cover;
+        position: relative;
+        z-index: 1;
       }
 
       .cover-button img.not-owned {
         filter: grayscale(1) brightness(0.72);
+      }
+
+      .vinyl-overlay {
+        position: absolute;
+        top: 50%;
+        right: -30%;
+        width: 92%;
+        aspect-ratio: 1 / 1;
+        display: block;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 220ms ease;
+        z-index: 0;
+        transform: translateY(-50%);
+      }
+
+      .vinyl-overlay.cd-overlay {
+        right: -25%;
+        width: 88%;
+      }
+
+      .vinyl-disc {
+        --vinyl-color: #0b0b0b;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at center, #0f172a 0 8%, #d4d4d8 8.4% 10.5%, transparent 11%),
+          radial-gradient(circle at center, transparent 0 74%, rgba(255, 255, 255, 0.35) 74.5% 76%, transparent 76.5%),
+          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0 2px, rgba(0, 0, 0, 0.08) 2px 4px),
+          radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.26), transparent 45%),
+          var(--vinyl-color);
+        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.65), 0 8px 22px rgba(0, 0, 0, 0.5);
+        z-index: 1;
+      }
+
+      .vinyl-disc-primary {
+        z-index: 3;
+      }
+
+      .vinyl-disc-secondary {
+        transform: translateX(18%) scale(0.95);
+        opacity: 0.96;
+        filter: saturate(1.08) brightness(1.02);
+        z-index: 2;
+      }
+
+      .vinyl-disc.clear-vinyl {
+        background:
+          radial-gradient(circle at center, #f8fafc 0 8.2%, #cbd5e1 8.5% 10.2%, transparent 10.6%),
+          radial-gradient(circle at center, transparent 0 74%, rgba(255, 255, 255, 0.78) 74.4% 76.2%, transparent 76.6%),
+          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.28) 0 2px, rgba(203, 213, 225, 0.18) 2px 4px),
+          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.86), transparent 47%),
+          var(--vinyl-color);
+        box-shadow: 0 0 0 2px rgba(226, 232, 240, 0.86), 0 8px 22px rgba(0, 0, 0, 0.35);
+      }
+
+      .cd-disc {
+        background:
+          radial-gradient(circle at center, transparent 0 8%, rgba(220, 225, 235, 0.95) 8.5% 11.5%, transparent 12%),
+          radial-gradient(circle at center, transparent 0 42%, rgba(148, 163, 184, 0.22) 42.5% 43.5%, transparent 44%),
+          conic-gradient(
+            from 10deg,
+            rgba(255, 170, 170, 0.45),
+            rgba(255, 240, 160, 0.45),
+            rgba(170, 255, 215, 0.45),
+            rgba(170, 210, 255, 0.45),
+            rgba(220, 170, 255, 0.45),
+            rgba(255, 170, 170, 0.45)
+          ),
+          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.52), transparent 46%),
+          linear-gradient(145deg, #d8e1ea, #a8b4c3 35%, #e6edf6 65%, #95a1b0);
+        box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.55), 0 8px 22px rgba(0, 0, 0, 0.45);
+      }
+
+      .album-card.expanded .vinyl-overlay {
+        opacity: 1;
+      }
+
+      .album-card.expanded .vinyl-disc-primary {
+        animation: spinVinyl 2.4s linear infinite;
+      }
+
+      .album-card.expanded .cd-disc {
+        animation: spinCd 1.9s linear infinite;
+      }
+
+      .album-card.expanded .vinyl-disc-secondary {
+        animation: spinVinylSecondary 3.1s linear infinite reverse;
+      }
+
+      @keyframes spinVinyl {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes spinVinylSecondary {
+        from {
+          transform: translateX(14%) scale(0.95) rotate(0deg);
+        }
+        to {
+          transform: translateX(14%) scale(0.95) rotate(360deg);
+        }
+      }
+
+      @keyframes spinCd {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
       }
 
       .album-details {
@@ -628,9 +871,10 @@
       }
 
       .album-card.expanded .album-details {
-        max-height: 360px;
+        max-height: 5000px;
         opacity: 1;
         transform: translateY(0);
+        overflow: visible;
         padding: 0.6rem 0.65rem 0.75rem;
       }
 
@@ -678,6 +922,13 @@
         padding: 0.28rem 0.5rem;
         font-size: 0.74rem;
         text-decoration: none;
+        cursor: pointer;
+      }
+
+      .listen-album-button {
+        border-color: #f59e0b;
+        background: #9a3412;
+        color: #fff7ed;
       }
 
       .track-list {
@@ -689,6 +940,18 @@
 
       .track-list li + li {
         margin-top: 0.15rem;
+      }
+
+      .track-play-button {
+        width: 100%;
+        border: 1px solid #334155;
+        border-radius: 0.4rem;
+        background: #0b1220;
+        color: #e2e8f0;
+        text-align: left;
+        font-size: 0.78rem;
+        padding: 0.25rem 0.4rem;
+        cursor: pointer;
       }
 
       .guest-label {
@@ -705,9 +968,11 @@
     <section id="auth-overlay" class="auth-overlay">
       <div class="auth-card">
         <h2>Entrar o registrarte</h2>
-        <p class="auth-help">Escribe tu nombre. Si ya existe, entraras a ese perfil sin contrasena.</p>
+        <p class="auth-help">Escribe tu nombre y contraseña</p>
         <label class="auth-field-label" for="auth-name">Nombre</label>
         <input id="auth-name" type="text" placeholder="Tu nombre" />
+        <label class="auth-field-label" for="auth-password">Contraseña</label>
+        <input id="auth-password" type="password" placeholder="Tu Contraseña" />
         <label class="auth-field-label" for="auth-photo">Foto (solo al crear usuario)</label>
         <input id="auth-photo" type="file" accept="image/*" />
         <div class="auth-actions">
@@ -719,8 +984,15 @@
     </section>
 
     <section id="now-playing" class="now-playing" hidden>
+      <div id="now-playing-controls" class="now-playing-controls" hidden>
+        <button id="now-playing-stop" class="now-playing-stop-button" type="button">Finalizar</button>
+      </div>
       <button id="now-playing-toggle" class="now-playing-toggle" type="button" aria-expanded="false" aria-controls="review-panel">
-        <img id="now-playing-cover" src="" alt="Currently playing album cover" />
+        <div class="now-playing-artwork" aria-hidden="true">
+          <img id="now-playing-cover" src="" alt="Currently playing album cover" />
+          <span id="now-playing-disc" class="now-playing-disc"></span>
+          <span id="now-playing-disc-secondary" class="now-playing-disc secondary"></span>
+        </div>
         <div class="now-playing-copy">
           <p class="now-playing-label">Reproduciendo ahora</p>
           <p id="now-playing-text" class="now-playing-text"></p>
@@ -743,6 +1015,7 @@
         <p id="rating-value" class="rating-value">Puntuacion: 0 / 5</p>
         <div class="review-actions">
           <button id="save-review" class="save-review-button" type="button">Guardar reseña</button>
+          <button id="open-now-playing-album" class="open-album-button" type="button">Ver álbum</button>
           <p id="review-status" class="review-status"></p>
         </div>
       </div>

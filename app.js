@@ -18,9 +18,125 @@ let activeBubbleDrag = null;
 let lastBubbleSignature = "";
 const userPhotoCache = new Map();
 
+const VINYL_COLOR_RULES = [
+  { key: "grape", color: "#7e22ce" },
+  { key: "coral", color: "#fb7185" },
+  { key: "green", color: "#16a34a" },
+  { key: "red", color: "#dc2626" },
+  { key: "blue", color: "#2563eb" },
+  { key: "yellow", color: "#eab308" },
+  { key: "orange", color: "#f97316" },
+  { key: "pink", color: "#ec4899" },
+  { key: "purple", color: "#8b5cf6" },
+  { key: "white", color: "#f8fafc" },
+  { key: "gold", color: "#ca8a04" },
+  { key: "silver", color: "#94a3b8" }
+];
+
+function isAdminUser() {
+  return String(sessionState.currentUser?.accountName || "").trim().toLowerCase() === "administrador";
+}
+
 function normalizeTrackLabel(value) {
   const text = String(value || "").trim();
   return text.replace(/^[A-Z]{1,3}\d+[A-Z]?\s*-\s*/i, "");
+}
+
+function withAlpha(hexColor, alpha) {
+  const clean = String(hexColor || "").replace("#", "");
+  if (clean.length !== 6) {
+    return "rgba(20, 20, 20, 0.95)";
+  }
+
+  const red = Number.parseInt(clean.slice(0, 2), 16);
+  const green = Number.parseInt(clean.slice(2, 4), 16);
+  const blue = Number.parseInt(clean.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function resolveVinylColor(rule, translucent) {
+  if (!rule || !rule.color) {
+    return "#0b0b0b";
+  }
+
+  if (translucent && rule.key === "grape") {
+    return withAlpha(rule.color, 0.7);
+  }
+
+  return translucent ? withAlpha(rule.color, 0.82) : rule.color;
+}
+
+function detectVinylColors(rawText) {
+  const text = String(rawText || "").toLowerCase();
+
+  if (!text) {
+    return ["#0b0b0b", ""];
+  }
+
+  const translucent = /(translucent|transparent|clear)/.test(text);
+  const clearOnly = /\bclear\b/.test(text);
+  const matchedRules = VINYL_COLOR_RULES.filter((rule) => text.includes(rule.key));
+
+  if (matchedRules.length >= 2) {
+    return [
+      resolveVinylColor(matchedRules[0], translucent),
+      resolveVinylColor(matchedRules[1], translucent)
+    ];
+  }
+
+  if (matchedRules.length === 1) {
+    if (clearOnly) {
+      return ["#f8fafc", ""];
+    }
+
+    return [resolveVinylColor(matchedRules[0], translucent), ""];
+  }
+
+  if (translucent) {
+    if (clearOnly) {
+      return ["#f8fafc", ""];
+    }
+
+    return ["rgba(255, 255, 255, 0.88)", ""];
+  }
+
+  return ["#0b0b0b", ""];
+}
+
+function detectDiscType(rawText) {
+  const text = String(rawText || "").toLowerCase();
+  if (!text) {
+    return "vinyl";
+  }
+
+  if (/\bcd\b|compact\s*disc|cdr|cd-r/.test(text)) {
+    return "cd";
+  }
+
+  return "vinyl";
+}
+
+function detectDiscCount(rawText) {
+  const text = String(rawText || "").toLowerCase();
+  if (!text) {
+    return 1;
+  }
+
+  const timesMatch = text.match(/\bx\s*(\d+)\b/);
+  if (timesMatch && Number(timesMatch[1]) > 0) {
+    return Number(timesMatch[1]);
+  }
+
+  const prefixMatch = text.match(/\b(\d+)\s*x\b/);
+  if (prefixMatch && Number(prefixMatch[1]) > 0) {
+    return Number(prefixMatch[1]);
+  }
+
+  return 1;
+}
+
+function detectClearVinyl(rawText) {
+  return /\bclear\b/.test(String(rawText || "").toLowerCase());
 }
 
 function escapeHtml(value) {
@@ -106,17 +222,38 @@ async function apiGetUser(name) {
   return payload && payload.user ? payload.user : null;
 }
 
-async function apiLogin(name) {
+async function apiGetCurrentUser() {
+  const response = await fetch(`/api/users/me?t=${Date.now()}`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo validar sesion.");
+  }
+
+  const payload = await response.json();
+  return payload && payload.user ? payload.user : null;
+}
+
+async function apiLogin(name, password) {
   const response = await fetch("/api/users/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name, password })
   });
 
   if (response.status === 404) {
     throw new Error("Ese nombre no existe. Crea el usuario primero.");
+  }
+
+  if (response.status === 401) {
+    throw new Error("Contraseña incorrecta.");
+  }
+
+  if (response.status === 403) {
+    throw new Error("Ese usuario no tiene Contraseña configurada.");
   }
 
   if (!response.ok) {
@@ -127,7 +264,7 @@ async function apiLogin(name) {
   return payload.user || null;
 }
 
-async function apiRegister(name, photoDataUrl) {
+async function apiRegister(name, password, photoDataUrl) {
   const response = await fetch("/api/users/register", {
     method: "POST",
     headers: {
@@ -135,6 +272,7 @@ async function apiRegister(name, photoDataUrl) {
     },
     body: JSON.stringify({
       name,
+      password,
       photoDataUrl: photoDataUrl || ""
     })
   });
@@ -184,6 +322,61 @@ async function apiGetMyReviews(name) {
   return Array.isArray(payload.reviews) ? payload.reviews : [];
 }
 
+async function apiSetNowPlaying(nowPlayingPayload) {
+  const response = await fetch("/api/now-playing", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(nowPlayingPayload)
+  });
+
+  if (response.status === 403) {
+    throw new Error("Solo administrador puede iniciar la escucha actual.");
+  }
+
+  if (!response.ok) {
+    throw new Error("No se pudo actualizar la escucha actual.");
+  }
+
+  const payload = await response.json();
+  return payload.nowPlaying || null;
+}
+
+async function apiClearNowPlaying(actorName) {
+  const response = await fetch("/api/now-playing/clear", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ actorName })
+  });
+
+  if (response.status === 403) {
+    throw new Error("Solo administrador puede finalizar reproduciendo ahora.");
+  }
+
+  if (!response.ok) {
+    throw new Error("No se pudo finalizar reproduciendo ahora.");
+  }
+
+  return response.json();
+}
+
+async function apiLogout() {
+  const response = await fetch("/api/users/logout", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({})
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo cerrar sesion.");
+  }
+}
+
 function getProfilePhotoUrl(user) {
   const photo = String(user?.photoDataUrl || "").trim();
   return photo || coverFallbackUrl;
@@ -195,6 +388,7 @@ function setCurrentUser(user) {
   const profileAvatar = document.getElementById("profile-avatar");
   const profileMenuUser = document.getElementById("profile-menu-user");
   const reviewerName = document.getElementById("reviewer-name");
+  const nowPlayingControls = document.getElementById("now-playing-controls");
 
   if (!sessionState.currentUser) {
     clearPersistedUserName();
@@ -204,6 +398,10 @@ function setCurrentUser(user) {
     if (reviewerName) {
       reviewerName.value = "";
     }
+    if (nowPlayingControls) {
+      nowPlayingControls.hidden = true;
+    }
+    renderAlbums();
     return;
   }
 
@@ -225,7 +423,133 @@ function setCurrentUser(user) {
     reviewerName.value = sessionState.currentUser.name || "";
   }
 
+  if (nowPlayingControls) {
+    nowPlayingControls.hidden = !isAdminUser();
+  }
+
   hideAuthOverlay();
+  renderAlbums();
+}
+
+function getAlbumById(albumId) {
+  return appState.albums.find((album) => String(album.id) === String(albumId)) || null;
+}
+
+function findAlbumByNowPlaying(nowPlaying) {
+  if (!nowPlaying) {
+    return null;
+  }
+
+  const targetTitle = String(nowPlaying.albumTitle || "").trim().toLowerCase();
+  const targetArtist = String(nowPlaying.albumArtist || "").trim().toLowerCase();
+
+  if (!targetTitle) {
+    return null;
+  }
+
+  return appState.albums.find((album) => {
+    const albumTitle = String(album.title || "").trim().toLowerCase();
+    const albumArtist = String(album.artist || "").trim().toLowerCase();
+
+    if (albumTitle !== targetTitle) {
+      return false;
+    }
+
+    if (!targetArtist) {
+      return true;
+    }
+
+    return albumArtist === targetArtist;
+  }) || null;
+}
+
+function openNowPlayingAlbumInGrid() {
+  const album = findAlbumByNowPlaying(currentNowPlaying);
+  if (!album) {
+    showReviewStatus("No se encontro el album en la lista.");
+    return;
+  }
+
+  const reviewsView = document.getElementById("reviews-view");
+  if (reviewsView && !reviewsView.hidden) {
+    showMainView();
+  }
+
+  appState.expandedAlbumId = album.id;
+  renderAlbums();
+
+  const coverButton = Array.from(document.querySelectorAll(".cover-button"))
+    .find((element) => String(element.dataset.albumId || "") === String(album.id));
+  if (coverButton && typeof coverButton.scrollIntoView === "function") {
+    coverButton.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+function applyNowPlayingDiscVisual(nowPlaying) {
+  const primaryDisc = document.getElementById("now-playing-disc");
+  const secondaryDisc = document.getElementById("now-playing-disc-secondary");
+  const nowPlayingSection = document.getElementById("now-playing");
+
+  if (!primaryDisc || !secondaryDisc || !nowPlayingSection) {
+    return;
+  }
+
+  const albumMeta = findAlbumByNowPlaying(nowPlaying);
+  const discType = albumMeta?.discType === "cd" ? "cd" : "vinyl";
+  const primaryColor = String(albumMeta?.vinylColor || "#0b0b0b").trim() || "#0b0b0b";
+  const secondaryColor = String(albumMeta?.vinylColorSecondary || "").trim();
+  const discCount = Number(albumMeta?.discCount || 1);
+  const showSecondDisc = discCount > 1 || Boolean(secondaryColor);
+  const reviewScope = nowPlaying?.reviewScope === "album" ? "album" : "song";
+  const primarySpeed = reviewScope === "album" ? "3.8s" : "1.9s";
+  const secondarySpeed = reviewScope === "album" ? "5.3s" : "2.7s";
+
+  nowPlayingSection.style.setProperty("--np-spin-primary", primarySpeed);
+  nowPlayingSection.style.setProperty("--np-spin-secondary", secondarySpeed);
+
+  primaryDisc.style.setProperty("--disc-color", primaryColor);
+  secondaryDisc.style.setProperty("--disc-color", secondaryColor || primaryColor);
+
+  primaryDisc.classList.toggle("cd-disc", discType === "cd");
+  secondaryDisc.classList.toggle("cd-disc", discType === "cd");
+
+  const clearVinyl = discType === "vinyl" && Boolean(albumMeta?.isClearVinyl);
+  primaryDisc.classList.toggle("clear-vinyl", clearVinyl);
+  secondaryDisc.classList.toggle("clear-vinyl", clearVinyl);
+
+  secondaryDisc.classList.toggle("visible", showSecondDisc);
+}
+
+async function startAlbumListening(album) {
+  if (!album || !isAdminUser() || !sessionState.currentUser?.name) {
+    return;
+  }
+
+  await apiSetNowPlaying({
+    actorName: sessionState.currentUser.name,
+    albumTitle: album.title,
+    albumArtist: album.artist,
+    songTitle: "",
+    reviewScope: "album",
+    coverUrl: album.coverUrl
+  });
+  showReviewStatus(`Escucha iniciada para album: ${album.title}`);
+}
+
+async function startSongListening(album, songTitle) {
+  if (!album || !songTitle || !isAdminUser() || !sessionState.currentUser?.name) {
+    return;
+  }
+
+  await apiSetNowPlaying({
+    actorName: sessionState.currentUser.name,
+    albumTitle: album.title,
+    albumArtist: album.artist,
+    songTitle,
+    reviewScope: "song",
+    coverUrl: album.coverUrl
+  });
+  showReviewStatus(`Escucha iniciada: ${album.title} - ${songTitle}`);
 }
 
 function closeProfileMenu() {
@@ -329,7 +653,13 @@ async function openMyReviewsView() {
   }
 }
 
-function logoutUser() {
+async function logoutUser() {
+  try {
+    await apiLogout();
+  } catch {
+    // Ignore logout API failures and clear local state anyway.
+  }
+
   sessionState.currentUser = null;
   setCurrentUser(null);
   closeProfileMenu();
@@ -352,6 +682,7 @@ function renderAlbums() {
 
   container.innerHTML = appState.albums
     .map((album) => {
+      const adminUser = isAdminUser();
       const isExpanded = appState.expandedAlbumId === album.id;
       const safeTitle = escapeHtml(album.title);
       const safeArtist = escapeHtml(album.artist);
@@ -360,15 +691,31 @@ function renderAlbums() {
       const safeNotes = escapeHtml(album.notes);
       const safeGiftedBy = escapeHtml(album.giftedBy || "");
       const safeCoverUrl = escapeHtml(album.coverUrl);
+      const safeVinylColor = escapeHtml(album.vinylColor || "#0b0b0b");
+      const safeVinylColorSecondary = escapeHtml(album.vinylColorSecondary || "");
+      const secondaryVinylColor = safeVinylColorSecondary || safeVinylColor;
+      const isCdDisc = album.discType === "cd";
+      const hasSecondDisc = !isCdDisc && (Boolean(safeVinylColorSecondary) || Number(album.discCount || 1) > 1);
+      const clearVinylClass = album.isClearVinyl ? "clear-vinyl" : "";
       const coverClassName = album.ownedByUser ? "" : "not-owned";
-      const detailListMarkup = (album.details || [])
-        .map((detail) => `<li>${escapeHtml(detail)}</li>`)
-        .join("");
+      const detailListMarkup = adminUser
+        ? (album.tracks || [])
+            .map((track, index) => {
+              const safeTrack = escapeHtml(track);
+              return `<li><button type="button" class="track-play-button" data-album-id="${escapeHtml(String(album.id))}" data-track-index="${index}">${safeTrack}</button></li>`;
+            })
+            .join("")
+        : (album.details || [])
+            .map((detail) => `<li>${escapeHtml(detail)}</li>`)
+            .join("");
+      const listenAlbumMarkup = adminUser
+        ? `<button type="button" class="album-action-button listen-album-button" data-album-id="${escapeHtml(String(album.id))}">Escuchar album</button>`
+        : "";
       const spotifyButtonMarkup = album.spotifyUrl
         ? `<a class="album-action-button" href="${escapeHtml(album.spotifyUrl)}" target="_blank" rel="noreferrer">Abrir en Spotify</a>`
         : "";
-      const linksMarkup = spotifyButtonMarkup
-        ? `<div class="album-links">${spotifyButtonMarkup}</div>`
+      const linksMarkup = (spotifyButtonMarkup || listenAlbumMarkup)
+        ? `<div class="album-links">${listenAlbumMarkup}${spotifyButtonMarkup}</div>`
         : "";
       const giftedByMarkup = safeGiftedBy
         ? `<p class="gifted-by"><em>Regalado por: ${safeGiftedBy}</em></p>`
@@ -384,6 +731,10 @@ function renderAlbums() {
             aria-controls="album-details-${album.id}"
           >
             <img class="${coverClassName}" src="${safeCoverUrl}" alt="${safeTitle} album cover" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />
+            <span class="vinyl-overlay ${isCdDisc ? "cd-overlay" : ""}" aria-hidden="true">
+              <span class="vinyl-disc vinyl-disc-primary ${isCdDisc ? "cd-disc" : ""} ${clearVinylClass}" style="--vinyl-color:${safeVinylColor}"></span>
+              ${hasSecondDisc ? `<span class="vinyl-disc vinyl-disc-secondary ${clearVinylClass}" style="--vinyl-color:${secondaryVinylColor}"></span>` : ""}
+            </span>
           </button>
           <div id="album-details-${album.id}" class="album-details">
             <h2>${safeTitle}</h2>
@@ -407,7 +758,53 @@ function setupAlbumInteractions() {
     return;
   }
 
-  container.addEventListener("click", (event) => {
+  container.addEventListener("click", async (event) => {
+    const listenAlbumButton = event.target.closest(".listen-album-button");
+    if (listenAlbumButton) {
+      if (!isAdminUser()) {
+        return;
+      }
+
+      const album = getAlbumById(listenAlbumButton.dataset.albumId || "");
+      if (!album) {
+        return;
+      }
+
+      try {
+        await startAlbumListening(album);
+      } catch (error) {
+        showReviewStatus(error instanceof Error ? error.message : "No se pudo iniciar la escucha del album.");
+      }
+      return;
+    }
+
+    const trackPlayButton = event.target.closest(".track-play-button");
+    if (trackPlayButton) {
+      if (!isAdminUser()) {
+        return;
+      }
+
+      const album = getAlbumById(trackPlayButton.dataset.albumId || "");
+      const trackIndex = Number(trackPlayButton.dataset.trackIndex || "-1");
+      const songTitle = album?.tracks?.[trackIndex] || "";
+
+      if (!album || !songTitle) {
+        return;
+      }
+
+      const confirmed = window.confirm(`Quieres iniciar currently listening de esta cancion?\n${album.title} - ${songTitle}`);
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await startSongListening(album, songTitle);
+      } catch (error) {
+        showReviewStatus(error instanceof Error ? error.message : "No se pudo iniciar la escucha de la cancion.");
+      }
+      return;
+    }
+
     const trigger = event.target.closest(".cover-button");
 
     if (!trigger) {
@@ -458,6 +855,17 @@ async function loadAlbums() {
     const giftedBy = String(
       item.regaladoPor || item["regalado por"] || item.regalado_por || item.giftedBy || ""
     ).trim();
+    const descriptor = [
+      item.rawText,
+      item.title,
+      item.notes,
+      item.format,
+      item.formats
+    ].filter(Boolean).join(" ");
+    const [vinylColor, vinylColorSecondary] = detectVinylColors(descriptor);
+    const discType = detectDiscType(descriptor);
+    const discCount = detectDiscCount(descriptor);
+    const isClearVinyl = detectClearVinyl(descriptor);
 
     return {
       id: item.releaseUrl || `${item.title}-${item.artist}-${index}`,
@@ -469,6 +877,12 @@ async function loadAlbums() {
       releaseUrl: item.releaseUrl || "",
       spotifyUrl,
       coverUrl: item.imageUrl || coverFallbackUrl,
+      vinylColor,
+      vinylColorSecondary,
+      discType,
+      discCount,
+      isClearVinyl,
+      tracks,
       details,
       ownedByUser: item.isOwned !== false,
       giftedBy
@@ -480,6 +894,7 @@ function hideNowPlaying() {
   const section = document.getElementById("now-playing");
   const panel = document.getElementById("review-panel");
   const toggle = document.getElementById("now-playing-toggle");
+  const stopControls = document.getElementById("now-playing-controls");
 
   if (panel) {
     panel.hidden = true;
@@ -491,6 +906,10 @@ function hideNowPlaying() {
 
   if (section) {
     section.hidden = true;
+  }
+
+  if (stopControls) {
+    stopControls.hidden = true;
   }
 
   currentNowPlaying = null;
@@ -1065,8 +1484,10 @@ function setupNowPlayingInteractions() {
   const panel = document.getElementById("review-panel");
   const ratingContainer = document.getElementById("star-rating");
   const saveButton = document.getElementById("save-review");
+  const openAlbumButton = document.getElementById("open-now-playing-album");
+  const stopNowPlayingButton = document.getElementById("now-playing-stop");
 
-  if (!toggle || !panel || !ratingContainer || !saveButton) {
+  if (!toggle || !panel || !ratingContainer || !saveButton || !openAlbumButton || !stopNowPlayingButton) {
     return;
   }
 
@@ -1102,6 +1523,25 @@ function setupNowPlayingInteractions() {
     await saveCurrentReview();
   });
 
+  openAlbumButton.addEventListener("click", () => {
+    openNowPlayingAlbumInGrid();
+  });
+
+  stopNowPlayingButton.addEventListener("click", async () => {
+    if (!isAdminUser() || !sessionState.currentUser?.name) {
+      showReviewStatus("Solo administrador puede finalizar reproduciendo ahora.");
+      return;
+    }
+
+    try {
+      await apiClearNowPlaying(sessionState.currentUser.name);
+      hideNowPlaying();
+      showReviewStatus("Reproduciendo ahora finalizado.");
+    } catch (error) {
+      showReviewStatus(error instanceof Error ? error.message : "No se pudo finalizar reproduciendo ahora.");
+    }
+  });
+
   renderRating(selectedRating);
 }
 
@@ -1109,6 +1549,7 @@ function renderNowPlaying(nowPlaying) {
   const section = document.getElementById("now-playing");
   const cover = document.getElementById("now-playing-cover");
   const text = document.getElementById("now-playing-text");
+  const stopControls = document.getElementById("now-playing-controls");
   const reviewScope = nowPlaying?.reviewScope === "album" ? "album" : "song";
 
   if (!section || !cover || !text) {
@@ -1136,6 +1577,11 @@ function renderNowPlaying(nowPlaying) {
     lastNowPlayingSignature = signature;
   }
 
+  if (stopControls) {
+    stopControls.hidden = !isAdminUser();
+  }
+
+  applyNowPlayingDiscVisual(nowPlaying);
   currentNowPlaying = nowPlaying;
   updateReviewTargetCopy(nowPlaying);
   void fetchCurrentSongReviews();
@@ -1170,6 +1616,7 @@ function startNowPlayingPolling() {
 
 function setupAuthInteractions() {
   const authName = document.getElementById("auth-name");
+  const authPassword = document.getElementById("auth-password");
   const authPhoto = document.getElementById("auth-photo");
   const loginButton = document.getElementById("auth-login");
   const registerButton = document.getElementById("auth-register");
@@ -1180,21 +1627,27 @@ function setupAuthInteractions() {
   const logoutButton = document.getElementById("logout-profile");
   const reviewsBackButton = document.getElementById("reviews-back");
 
-  if (!authName || !authPhoto || !loginButton || !registerButton || !avatarButton || !changePhotoButton || !changePhotoInput || !viewReviewsButton || !logoutButton || !reviewsBackButton) {
+  if (!authName || !authPassword || !authPhoto || !loginButton || !registerButton || !avatarButton || !changePhotoButton || !changePhotoInput || !viewReviewsButton || !logoutButton || !reviewsBackButton) {
     return;
   }
 
   loginButton.addEventListener("click", async () => {
     const name = normalizeUserName(authName.value);
+    const password = String(authPassword.value || "").trim();
 
     if (!name) {
       setAuthStatus("Escribe tu nombre.");
       return;
     }
 
+    if (!password) {
+      setAuthStatus("Escribe tu Contraseña.");
+      return;
+    }
+
     try {
       setAuthStatus("Entrando...");
-      const user = await apiLogin(name);
+      const user = await apiLogin(name, password);
       if (!user) {
         throw new Error("No se encontro el usuario.");
       }
@@ -1207,9 +1660,15 @@ function setupAuthInteractions() {
 
   registerButton.addEventListener("click", async () => {
     const name = normalizeUserName(authName.value);
+    const password = String(authPassword.value || "").trim();
 
     if (!name) {
       setAuthStatus("Escribe un nombre para crear el usuario.");
+      return;
+    }
+
+    if (!password) {
+      setAuthStatus("Escribe una Contraseña para crear el usuario.");
       return;
     }
 
@@ -1217,12 +1676,13 @@ function setupAuthInteractions() {
       setAuthStatus("Creando usuario...");
       const file = authPhoto.files && authPhoto.files[0] ? authPhoto.files[0] : null;
       const photoDataUrl = file ? await readFileAsDataUrl(file) : "";
-      const user = await apiRegister(name, photoDataUrl);
+      const user = await apiRegister(name, password, photoDataUrl);
       if (!user) {
         throw new Error("No se pudo crear el perfil.");
       }
       setCurrentUser(user);
       authPhoto.value = "";
+      authPassword.value = "";
       setAuthStatus("");
     } catch (error) {
       setAuthStatus(error instanceof Error ? error.message : "No se pudo crear el usuario.");
@@ -1230,6 +1690,15 @@ function setupAuthInteractions() {
   });
 
   authName.addEventListener("keydown", async (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    loginButton.click();
+  });
+
+  authPassword.addEventListener("keydown", async (event) => {
     if (event.key !== "Enter") {
       return;
     }
@@ -1275,8 +1744,8 @@ function setupAuthInteractions() {
     await openMyReviewsView();
   });
 
-  logoutButton.addEventListener("click", () => {
-    logoutUser();
+  logoutButton.addEventListener("click", async () => {
+    await logoutUser();
   });
 
   reviewsBackButton.addEventListener("click", () => {
@@ -1301,25 +1770,23 @@ function setupAuthInteractions() {
 }
 
 async function bootSession() {
-  const savedName = getPersistedUserName();
-
-  if (!savedName) {
-    showAuthOverlay("Inicia sesion o crea un usuario.");
-    return;
-  }
-
   try {
-    const user = await apiGetUser(savedName);
-    if (!user) {
-      showAuthOverlay("Inicia sesion o crea un usuario.");
-      clearPersistedUserName();
+    const sessionUser = await apiGetCurrentUser();
+    if (sessionUser) {
+      setCurrentUser(sessionUser);
       return;
     }
-
-    setCurrentUser(user);
   } catch {
-    showAuthOverlay("Inicia sesion o crea un usuario.");
+    // If session check fails, fallback to login form.
   }
+
+  const savedName = getPersistedUserName();
+  const authName = document.getElementById("auth-name");
+  if (authName && savedName) {
+    authName.value = savedName;
+  }
+
+  showAuthOverlay("Inicia sesion o crea un usuario.");
 }
 
 (function restrictAccess() {
