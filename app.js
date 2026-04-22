@@ -1319,6 +1319,52 @@ function openNowPlayingAlbumInGrid() {
   openAlbumInGrid(album, false);
 }
 
+function animateCoverToNowPlaying(sourceImg) {
+  if (!sourceImg || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
+
+  const sourceRect = sourceImg.getBoundingClientRect();
+  if (!sourceRect.width || !sourceRect.height) return;
+
+  const npCover = document.getElementById("now-playing-cover");
+  const npSection = document.getElementById("now-playing");
+  let targetRect;
+  if (npSection && !npSection.hidden && npCover) {
+    targetRect = npCover.getBoundingClientRect();
+  } else {
+    const widgetW = Math.min(window.innerWidth * 0.96, 420);
+    const widgetLeft = (window.innerWidth - widgetW) / 2;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    targetRect = { left: widgetLeft + rem * 0.5, top: rem * 0.6 + rem * 0.5, width: 46, height: 46 };
+  }
+
+  const clone = document.createElement("img");
+  clone.src = sourceImg.src;
+  clone.setAttribute("aria-hidden", "true");
+  clone.style.cssText = `position:fixed;pointer-events:none;z-index:9999;border-radius:0.4rem;object-fit:cover;will-change:transform,opacity;width:${sourceRect.width}px;height:${sourceRect.height}px;top:${sourceRect.top}px;left:${sourceRect.left}px;`;
+  document.body.appendChild(clone);
+
+  const targetScale = Math.min(targetRect.width / sourceRect.width, targetRect.height / sourceRect.height);
+  const targetLeft = targetRect.left + (targetRect.width - sourceRect.width * targetScale) / 2;
+  const targetTop = targetRect.top + (targetRect.height - sourceRect.height * targetScale) / 2;
+  const arcMidX = (sourceRect.left + targetLeft) / 2;
+  const arcMidY = Math.min(sourceRect.top, targetTop) - 80;
+  const midScale = (1 + targetScale) / 2;
+
+  const anim = clone.animate(
+    [
+      { transform: "translate(0,0) scale(1)", opacity: 1, boxShadow: "0 8px 32px rgba(0,0,0,0.55)" },
+      { transform: `translate(${arcMidX - sourceRect.left}px,${arcMidY - sourceRect.top}px) scale(${midScale})`, opacity: 1, boxShadow: "0 16px 48px rgba(0,0,0,0.4)", offset: 0.42 },
+      { transform: `translate(${targetLeft - sourceRect.left}px,${targetTop - sourceRect.top}px) scale(${targetScale})`, opacity: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.25)" },
+    ],
+    { duration: 680, easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)", fill: "forwards" }
+  );
+
+  anim.onfinish = () => clone.remove();
+  window.setTimeout(() => clone.remove(), 800);
+}
+
 function runAlbumOpenAnimation(albumId) {
   const container = document.getElementById("albums");
 
@@ -1387,7 +1433,7 @@ async function startAlbumListening(album) {
     return;
   }
 
-  await apiSetNowPlaying({
+  const nowPlaying = await apiSetNowPlaying({
     actorName: sessionState.currentUser.name,
     albumTitle: album.title,
     albumArtist: album.artist,
@@ -1395,6 +1441,7 @@ async function startAlbumListening(album) {
     reviewScope: "album",
     coverUrl: album.coverUrl
   });
+  if (nowPlaying) renderNowPlaying(nowPlaying);
   showReviewStatus(`Escucha iniciada para album: ${album.title}`);
 }
 
@@ -1403,7 +1450,7 @@ async function startSongListening(album, songTitle) {
     return;
   }
 
-  await apiSetNowPlaying({
+  const nowPlaying = await apiSetNowPlaying({
     actorName: sessionState.currentUser.name,
     albumTitle: album.title,
     albumArtist: album.artist,
@@ -1411,6 +1458,7 @@ async function startSongListening(album, songTitle) {
     reviewScope: "song",
     coverUrl: album.coverUrl
   });
+  if (nowPlaying) renderNowPlaying(nowPlaying);
   showReviewStatus(`Escucha iniciada: ${album.title} - ${songTitle}`);
 }
 
@@ -2443,6 +2491,14 @@ function setupAlbumInteractions() {
         return;
       }
 
+      const confirmed = window.confirm(`Quieres iniciar currently listening de este album?\n${album.title}`);
+      if (!confirmed) {
+        return;
+      }
+
+      const sourceImg = container.querySelector(".album-card.expanded .cover-button img");
+      animateCoverToNowPlaying(sourceImg);
+
       try {
         await startAlbumListening(album);
       } catch (error) {
@@ -2469,6 +2525,9 @@ function setupAlbumInteractions() {
       if (!confirmed) {
         return;
       }
+
+      const sourceImgTrack = container.querySelector(".album-card.expanded .cover-button img");
+      animateCoverToNowPlaying(sourceImgTrack);
 
       try {
         await startSongListening(album, songTitle);
@@ -3740,9 +3799,17 @@ function renderNowPlaying(nowPlaying) {
     };
     cover.src = nowPlaying.coverUrl;
     cover.alt = `${nowPlaying.albumTitle} album cover`;
+    cover.classList.remove("np-cover-arriving");
+    cover.classList.add("np-cover-arriving");
+    cover.addEventListener("animationend", () => cover.classList.remove("np-cover-arriving"), { once: true });
     section.hidden = false;
     lastNowPlayingSignature = signature;
     document.documentElement.style.setProperty("--layout-top-space", "5.5rem");
+
+    const playingAlbum = findAlbumByNowPlaying(nowPlaying);
+    if (playingAlbum && appState.expandedAlbumId !== playingAlbum.id) {
+      openAlbumInGrid(playingAlbum);
+    }
   }
 
   if (stopControls) {

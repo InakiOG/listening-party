@@ -54,14 +54,14 @@
   "test2": {
     "name": "test2",
     "photoDataUrl": "",
-    "description": "",
-    "instagramUsername": "",
+    "description": "soy una prueba",
+    "instagramUsername": "charlie_kirk",
     "spotifyUrl": "",
     "topAlbums": [
       {
-        "title": "",
-        "artist": "",
-        "coverUrl": ""
+        "title": "el ansioso",
+        "artist": "grupo marrano",
+        "coverUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/4d/eb/9c/4deb9ca5-9ded-3c29-66df-81a86436276e/194491571559.jpg/600x600bb.jpg"
       },
       {
         "title": "",

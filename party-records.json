@@ -139,6 +139,35 @@
           "createdAt": "22/04/26"
         }
       ]
+    },
+    {
+      "id": "2026-04-22T20:30:39.213474+00:00",
+      "date": "2026-04-22",
+      "startedAt": "2026-04-22T20:30:39.213474+00:00",
+      "savedAt": "2026-04-22T20:32:41.477750+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki",
+        "test2"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "The Best Of Sade",
+          "artist": "Sade",
+          "coverUrl": "https://i.discogs.com/AT-5QmxgN_dzeuigTUBzbWhT5MSrn23kYiXHvrlExt0/rs:fit/g:sm/q:90/h:599/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTgxMzE0/NzUtMTczNTgzNTAz/OC05MTcwLnBuZw.jpeg"
+        },
+        {
+          "title": "Floral Green",
+          "artist": "Title Fight",
+          "coverUrl": "https://i.discogs.com/KFYMdXGRxBnajOlxwLuNT8n_b2Ax3osW03UDx-tzFa8/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQxNDYy/MDQtMTc0OTQ4NzA5/OS02MDkwLmpwZWc.jpeg"
+        },
+        {
+          "title": "Doolittle",
+          "artist": "Pixies",
+          "coverUrl": "https://i.discogs.com/GM3cEF_7hUvQfX4Pzh1RXeuer_oFyKDeO8mk5oZqn_o/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI0NDk1/NDYtMTQ4NTYxNDY3/OS02NTkxLmpwZWc.jpeg"
+        }
+      ],
+      "reviews": []
     }
   ]
 }
