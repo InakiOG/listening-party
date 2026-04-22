@@ -26,6 +26,8 @@ const userPhotoCache = new Map();
 const activeUserBubbleColorCache = new Map();
 const topAlbumCoverCache = new Map();
 const topAlbumCoverPending = new Map();
+const topAlbumCoverOptions = new Map();
+const topAlbumCoverUserPick = new Map();
 let lastActiveUsersSignature = "";
 let lastRenderedActiveUsers = [];
 let viewBeforeReviews = "main";
@@ -544,6 +546,8 @@ function clearTopAlbumCoverCacheEntry(albumTitle, albumArtist) {
 
   topAlbumCoverCache.delete(key);
   topAlbumCoverPending.delete(key);
+  topAlbumCoverOptions.delete(key);
+  topAlbumCoverUserPick.delete(key);
 }
 
 function getProfileTopAlbumEntriesFromInputs() {
@@ -565,8 +569,9 @@ function refreshProfileTopAlbumPreviews() {
   const entries = getProfileTopAlbumEntriesFromInputs();
 
   entries.forEach((entry, index) => {
-    const image = document.getElementById(`profile-top-album-${index + 1}-cover`);
-    const emptyLabel = document.getElementById(`profile-top-album-${index + 1}-cover-empty`);
+    const num = index + 1;
+    const image = document.getElementById(`profile-top-album-${num}-cover`);
+    const emptyLabel = document.getElementById(`profile-top-album-${num}-cover-empty`);
 
     if (!image || !emptyLabel) {
       return;
@@ -576,6 +581,8 @@ function refreshProfileTopAlbumPreviews() {
       image.hidden = true;
       image.removeAttribute("src");
       emptyLabel.textContent = "Sin portada";
+      const picker = document.getElementById(`profile-top-album-${num}-picker`);
+      if (picker) picker.innerHTML = "";
       return;
     }
 
@@ -585,73 +592,84 @@ function refreshProfileTopAlbumPreviews() {
       image.src = coverUrl;
       image.hidden = false;
       emptyLabel.textContent = "";
-      return;
+    } else {
+      image.hidden = true;
+      image.removeAttribute("src");
+      emptyLabel.textContent = "Buscando portada...";
     }
 
-    image.hidden = true;
-    image.removeAttribute("src");
-    emptyLabel.textContent = "Buscando portada...";
+    renderTopAlbumPicker(num, entry.title, entry.artist);
   });
 }
 
 async function fetchTopAlbumCover(albumTitle, albumArtist) {
   const title = String(albumTitle || "").trim();
   const artist = String(albumArtist || "").trim();
-  const query = [artist, title].filter(Boolean).join(" ");
 
-  if (!query) {
-    return "";
+  if (!title && !artist) {
+    return [];
   }
 
-  function normalizeForMatch(s) {
+  function norm(s) {
     return s.toLowerCase().replace(/[^a-z0-9]/g, "");
   }
 
-  function artworkFrom(result) {
+  function artworkUrl(result) {
     const url = String(result?.artworkUrl100 || result?.artworkUrl60 || "").trim();
     return url ? url.replace(/100x100bb|60x60bb/, "600x600bb") : "";
   }
 
-  try {
+  async function fetchRaw(query) {
     const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=10`);
-    if (!response.ok) {
-      return "";
-    }
-
+    if (!response.ok) return [];
     const payload = await response.json();
-    const results = Array.isArray(payload?.results) ? payload.results : [];
+    return Array.isArray(payload?.results) ? payload.results : [];
+  }
 
-    if (!results.length) {
-      return "";
+  function dedup(rawResults) {
+    const seen = new Set();
+    const options = [];
+    for (const r of rawResults) {
+      const url = artworkUrl(r);
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      options.push({ url, collectionName: r.collectionName || "", artistName: r.artistName || "" });
+    }
+    return options;
+  }
+
+  try {
+    const normTitle = norm(title);
+    const normArtist = norm(artist);
+
+    // Try combined query first; fall back to artist-only if it returns nothing useful
+    const combinedQuery = [artist, title].filter(Boolean).join(" ");
+    let raw = await fetchRaw(combinedQuery);
+
+    if (!raw.length && artist) {
+      raw = await fetchRaw(artist);
     }
 
-    const normTitle = normalizeForMatch(title);
-    const normArtist = normalizeForMatch(artist);
+    const options = dedup(raw);
+    if (!options.length) return [];
 
-    // Exact match on both album and artist
-    if (normTitle && normArtist) {
-      const exact = results.find(r =>
-        normalizeForMatch(r.collectionName || "") === normTitle &&
-        normalizeForMatch(r.artistName || "") === normArtist
-      );
-      if (exact) return artworkFrom(exact);
-    }
+    options.sort((a, b) => {
+      function score(o) {
+        const t = norm(o.collectionName);
+        const ar = norm(o.artistName);
+        const titleMatch = t === normTitle || t.includes(normTitle) || normTitle.includes(t);
+        const artistMatch = ar === normArtist || ar.includes(normArtist) || normArtist.includes(ar);
+        if (titleMatch && artistMatch) return 0;
+        if (titleMatch) return 1;
+        if (artistMatch) return 2;
+        return 3;
+      }
+      return score(a) - score(b);
+    });
 
-    // Exact match on album title only
-    if (normTitle) {
-      const byTitle = results.find(r => normalizeForMatch(r.collectionName || "") === normTitle);
-      if (byTitle) return artworkFrom(byTitle);
-    }
-
-    // Exact match on artist only
-    if (normArtist) {
-      const byArtist = results.find(r => normalizeForMatch(r.artistName || "") === normArtist);
-      if (byArtist) return artworkFrom(byArtist);
-    }
-
-    return artworkFrom(results[0]);
+    return options;
   } catch {
-    return "";
+    return [];
   }
 }
 
@@ -660,6 +678,10 @@ function ensureTopAlbumCover(albumTitle, albumArtist) {
 
   if (!key) {
     return "";
+  }
+
+  if (topAlbumCoverUserPick.has(key)) {
+    return topAlbumCoverUserPick.get(key) || "";
   }
 
   if (topAlbumCoverCache.has(key)) {
@@ -671,8 +693,10 @@ function ensureTopAlbumCover(albumTitle, albumArtist) {
   }
 
   const task = fetchTopAlbumCover(albumTitle, albumArtist)
-    .then((url) => {
-      topAlbumCoverCache.set(key, url || "");
+    .then((options) => {
+      topAlbumCoverOptions.set(key, options || []);
+      const bestUrl = options.length ? options[0].url : "";
+      topAlbumCoverCache.set(key, bestUrl);
       topAlbumCoverPending.delete(key);
       refreshActiveUsersBubbleLayer();
       refreshProfileTopAlbumPreviews();
@@ -684,6 +708,46 @@ function ensureTopAlbumCover(albumTitle, albumArtist) {
 
   topAlbumCoverPending.set(key, task);
   return "";
+}
+
+function renderTopAlbumPicker(index, albumTitle, albumArtist) {
+  const picker = document.getElementById(`profile-top-album-${index}-picker`);
+  if (!picker) return;
+
+  const key = getTopAlbumCoverCacheKey(albumTitle, albumArtist);
+  const options = topAlbumCoverOptions.get(key) || [];
+  const selectedUrl = topAlbumCoverUserPick.get(key) || topAlbumCoverCache.get(key) || "";
+
+  if (options.length <= 1) {
+    picker.innerHTML = "";
+    return;
+  }
+
+  picker.innerHTML = options.map((opt) => {
+    const isSelected = opt.url === selectedUrl;
+    const label = [opt.collectionName, opt.artistName].filter(Boolean).join(" – ");
+    return `<button type="button" class="${isSelected ? "selected" : ""}" title="${escapeHtml(label)}" data-url="${escapeHtml(opt.url)}" data-index="${index}" data-title="${escapeHtml(albumTitle)}" data-artist="${escapeHtml(albumArtist)}"><img src="${escapeHtml(opt.url)}" alt="${escapeHtml(label)}" loading="lazy" /></button>`;
+  }).join("");
+}
+
+function handleTopAlbumPickerClick(e) {
+  const btn = e.target.closest("button[data-url][data-index]");
+  if (!btn || !btn.closest(".profile-top-album-picker")) return;
+
+  const url = btn.dataset.url;
+  const index = btn.dataset.index;
+  const albumTitle = btn.dataset.title;
+  const albumArtist = btn.dataset.artist;
+  const key = getTopAlbumCoverCacheKey(albumTitle, albumArtist);
+
+  topAlbumCoverUserPick.set(key, url);
+
+  const image = document.getElementById(`profile-top-album-${index}-cover`);
+  const emptyLabel = document.getElementById(`profile-top-album-${index}-cover-empty`);
+  if (image) { image.src = url; image.hidden = false; }
+  if (emptyLabel) emptyLabel.textContent = "";
+
+  renderTopAlbumPicker(Number(index), albumTitle, albumArtist);
 }
 
 function renderActiveUserBubbles(users) {
@@ -2617,6 +2681,8 @@ function setupAuthInteractions() {
   profileBackButton.addEventListener("click", () => {
     showMainView();
   });
+
+  document.addEventListener("click", handleTopAlbumPickerClick);
 
   document.addEventListener("click", (event) => {
     const target = event.target;

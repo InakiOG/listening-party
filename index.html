@@ -557,6 +557,42 @@
         font-size: 0.7rem;
       }
 
+      .profile-top-album-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.4rem;
+      }
+
+      .profile-top-album-picker button {
+        padding: 0;
+        border: 2px solid transparent;
+        border-radius: 0.4rem;
+        background: none;
+        cursor: pointer;
+        line-height: 0;
+        transition: border-color 0.15s, opacity 0.15s;
+        opacity: 0.7;
+      }
+
+      .profile-top-album-picker button img {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.28rem;
+        display: block;
+        object-fit: cover;
+      }
+
+      .profile-top-album-picker button.selected {
+        border-color: #6366f1;
+        opacity: 1;
+      }
+
+      .profile-top-album-picker button:hover {
+        border-color: #94a3b8;
+        opacity: 1;
+      }
+
       .profile-section .save-profile-button {
         border: 1px solid #22c55e;
         border-radius: 0.45rem;
@@ -1499,6 +1535,7 @@
                 <img id="profile-top-album-1-cover" alt="Preview portada top album 1" hidden />
                 <span id="profile-top-album-1-cover-empty">Sin portada</span>
               </div>
+              <div id="profile-top-album-1-picker" class="profile-top-album-picker"></div>
             </div>
 
             <div class="profile-top-album-block">
@@ -1517,6 +1554,7 @@
                 <img id="profile-top-album-2-cover" alt="Preview portada top album 2" hidden />
                 <span id="profile-top-album-2-cover-empty">Sin portada</span>
               </div>
+              <div id="profile-top-album-2-picker" class="profile-top-album-picker"></div>
             </div>
 
             <div class="profile-top-album-block">
@@ -1535,6 +1573,7 @@
                 <img id="profile-top-album-3-cover" alt="Preview portada top album 3" hidden />
                 <span id="profile-top-album-3-cover-empty">Sin portada</span>
               </div>
+              <div id="profile-top-album-3-picker" class="profile-top-album-picker"></div>
             </div>
 
             <button id="save-profile" class="save-profile-button" type="button">Guardar perfil</button>
