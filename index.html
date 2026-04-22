@@ -1421,6 +1421,141 @@
         letter-spacing: 0.08em;
       }
 
+      .group-by-button {
+        border: 1px solid #334155;
+        border-radius: 0.45rem;
+        background: #0b1220;
+        color: #e2e8f0;
+        padding: 0.28rem 0.45rem;
+        font-size: 0.76rem;
+        cursor: pointer;
+      }
+
+      .group-by-button.active {
+        border-color: #7dd3fc;
+        color: #7dd3fc;
+      }
+
+      .group-pile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.28rem;
+      }
+
+      .group-pile-name {
+        font-size: 0.56rem;
+        color: #94a3b8;
+        text-align: center;
+        margin: 0;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 1.2;
+        pointer-events: none;
+      }
+
+      .group-pile-covers {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        padding: 0;
+        display: block;
+      }
+
+      .group-pile-covers:hover .pile-cover-2 {
+        transform: scale(1.05);
+        border-color: #7dd3fc;
+      }
+
+      .pile-cover {
+        position: absolute;
+        width: 80%;
+        aspect-ratio: 1 / 1;
+        overflow: hidden;
+        border-radius: 0.4rem;
+        border: 1px solid #334155;
+        background: #0f172a;
+        transition: transform 150ms ease, border-color 150ms ease;
+      }
+
+      .pile-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .pile-cover-0 {
+        top: 10%;
+        left: 0%;
+        z-index: 1;
+        transform: rotate(-7deg);
+        opacity: 0.55;
+      }
+
+      .pile-cover-1 {
+        top: 5%;
+        left: 5%;
+        z-index: 2;
+        transform: rotate(4deg);
+        opacity: 0.78;
+      }
+
+      .pile-cover-2 {
+        top: 0%;
+        left: 10%;
+        z-index: 3;
+      }
+
+      .pile-count {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        z-index: 10;
+        background: #1e293b;
+        color: #94a3b8;
+        font-size: 0.55rem;
+        border-radius: 0.3rem;
+        padding: 0.1rem 0.28rem;
+        border: 1px solid #334155;
+        line-height: 1.4;
+      }
+
+      .group-expanded {
+        grid-column: 1 / -1;
+        background: #111927;
+        border-radius: 0.75rem;
+        border: 1px solid #334155;
+        padding: 0.45rem;
+      }
+
+      .group-expanded-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        border: 0;
+        background: transparent;
+        color: #7dd3fc;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 0.1rem 0;
+        margin-bottom: 0.45rem;
+        width: 100%;
+        text-align: left;
+      }
+
+      .group-inner-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.4rem;
+      }
+
     </style>
   </head>
   <body>
@@ -1502,10 +1637,11 @@
           <select id="album-sort-by" aria-label="Campo de orden">
             <option value="date">Fecha</option>
             <option value="score">Score</option>
-            <option value="artist">Artista</option>
             <option value="title">Titulo</option>
           </select>
           <button id="album-sort-direction" type="button" aria-label="Cambiar direccion de orden">Descendente</button>
+          <button id="group-by-artist" type="button" class="group-by-button" aria-label="Agrupar por artista">Por artista</button>
+          <button id="group-by-genre" type="button" class="group-by-button" aria-label="Agrupar por genero">Por genero</button>
         </div>
         <section id="albums" class="albums" aria-live="polite"></section>
       </section>
@@ -1597,6 +1733,6 @@
         </article>
       </section>
     </main>
-    <script src="./app.js?v=20260421-3"></script>
+    <script src="./app.js?v=20260421-4"></script>
   </body>
 </html>

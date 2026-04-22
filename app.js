@@ -2,7 +2,9 @@ const appState = {
   albums: [],
   expandedAlbumId: null,
   sortBy: "date",
-  sortDirection: "desc"
+  sortDirection: "desc",
+  groupBy: null,
+  expandedGroupKey: null
 };
 
 let pendingAlbumOpenAnimationId = null;
@@ -164,6 +166,16 @@ function detectDiscCount(rawText) {
 
 function detectClearVinyl(rawText) {
   return /\bclear\b/.test(String(rawText || "").toLowerCase());
+}
+
+function extractPrimaryGenre(rawText) {
+  const text = String(rawText || "").trim();
+  const parts = text.split(";");
+  if (parts.length > 1) {
+    const genre = parts[1].split(",")[0].trim();
+    return genre || "Unknown";
+  }
+  return "Unknown";
 }
 
 function escapeHtml(value) {
@@ -1359,60 +1371,47 @@ async function logoutUser() {
   showAuthOverlay("Sesion cerrada.");
 }
 
-function renderAlbums() {
-  const container = document.getElementById("albums");
+function buildAlbumCardHtml(album) {
+  const adminUser = isAdminUser();
+  const isExpanded = appState.expandedAlbumId === album.id;
+  const safeTitle = escapeHtml(album.title);
+  const safeArtist = escapeHtml(album.artist);
+  const safeYear = escapeHtml(album.year);
+  const safeGenre = escapeHtml(album.genre);
+  const safeNotes = escapeHtml(album.notes);
+  const safeGiftedBy = escapeHtml(album.giftedBy || "");
+  const safeCoverUrl = escapeHtml(album.coverUrl);
+  const safeVinylColor = escapeHtml(album.vinylColor || "#0b0b0b");
+  const safeVinylColorSecondary = escapeHtml(album.vinylColorSecondary || "");
+  const secondaryVinylColor = safeVinylColorSecondary || safeVinylColor;
+  const isCdDisc = album.discType === "cd";
+  const hasSecondDisc = !isCdDisc && (Boolean(safeVinylColorSecondary) || Number(album.discCount || 1) > 1);
+  const clearVinylClass = album.isClearVinyl ? "clear-vinyl" : "";
+  const coverClassName = album.ownedByUser ? "" : "not-owned";
+  const detailListMarkup = adminUser
+    ? (album.tracks || [])
+        .map((track, index) => {
+          const safeTrack = escapeHtml(track);
+          return `<li><button type="button" class="track-play-button" data-album-id="${escapeHtml(String(album.id))}" data-track-index="${index}">${safeTrack}</button></li>`;
+        })
+        .join("")
+    : (album.details || [])
+        .map((detail) => `<li>${escapeHtml(detail)}</li>`)
+        .join("");
+  const listenAlbumMarkup = adminUser
+    ? `<button type="button" class="album-action-button listen-album-button" data-album-id="${escapeHtml(String(album.id))}">Escuchar album</button>`
+    : "";
+  const spotifyButtonMarkup = album.spotifyUrl
+    ? `<a class="album-action-button" href="${escapeHtml(album.spotifyUrl)}" target="_blank" rel="noreferrer">Abrir en Spotify</a>`
+    : "";
+  const linksMarkup = (spotifyButtonMarkup || listenAlbumMarkup)
+    ? `<div class="album-links">${listenAlbumMarkup}${spotifyButtonMarkup}</div>`
+    : "";
+  const giftedByMarkup = safeGiftedBy
+    ? `<p class="gifted-by"><em>Regalado por: ${safeGiftedBy}</em></p>`
+    : "";
 
-  if (!container) {
-    return;
-  }
-
-  if (!appState.albums.length) {
-    container.innerHTML = "";
-    return;
-  }
-
-  container.innerHTML = appState.albums
-    .map((album) => {
-      const adminUser = isAdminUser();
-      const isExpanded = appState.expandedAlbumId === album.id;
-      const safeTitle = escapeHtml(album.title);
-      const safeArtist = escapeHtml(album.artist);
-      const safeYear = escapeHtml(album.year);
-      const safeGenre = escapeHtml(album.genre);
-      const safeNotes = escapeHtml(album.notes);
-      const safeGiftedBy = escapeHtml(album.giftedBy || "");
-      const safeCoverUrl = escapeHtml(album.coverUrl);
-      const safeVinylColor = escapeHtml(album.vinylColor || "#0b0b0b");
-      const safeVinylColorSecondary = escapeHtml(album.vinylColorSecondary || "");
-      const secondaryVinylColor = safeVinylColorSecondary || safeVinylColor;
-      const isCdDisc = album.discType === "cd";
-      const hasSecondDisc = !isCdDisc && (Boolean(safeVinylColorSecondary) || Number(album.discCount || 1) > 1);
-      const clearVinylClass = album.isClearVinyl ? "clear-vinyl" : "";
-      const coverClassName = album.ownedByUser ? "" : "not-owned";
-      const detailListMarkup = adminUser
-        ? (album.tracks || [])
-            .map((track, index) => {
-              const safeTrack = escapeHtml(track);
-              return `<li><button type="button" class="track-play-button" data-album-id="${escapeHtml(String(album.id))}" data-track-index="${index}">${safeTrack}</button></li>`;
-            })
-            .join("")
-        : (album.details || [])
-            .map((detail) => `<li>${escapeHtml(detail)}</li>`)
-            .join("");
-      const listenAlbumMarkup = adminUser
-        ? `<button type="button" class="album-action-button listen-album-button" data-album-id="${escapeHtml(String(album.id))}">Escuchar album</button>`
-        : "";
-      const spotifyButtonMarkup = album.spotifyUrl
-        ? `<a class="album-action-button" href="${escapeHtml(album.spotifyUrl)}" target="_blank" rel="noreferrer">Abrir en Spotify</a>`
-        : "";
-      const linksMarkup = (spotifyButtonMarkup || listenAlbumMarkup)
-        ? `<div class="album-links">${listenAlbumMarkup}${spotifyButtonMarkup}</div>`
-        : "";
-      const giftedByMarkup = safeGiftedBy
-        ? `<p class="gifted-by"><em>Regalado por: ${safeGiftedBy}</em></p>`
-        : "";
-
-      return `
+  return `
         <article class="album-card ${isExpanded ? "expanded" : ""}" data-album-id="${escapeHtml(String(album.id))}">
           <button
             type="button"
@@ -1438,8 +1437,82 @@ function renderAlbums() {
           </div>
         </article>
       `;
-    })
-    .join("");
+}
+
+function getGroupedAlbums() {
+  const sorted = getSortedAlbums();
+  const groups = new Map();
+  for (const album of sorted) {
+    const key = appState.groupBy === "genre"
+      ? (album.primaryGenre || "Unknown")
+      : (album.artist || "Unknown");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(album);
+  }
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .map(([key, albums]) => ({ key, albums }));
+}
+
+function buildGroupedAlbumsHtml() {
+  const groups = getGroupedAlbums();
+  if (!groups.length) return "";
+
+  return groups.map(({ key, albums }) => {
+    const isExpanded = appState.expandedGroupKey === key;
+    const safeKey = escapeHtml(key);
+    const dataKey = escapeHtml(key);
+
+    if (isExpanded) {
+      const innerCards = albums.map(buildAlbumCardHtml).join("");
+      return `
+        <div class="group-expanded" data-group-key="${dataKey}">
+          <button type="button" class="group-expanded-heading" data-group-key="${dataKey}">← ${safeKey}</button>
+          <div class="group-inner-grid">${innerCards}</div>
+        </div>
+      `;
+    }
+
+    const pileAlbums = albums.slice(0, 3);
+    const coversMarkup = pileAlbums.map((album, i) => {
+      const safeCover = escapeHtml(album.coverUrl);
+      const safeTitle = escapeHtml(album.title);
+      return `<span class="pile-cover pile-cover-${i}"><img src="${safeCover}" alt="${safeTitle}" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" /></span>`;
+    }).join("");
+    const countBadge = albums.length > 1
+      ? `<span class="pile-count">${albums.length}</span>`
+      : "";
+
+    return `
+      <div class="group-pile" data-group-key="${dataKey}">
+        <p class="group-pile-name">${safeKey}</p>
+        <button type="button" class="group-pile-covers" data-group-key="${dataKey}" aria-label="Expandir ${safeKey}">
+          ${coversMarkup}
+          ${countBadge}
+        </button>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderAlbums() {
+  const container = document.getElementById("albums");
+
+  if (!container) {
+    return;
+  }
+
+  if (!appState.albums.length) {
+    container.innerHTML = "";
+    return;
+  }
+
+  if (appState.groupBy) {
+    container.innerHTML = buildGroupedAlbumsHtml();
+    return;
+  }
+
+  container.innerHTML = appState.albums.map(buildAlbumCardHtml).join("");
 }
 
 function updateSortDirectionButtonLabel() {
@@ -1464,7 +1537,7 @@ function setupAlbumSortControls() {
 
   const applySortBySelection = () => {
     const selected = String(sortBySelect.value || "date");
-    appState.sortBy = ["date", "score", "artist", "title"].includes(selected) ? selected : "date";
+    appState.sortBy = ["date", "score", "title"].includes(selected) ? selected : "date";
     sortAlbumsInState();
     renderAlbums();
   };
@@ -1478,6 +1551,38 @@ function setupAlbumSortControls() {
     sortAlbumsInState();
     renderAlbums();
   });
+
+  const groupByArtistButton = document.getElementById("group-by-artist");
+  const groupByGenreButton = document.getElementById("group-by-genre");
+
+  function updateGroupButtonStates() {
+    if (groupByArtistButton) {
+      groupByArtistButton.classList.toggle("active", appState.groupBy === "artist");
+    }
+    if (groupByGenreButton) {
+      groupByGenreButton.classList.toggle("active", appState.groupBy === "genre");
+    }
+  }
+
+  if (groupByArtistButton) {
+    groupByArtistButton.addEventListener("click", () => {
+      appState.groupBy = appState.groupBy === "artist" ? null : "artist";
+      appState.expandedGroupKey = null;
+      appState.expandedAlbumId = null;
+      updateGroupButtonStates();
+      renderAlbums();
+    });
+  }
+
+  if (groupByGenreButton) {
+    groupByGenreButton.addEventListener("click", () => {
+      appState.groupBy = appState.groupBy === "genre" ? null : "genre";
+      appState.expandedGroupKey = null;
+      appState.expandedAlbumId = null;
+      updateGroupButtonStates();
+      renderAlbums();
+    });
+  }
 }
 
 function setupAlbumInteractions() {
@@ -1531,6 +1636,27 @@ function setupAlbumInteractions() {
       } catch (error) {
         showReviewStatus(error instanceof Error ? error.message : "No se pudo iniciar la escucha de la cancion.");
       }
+      return;
+    }
+
+    const pileButton = event.target.closest(".group-pile-covers");
+    if (pileButton) {
+      const key = pileButton.dataset.groupKey || "";
+      appState.expandedGroupKey = key;
+      appState.expandedAlbumId = null;
+      renderAlbums();
+      const expandedGroup = container.querySelector(".group-expanded");
+      if (expandedGroup && typeof expandedGroup.scrollIntoView === "function") {
+        expandedGroup.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      return;
+    }
+
+    const groupHeading = event.target.closest(".group-expanded-heading");
+    if (groupHeading) {
+      appState.expandedGroupKey = null;
+      appState.expandedAlbumId = null;
+      renderAlbums();
       return;
     }
 
@@ -1618,6 +1744,7 @@ async function loadAlbums() {
       dateAdded: item.dateAdded || "",
       score: Number(item.rating || 0),
       genre: item.rawText || "Discogs collection item",
+      primaryGenre: extractPrimaryGenre(item.rawText || ""),
       notes: tracks.length ? `${tracks.length} canciones` : `Release page ${item.sourcePage || "?"}`,
       releaseUrl: item.releaseUrl || "",
       spotifyUrl,
