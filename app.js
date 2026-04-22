@@ -481,6 +481,27 @@ async function apiClearNowPlaying(actorName) {
 
   return response.json();
 }
+
+async function apiAddPartyPicture(pictureDataUrl) {
+  const response = await fetch("/api/listening-party/picture", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ pictureDataUrl })
+  });
+
+  if (response.status === 403) {
+    throw new Error("Solo administrador puede agregar fotos.");
+  }
+
+  if (!response.ok) {
+    throw new Error("No se pudo agregar la foto a la sesion.");
+  }
+
+  return response.json();
+}
+
 async function apiLogout() {
   const response = await fetch("/api/users/logout", {
     method: "POST",
@@ -3194,6 +3215,8 @@ function setupNowPlayingInteractions() {
   const saveButton = document.getElementById("save-review");
   const openAlbumButton = document.getElementById("open-now-playing-album");
   const stopNowPlayingButton = document.getElementById("now-playing-stop");
+  const addPictureButton = document.getElementById("now-playing-add-picture");
+  const pictureInput = document.getElementById("now-playing-picture-input");
 
   if (!toggle || !panel || !ratingContainer || !saveButton || !openAlbumButton || !stopNowPlayingButton) {
     return;
@@ -3237,18 +3260,47 @@ function setupNowPlayingInteractions() {
 
   stopNowPlayingButton.addEventListener("click", async () => {
     if (!isAdminUser() || !sessionState.currentUser?.name) {
-      showReviewStatus("Solo administrador puede finalizar reproduciendo ahora.");
+      showReviewStatus("Solo administrador puede finalizar la reproduccion actual.");
       return;
     }
 
     try {
       await apiClearNowPlaying(sessionState.currentUser.name);
       hideNowPlaying();
-      showReviewStatus("Reproduciendo ahora finalizado.");
+      showReviewStatus("Reproduccion actual finalizada.");
     } catch (error) {
-      showReviewStatus(error instanceof Error ? error.message : "No se pudo finalizar reproduciendo ahora.");
+      showReviewStatus(error instanceof Error ? error.message : "No se pudo finalizar la reproduccion actual.");
     }
   });
+
+  if (addPictureButton && pictureInput) {
+    addPictureButton.addEventListener("click", () => {
+      pictureInput.click();
+    });
+
+    pictureInput.addEventListener("change", async (event) => {
+      const files = event.currentTarget?.files;
+      if (!files || files.length === 0) {
+        return;
+      }
+
+      const file = files[0];
+
+      if (!isAdminUser()) {
+        showReviewStatus("Solo administrador puede agregar fotos.");
+        return;
+      }
+
+      try {
+        const pictureDataUrl = await readFileAsDataUrl(file);
+        await apiAddPartyPicture(pictureDataUrl);
+        showReviewStatus("Foto agregada a la sesion.");
+        pictureInput.value = "";
+      } catch (error) {
+        showReviewStatus(error instanceof Error ? error.message : "No se pudo agregar la foto.");
+      }
+    });
+  }
 
   renderRating(selectedRating);
 }

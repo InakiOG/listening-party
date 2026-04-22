@@ -114,6 +114,9 @@
         top: 0.45rem;
         right: 0.45rem;
         z-index: 30;
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
       }
 
       .now-playing-stop-button {
@@ -124,6 +127,25 @@
         padding: 0.2rem 0.45rem;
         font-size: 0.68rem;
         cursor: pointer;
+      }
+
+      .now-playing-picture-upload {
+        display: flex;
+        align-items: center;
+      }
+
+      .now-playing-picture-button {
+        border: 1px solid #3b82f6;
+        background: #1e3a8a;
+        color: #dbeafe;
+        border-radius: 0.4rem;
+        padding: 0.2rem 0.45rem;
+        font-size: 0.68rem;
+        cursor: pointer;
+      }
+
+      .now-playing-picture-button:hover {
+        background: #1e40af;
       }
 
       .now-playing[hidden] {
@@ -2411,7 +2433,11 @@
 
     <section id="now-playing" class="now-playing" hidden>
       <div id="now-playing-controls" class="now-playing-controls" hidden>
-        <button id="now-playing-stop" class="now-playing-stop-button" type="button">Finalizar</button>
+        <button id="now-playing-stop" class="now-playing-stop-button" type="button" aria-label="Terminar reproduccion actual">Terminar</button>
+        <div class="now-playing-picture-upload">
+          <button id="now-playing-add-picture" class="now-playing-picture-button" type="button" aria-label="Agregar foto a la sesion">📷</button>
+          <input id="now-playing-picture-input" type="file" accept="image/*" hidden />
+        </div>
       </div>
       <button id="now-playing-toggle" class="now-playing-toggle" type="button" aria-expanded="false" aria-controls="review-panel">
         <div class="now-playing-artwork" aria-hidden="true">

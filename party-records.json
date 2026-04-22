@@ -1,3 +1,45 @@
 {
-  "parties": []
+  "parties": [
+    {
+      "id": "2026-04-22T05:00:39.097412+00:00",
+      "date": "2026-04-22",
+      "savedAt": "2026-04-22T05:04:38.383063+00:00",
+      "attendees": [
+        "I\u00f1aki",
+        "test2"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Around The Fur",
+          "artist": "Deftones",
+          "coverUrl": "https://i.discogs.com/xHvabeA8Utori9_VlFa42eLpWpu-YNcKNL6aPZu7e74/rs:fit/g:sm/q:90/h:600/w:595/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4NzMw/NzktMTY0MDg4MTI2/NS03OTc3LmpwZWc.jpeg"
+        },
+        {
+          "title": "Led Zeppelin",
+          "artist": "Led Zeppelin",
+          "coverUrl": "https://i.discogs.com/GlWm3wwaPFeBa78mFMN0-H-kNubJo5jYTs62FdSU_1w/rs:fit/g:sm/q:90/h:597/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5ODg3/Nzc4LTE2MjkxNzM0/NjktNTU1My5qcGVn.jpeg"
+        }
+      ],
+      "reviews": [
+        {
+          "reviewer": "I\u00f1aki",
+          "albumTitle": "Around The Fur",
+          "songTitle": "Mascara",
+          "rating": 3.0,
+          "text": "",
+          "scope": "song",
+          "createdAt": "22/04/26"
+        },
+        {
+          "reviewer": "test2",
+          "albumTitle": "Led Zeppelin",
+          "songTitle": "Babe I'm Gonna Leave You - 6:42",
+          "rating": 2.5,
+          "text": "good shit",
+          "scope": "song",
+          "createdAt": "22/04/26"
+        }
+      ]
+    }
+  ]
 }

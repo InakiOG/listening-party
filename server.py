@@ -153,7 +153,35 @@ def write_party_records_store(store):
         json.dump(store, handle, indent=2)
 
 
-def collect_reviews_for_albums(reviews_store, albums_played):
+def parse_review_date_key(value):
+    text = str(value or "").strip()
+    if not text:
+        return ""
+
+    if len(text) >= 10:
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00")).date().isoformat()
+        except ValueError:
+            pass
+
+    try:
+        return datetime.strptime(text, "%d/%m/%y").date().isoformat()
+    except ValueError:
+        return ""
+
+
+def get_session_date_key(session_payload):
+    started_at = str((session_payload or {}).get("startedAt", "")).strip()
+    if not started_at:
+        return ""
+
+    try:
+        return datetime.fromisoformat(started_at.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        return started_at[:10]
+
+
+def collect_reviews_for_albums(reviews_store, albums_played, review_date_filter=""):
     reviews = []
     album_titles_lower = {
         str(a.get("title", "")).strip().lower()
@@ -187,6 +215,9 @@ def collect_reviews_for_albums(reviews_store, albums_played):
 
         for r in review_list:
             if not isinstance(r, dict):
+                continue
+            review_date_key = parse_review_date_key(r.get("createdAt", ""))
+            if review_date_key and review_date_key != review_date_filter:
                 continue
             reviews.append({
                 "reviewer": str(r.get("name", "")).strip(),
@@ -243,7 +274,8 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
     if not attendees:
         return None
 
-    party_reviews = collect_reviews_for_albums(reviews_store, session_payload.get("albumsPlayed", []))
+    session_date_key = get_session_date_key(session_payload)
+    party_reviews = collect_reviews_for_albums(reviews_store, session_payload.get("albumsPlayed", []), session_date_key)
     now_iso = datetime.now(timezone.utc).isoformat()
 
     records_store = read_party_records_store()
@@ -266,6 +298,11 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
         "reviews": party_reviews
     }
 
+    # Include picture if it exists in the session
+    party_picture = str(session_payload.get("partyPicture", "")).strip()
+    if party_picture:
+        record["partyPicture"] = party_picture
+
     finalized_at = str(existing.get("finalizedAt", "")).strip()
     if finalized:
         finalized_at = now_iso
@@ -280,6 +317,33 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
     records_store["parties"] = parties
     write_party_records_store(records_store)
     return record
+
+
+def finalize_active_session_on_shutdown():
+    global _current_session
+
+    with REVIEWS_LOCK:
+        session_to_save = _current_session
+        if not session_to_save or not session_to_save.get("albumsPlayed"):
+            _current_session = None
+            clear_now_playing()
+            return
+
+        users_store = read_users_store()
+        credentials_store = read_credentials_store()
+        users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+        write_users_store(users_store)
+        write_credentials_store(credentials_store)
+        reviews_store = read_reviews_store()
+        upsert_party_record_snapshot(
+            session_to_save,
+            users_store,
+            credentials_store,
+            reviews_store,
+            finalized=True
+        )
+        _current_session = None
+        clear_now_playing()
 
 
 def normalize_user_key(name):
@@ -858,6 +922,61 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             self._send_json({"ok": True, "recordCreated": True, "partyId": record["id"]})
             return
 
+        if parsed.path == "/api/listening-party/picture":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            picture_data_url = str(payload.get("pictureDataUrl", "")).strip()
+
+            if not picture_data_url:
+                self._send_json({"error": "pictureDataUrl is required"}, status_code=400)
+                return
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+
+                # Verify that only admin can add pictures
+                admin_key = normalize_user_key(ADMIN_DEFAULT_NAME)
+                admin_profile = sanitize_user_profile(users_store.get(admin_key))
+
+                if not admin_profile or admin_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                    self._send_json({"error": "only administrador can add pictures"}, status_code=403)
+                    return
+
+                if _current_session is None:
+                    self._send_json({"error": "No hay listening party activa"}, status_code=400)
+                    return
+
+                if not _current_session.get("albumsPlayed"):
+                    self._send_json({"error": "No hay reproduccion activa"}, status_code=400)
+                    return
+
+                # Add picture to the session
+                _current_session["partyPicture"] = picture_data_url
+
+                # Upsert the record with the picture
+                reviews_store = read_reviews_store()
+                upsert_party_record_snapshot(
+                    _current_session,
+                    users_store,
+                    credentials_store,
+                    reviews_store,
+                    finalized=False
+                )
+
+            self._send_json({"ok": True})
+            return
+
         if parsed.path == "/api/now-playing":
             content_length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(content_length) if content_length > 0 else b""
@@ -1401,6 +1520,7 @@ def run_server(port=8000, refresh_discogs=False):
     except KeyboardInterrupt:
         pass
     finally:
+        finalize_active_session_on_shutdown()
         server.server_close()
 
 
