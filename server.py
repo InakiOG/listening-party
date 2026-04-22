@@ -15,7 +15,9 @@ REVIEWS_DB_PATH = ROOT / "reviews-db.json"
 USERS_DB_PATH = ROOT / "users-db.json"
 CREDENTIALS_DB_PATH = ROOT / "user-credentials.local.json"
 NOW_PLAYING_PATH = ROOT / "now-playing.json"
+PARTY_RECORDS_PATH = ROOT / "party-records.json"
 REVIEWS_LOCK = threading.Lock()
+_current_session = None
 ADMIN_USER_KEY = "iñaki"
 ADMIN_DEFAULT_NAME = "Iñaki"
 ADMIN_DEFAULT_PASSWORD = "14agosto"
@@ -47,6 +49,14 @@ def ensure_credentials_db():
 
     with CREDENTIALS_DB_PATH.open("w", encoding="utf-8") as handle:
         json.dump({}, handle, indent=2)
+
+
+def ensure_party_records_db():
+    if PARTY_RECORDS_PATH.exists():
+        return
+
+    with PARTY_RECORDS_PATH.open("w", encoding="utf-8") as handle:
+        json.dump({"parties": []}, handle, indent=2)
 
 
 def read_json_dict_or_reset(path):
@@ -94,6 +104,75 @@ def write_users_store(store):
 def write_credentials_store(store):
     with CREDENTIALS_DB_PATH.open("w", encoding="utf-8") as handle:
         json.dump(store, handle, indent=2)
+
+
+def read_party_records_store():
+    ensure_party_records_db()
+    try:
+        with PARTY_RECORDS_PATH.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        payload = {"parties": []}
+
+    if not isinstance(payload, dict):
+        payload = {"parties": []}
+    if not isinstance(payload.get("parties"), list):
+        payload["parties"] = []
+
+    return payload
+
+
+def write_party_records_store(store):
+    with PARTY_RECORDS_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(store, handle, indent=2)
+
+
+def collect_reviews_for_albums(reviews_store, albums_played):
+    reviews = []
+    album_titles_lower = {
+        str(a.get("title", "")).strip().lower()
+        for a in albums_played
+        if str(a.get("title", "")).strip()
+    }
+    if not album_titles_lower:
+        return reviews
+
+    for review_key, review_list in reviews_store.items():
+        if not isinstance(review_list, list):
+            continue
+
+        key_str = str(review_key)
+        is_album_key = key_str.startswith("album::")
+
+        if is_album_key:
+            rest = key_str[len("album::"):]
+            parts = [p for p in rest.split("::") if p]
+            if not parts:
+                continue
+            album_title = parts[-1].strip()
+            song_title_val = ""
+        else:
+            parts = key_str.split("::", 1)
+            album_title = parts[0].strip()
+            song_title_val = parts[1].strip() if len(parts) > 1 else ""
+
+        if album_title.lower() not in album_titles_lower:
+            continue
+
+        for r in review_list:
+            if not isinstance(r, dict):
+                continue
+            reviews.append({
+                "reviewer": str(r.get("name", "")).strip(),
+                "albumTitle": album_title,
+                "songTitle": song_title_val,
+                "rating": float(r.get("rating", 0) or 0),
+                "text": str(r.get("text", "")).strip(),
+                "scope": "album" if is_album_key else "song",
+                "createdAt": str(r.get("createdAt", "")).strip()
+            })
+
+    return reviews
 
 
 def normalize_user_key(name):
@@ -475,9 +554,33 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             })
             return
 
+        if parsed.path == "/api/party-records":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+
+            with REVIEWS_LOCK:
+                credentials_store = read_credentials_store()
+                user_key = find_user_key_by_session_token(credentials_store, session_token)
+                users_store = read_users_store()
+                user_profile = sanitize_user_profile(users_store.get(user_key)) if user_key else None
+
+            if not user_profile or user_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                self._send_json({"error": "admin only"}, status_code=403)
+                return
+
+            records = read_party_records_store()
+            parties = sorted(
+                records.get("parties", []),
+                key=lambda p: str(p.get("date", "")),
+                reverse=True
+            )
+            self._send_json({"parties": parties})
+            return
+
         super().do_GET()
 
     def do_POST(self):
+        global _current_session
         parsed = urlparse(self.path)
 
         if parsed.path == "/api/now-playing/clear":
@@ -515,6 +618,36 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     return
 
                 clear_now_playing()
+
+                session_to_save = _current_session
+                _current_session = None
+
+                if session_to_save and session_to_save.get("albumsPlayed"):
+                    attendees = []
+                    for uk, ce in credentials_store.items():
+                        if not read_session_token(ce):
+                            continue
+                        profile = sanitize_user_profile(users_store.get(uk))
+                        if not profile or profile.get("accountName") == ADMIN_ACCOUNT_NAME:
+                            continue
+                        attendees.append(profile.get("name", uk))
+
+                    if attendees:
+                        reviews_store = read_reviews_store()
+                        party_reviews = collect_reviews_for_albums(
+                            reviews_store, session_to_save["albumsPlayed"]
+                        )
+                        record = {
+                            "id": session_to_save["id"],
+                            "date": session_to_save["startedAt"][:10],
+                            "savedAt": datetime.now(timezone.utc).isoformat(),
+                            "attendees": attendees,
+                            "albumsPlayed": session_to_save["albumsPlayed"],
+                            "reviews": party_reviews
+                        }
+                        records = read_party_records_store()
+                        records["parties"].append(record)
+                        write_party_records_store(records)
 
             self._send_json({"ok": True})
             return
@@ -583,6 +716,23 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "updatedBy": actor_profile.get("name", actor_name)
                 }
                 write_now_playing_payload(now_playing_payload)
+
+                if _current_session is None:
+                    _current_session = {
+                        "id": datetime.now(timezone.utc).isoformat(),
+                        "startedAt": datetime.now(timezone.utc).isoformat(),
+                        "albumsPlayed": []
+                    }
+                already_tracked = any(
+                    str(a.get("title", "")).lower() == album_title.lower()
+                    for a in _current_session["albumsPlayed"]
+                )
+                if not already_tracked and album_title:
+                    _current_session["albumsPlayed"].append({
+                        "title": album_title,
+                        "artist": album_artist,
+                        "coverUrl": cover_url
+                    })
 
             self._send_json({"nowPlaying": now_playing_payload})
             return
@@ -952,6 +1102,7 @@ def run_server(port=8000, refresh_discogs=False):
     ensure_reviews_db()
     ensure_users_db()
     ensure_credentials_db()
+    ensure_party_records_db()
 
     users_store = read_users_store()
     credentials_store = read_credentials_store()

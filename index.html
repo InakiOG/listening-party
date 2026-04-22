@@ -1454,6 +1454,109 @@
         letter-spacing: 0.08em;
       }
 
+      .party-records-view {
+        text-align: left;
+      }
+
+      .party-records-view[hidden] {
+        display: none;
+      }
+
+      .party-records-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .party-record-card {
+        border: 1px solid #334155;
+        border-radius: 0.75rem;
+        background: #0f172a;
+        padding: 0.65rem;
+      }
+
+      .party-record-date {
+        margin: 0 0 0.45rem;
+        color: #7dd3fc;
+        font-size: 0.84rem;
+        font-weight: 700;
+      }
+
+      .party-section-label {
+        margin: 0.45rem 0 0.18rem;
+        font-size: 0.62rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .party-attendees {
+        margin: 0;
+        color: #e2e8f0;
+        font-size: 0.78rem;
+      }
+
+      .party-albums-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+
+      .party-album-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.18rem;
+        width: 54px;
+      }
+
+      .party-album-item img {
+        width: 54px;
+        height: 54px;
+        border-radius: 0.35rem;
+        object-fit: cover;
+        border: 1px solid #334155;
+        background: #1e293b;
+      }
+
+      .party-album-item span {
+        font-size: 0.5rem;
+        color: #94a3b8;
+        text-align: center;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .party-reviews-list {
+        margin: 0.1rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.32rem;
+      }
+
+      .party-review-item {
+        border: 1px solid #1e293b;
+        border-radius: 0.45rem;
+        padding: 0.32rem 0.45rem;
+        background: #0b1220;
+      }
+
+      .party-review-meta {
+        margin: 0;
+        color: #93c5fd;
+        font-size: 0.7rem;
+      }
+
+      .party-review-text {
+        margin: 0.12rem 0 0;
+        color: #cbd5e1;
+        font-size: 0.7rem;
+      }
+
       .group-by-button {
         border: 1px solid #334155;
         border-radius: 0.45rem;
@@ -1670,6 +1773,7 @@
 
     <section id="profile-hub" class="profile-hub" hidden>
       <div id="profile-menu" class="profile-menu" hidden>
+        <button id="open-party-records" type="button" hidden>Registro</button>
         <button id="open-profile" type="button">Perfil</button>
         <button id="logout-profile" type="button">Cerrar sesion</button>
       </div>
@@ -1706,6 +1810,13 @@
           <button id="reviews-back" class="back-button" type="button">Volver</button>
         </div>
         <ul id="my-reviews-list" class="my-reviews-list"></ul>
+      </section>
+      <section id="party-records-view" class="party-records-view" hidden>
+        <div class="reviews-header">
+          <h2>Listening Party Record</h2>
+          <button id="party-records-back" class="back-button" type="button">Volver</button>
+        </div>
+        <div id="party-records-list" class="party-records-list"></div>
       </section>
       <section id="profile-view" class="profile-view" hidden>
         <div class="reviews-header">
@@ -1788,6 +1899,6 @@
         </article>
       </section>
     </main>
-    <script src="./app.js?v=20260421-8"></script>
+    <script src="./app.js?v=20260421-9"></script>
   </body>
 </html>

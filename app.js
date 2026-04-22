@@ -1010,6 +1010,11 @@ function setCurrentUser(user) {
     nowPlayingControls.hidden = !isAdminUser();
   }
 
+  const openPartyRecordsButton = document.getElementById("open-party-records");
+  if (openPartyRecordsButton) {
+    openPartyRecordsButton.hidden = !isAdminUser();
+  }
+
   hideAuthOverlay();
   renderAlbums();
 }
@@ -1255,36 +1260,24 @@ function showMainView() {
   const mainView = document.getElementById("main-view");
   const reviewsView = document.getElementById("reviews-view");
   const profileView = document.getElementById("profile-view");
+  const partyRecordsView = document.getElementById("party-records-view");
 
-  if (mainView) {
-    mainView.hidden = false;
-  }
-
-  if (reviewsView) {
-    reviewsView.hidden = true;
-  }
-
-  if (profileView) {
-    profileView.hidden = true;
-  }
+  if (mainView) mainView.hidden = false;
+  if (reviewsView) reviewsView.hidden = true;
+  if (profileView) profileView.hidden = true;
+  if (partyRecordsView) partyRecordsView.hidden = true;
 }
 
 function openProfileView() {
   const mainView = document.getElementById("main-view");
   const reviewsView = document.getElementById("reviews-view");
   const profileView = document.getElementById("profile-view");
+  const partyRecordsView = document.getElementById("party-records-view");
 
-  if (mainView) {
-    mainView.hidden = true;
-  }
-
-  if (reviewsView) {
-    reviewsView.hidden = true;
-  }
-
-  if (profileView) {
-    profileView.hidden = false;
-  }
+  if (mainView) mainView.hidden = true;
+  if (reviewsView) reviewsView.hidden = true;
+  if (profileView) profileView.hidden = false;
+  if (partyRecordsView) partyRecordsView.hidden = true;
 }
 
 function renderMyReviews(reviews) {
@@ -1322,6 +1315,107 @@ function renderMyReviews(reviews) {
       `;
     })
     .join("");
+}
+
+async function apiGetPartyRecords() {
+  const response = await fetch(`/api/party-records?t=${Date.now()}`, { cache: "no-store" });
+  if (response.status === 403) throw new Error("Solo el administrador puede ver el registro.");
+  if (!response.ok) throw new Error("No se pudieron cargar los registros.");
+  const payload = await response.json();
+  return Array.isArray(payload.parties) ? payload.parties : [];
+}
+
+function renderPartyRecords(parties) {
+  const list = document.getElementById("party-records-list");
+  if (!list) return;
+
+  if (!parties.length) {
+    list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">No hay registros todavia. Los registros se guardan automaticamente cuando el admin finaliza la escucha y habia al menos un invitado.</p>";
+    return;
+  }
+
+  list.innerHTML = parties.map((party) => {
+    const date = escapeHtml(formatPartyDate(party.date || ""));
+    const attendees = (Array.isArray(party.attendees) ? party.attendees : [])
+      .map((a) => escapeHtml(String(a || "")))
+      .join(", ");
+
+    const albumsMarkup = (Array.isArray(party.albumsPlayed) ? party.albumsPlayed : [])
+      .map((album) => {
+        const safeCover = escapeHtml(album.coverUrl || "");
+        const safeTitle = escapeHtml(album.title || "");
+        const safeArtist = escapeHtml(album.artist || "");
+        const label = safeArtist ? `${safeTitle} — ${safeArtist}` : safeTitle;
+        return `
+          <div class="party-album-item">
+            <img src="${safeCover}" alt="${safeTitle}" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />
+            <span title="${label}">${safeTitle}</span>
+          </div>`;
+      }).join("");
+
+    const reviewsMarkup = (Array.isArray(party.reviews) ? party.reviews : [])
+      .map((r) => {
+        const reviewer = escapeHtml(r.reviewer || "");
+        const albumTitle = escapeHtml(r.albumTitle || "");
+        const songTitle = escapeHtml(r.songTitle || "");
+        const rating = Number(r.rating || 0).toFixed(1);
+        const text = escapeHtml(r.text || "");
+        const target = r.scope === "song" && songTitle
+          ? `${albumTitle} — ${songTitle}`
+          : albumTitle;
+        const textMarkup = text ? `<p class="party-review-text">${text}</p>` : "";
+        return `
+          <li class="party-review-item">
+            <p class="party-review-meta">${reviewer} · ${target} · ${rating}/5</p>
+            ${textMarkup}
+          </li>`;
+      }).join("");
+
+    const reviewsSection = reviewsMarkup
+      ? `<p class="party-section-label">Reseñas</p><ul class="party-reviews-list">${reviewsMarkup}</ul>`
+      : "";
+
+    return `
+      <article class="party-record-card">
+        <p class="party-record-date">${date}</p>
+        <p class="party-section-label">Asistentes</p>
+        <p class="party-attendees">${attendees || "—"}</p>
+        <p class="party-section-label">Albums</p>
+        <div class="party-albums-grid">${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}</div>
+        ${reviewsSection}
+      </article>`;
+  }).join("");
+}
+
+function formatPartyDate(dateStr) {
+  if (!dateStr) return "Fecha desconocida";
+  const value = new Date(dateStr + "T12:00:00");
+  if (Number.isNaN(value.getTime())) return dateStr;
+  return value.toLocaleDateString([], { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+}
+
+async function openPartyRecordsView() {
+  if (!isAdminUser()) return;
+
+  const mainView = document.getElementById("main-view");
+  const reviewsView = document.getElementById("reviews-view");
+  const profileView = document.getElementById("profile-view");
+  const partyRecordsView = document.getElementById("party-records-view");
+
+  if (mainView) mainView.hidden = true;
+  if (reviewsView) reviewsView.hidden = true;
+  if (profileView) profileView.hidden = true;
+  if (partyRecordsView) partyRecordsView.hidden = false;
+
+  const list = document.getElementById("party-records-list");
+  if (list) list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">Cargando...</p>";
+
+  try {
+    const parties = await apiGetPartyRecords();
+    renderPartyRecords(parties);
+  } catch (error) {
+    if (list) list.innerHTML = `<p style="color:#ef4444;font-size:0.8rem;margin:0">${escapeHtml(error instanceof Error ? error.message : "Error")}</p>`;
+  }
 }
 
 async function openMyReviewsView() {
@@ -2772,6 +2866,21 @@ function setupAuthInteractions() {
     closeProfileMenu();
     await openMyReviewsView();
   });
+
+  const openPartyRecordsButton = document.getElementById("open-party-records");
+  if (openPartyRecordsButton) {
+    openPartyRecordsButton.addEventListener("click", async () => {
+      closeProfileMenu();
+      await openPartyRecordsView();
+    });
+  }
+
+  const partyRecordsBackButton = document.getElementById("party-records-back");
+  if (partyRecordsBackButton) {
+    partyRecordsBackButton.addEventListener("click", () => {
+      showMainView();
+    });
+  }
 
   const topAlbumInputs = [
     profileTopAlbum1,
