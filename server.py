@@ -104,9 +104,39 @@ def sanitize_user_profile(profile):
     if not isinstance(profile, dict):
         return None
 
+    raw_top_albums = profile.get("topAlbums")
+    if not isinstance(raw_top_albums, list):
+        raw_top_albums = [
+            profile.get("topAlbum1", ""),
+            profile.get("topAlbum2", ""),
+            profile.get("topAlbum3", "")
+        ]
+
+    top_albums = []
+    for value in raw_top_albums[:3]:
+        if isinstance(value, dict):
+            top_albums.append({
+                "title": str(value.get("title", "")).strip()[:150],
+                "artist": str(value.get("artist", "")).strip()[:120]
+            })
+        else:
+            top_albums.append({
+                "title": str(value or "").strip()[:150],
+                "artist": ""
+            })
+
+    while len(top_albums) < 3:
+        top_albums.append({
+            "title": "",
+            "artist": ""
+        })
+
     return {
         "name": str(profile.get("name", "")).strip(),
         "photoDataUrl": str(profile.get("photoDataUrl", "")).strip(),
+        "description": str(profile.get("description", "")).strip()[:150],
+        "instagramUsername": str(profile.get("instagramUsername", "")).strip().lstrip("@")[:40],
+        "topAlbums": top_albums,
         "createdAt": str(profile.get("createdAt", "")).strip(),
         "accountName": str(profile.get("accountName", "usuario")).strip() or "usuario"
     }
@@ -195,6 +225,9 @@ def reconcile_auth_stores(users_store, credentials_store):
         normalized_users[user_key] = {
             "name": profile_name,
             "photoDataUrl": sanitized_profile.get("photoDataUrl", ""),
+            "description": sanitized_profile.get("description", ""),
+            "instagramUsername": sanitized_profile.get("instagramUsername", ""),
+            "topAlbums": sanitized_profile.get("topAlbums", ["", "", ""]),
             "createdAt": profile_created_at,
             "accountName": "usuario"
         }
@@ -216,13 +249,20 @@ def reconcile_auth_stores(users_store, credentials_store):
     if not isinstance(admin_credentials, dict):
         admin_credentials = {}
 
+    admin_sanitized_profile = sanitize_user_profile(admin_profile) or {}
     admin_name = str(admin_profile.get("name", ADMIN_DEFAULT_NAME)).strip() or ADMIN_DEFAULT_NAME
     admin_photo = str(admin_profile.get("photoDataUrl", "")).strip()
+    admin_description = str(admin_sanitized_profile.get("description", "")).strip()
+    admin_instagram = str(admin_sanitized_profile.get("instagramUsername", "")).strip().lstrip("@")
+    admin_top_albums = admin_sanitized_profile.get("topAlbums", ["", "", ""])
     admin_created_at = str(admin_profile.get("createdAt", "")).strip() or datetime.now(timezone.utc).isoformat()
 
     normalized_users[ADMIN_USER_KEY] = {
         "name": admin_name,
         "photoDataUrl": admin_photo,
+        "description": admin_description,
+        "instagramUsername": admin_instagram,
+        "topAlbums": admin_top_albums,
         "createdAt": admin_created_at,
         "accountName": ADMIN_ACCOUNT_NAME
     }
@@ -585,6 +625,9 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 profile = {
                     "name": name,
                     "photoDataUrl": photo_data_url,
+                    "description": "",
+                    "instagramUsername": "",
+                    "topAlbums": ["", "", ""],
                     "createdAt": datetime.now(timezone.utc).isoformat(),
                     "accountName": "usuario"
                 }
@@ -735,6 +778,88 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     return
 
                 profile["photoDataUrl"] = photo_data_url
+                users_store[user_key] = profile
+                write_users_store(users_store)
+
+                updated_profile = sanitize_user_profile(profile)
+
+            self._send_json({"user": updated_profile})
+            return
+
+        if parsed.path == "/api/users/profile":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            name = str(payload.get("name", "")).strip()
+            description = str(payload.get("description", "")).strip()
+            instagram_username = str(payload.get("instagramUsername", "")).strip().lstrip("@")
+            top_albums_raw = payload.get("topAlbums", [])
+
+            if not isinstance(top_albums_raw, list):
+                top_albums_raw = []
+
+            top_albums = []
+            for value in top_albums_raw[:3]:
+                if isinstance(value, dict):
+                    top_albums.append({
+                        "title": str(value.get("title", "")).strip(),
+                        "artist": str(value.get("artist", "")).strip()
+                    })
+                else:
+                    top_albums.append({
+                        "title": str(value or "").strip(),
+                        "artist": ""
+                    })
+
+            while len(top_albums) < 3:
+                top_albums.append({
+                    "title": "",
+                    "artist": ""
+                })
+
+            if not name:
+                self._send_json({"error": "name is required"}, status_code=400)
+                return
+
+            if len(description) > 150:
+                self._send_json({"error": "description must be 150 characters or less"}, status_code=400)
+                return
+
+            if len(instagram_username) > 40:
+                self._send_json({"error": "instagramUsername must be 40 characters or less"}, status_code=400)
+                return
+
+            if any(len(str(entry.get("title", ""))) > 150 for entry in top_albums):
+                self._send_json({"error": "topAlbums title must be 150 characters or less"}, status_code=400)
+                return
+
+            if any(len(str(entry.get("artist", ""))) > 120 for entry in top_albums):
+                self._send_json({"error": "topAlbums artist must be 120 characters or less"}, status_code=400)
+                return
+
+            user_key = normalize_user_key(name)
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                profile = users_store.get(user_key)
+
+                if not isinstance(profile, dict):
+                    self._send_json({"error": "user not found"}, status_code=404)
+                    return
+
+                profile["description"] = description
+                profile["instagramUsername"] = instagram_username
+                profile["topAlbums"] = top_albums
                 users_store[user_key] = profile
                 write_users_store(users_store)
 

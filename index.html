@@ -477,8 +477,138 @@
         font-size: 0.74rem;
       }
 
-      .profile-menu input[type="file"] {
+      .profile-section {
+        margin-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.42rem;
+      }
+
+      .profile-section label {
+        font-size: 0.7rem;
+        color: #93c5fd;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .profile-section textarea,
+      .profile-section input[type="text"] {
+        border: 1px solid #334155;
+        border-radius: 0.42rem;
+        background: #020617;
+        color: #e2e8f0;
+        padding: 0.32rem 0.42rem;
+        font-size: 0.74rem;
+      }
+
+      .profile-section textarea {
+        resize: vertical;
+        min-height: 56px;
+      }
+
+      .profile-top-album-block {
+        border: 1px solid #334155;
+        border-radius: 0.55rem;
+        background: #0b1220;
+        padding: 0.38rem;
+      }
+
+      .profile-top-album-heading {
+        margin: 0 0 0.32rem;
+        color: #f8fafc;
+        font-size: 0.74rem;
+      }
+
+      .profile-top-album-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.32rem;
+      }
+
+      .profile-top-album-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+      }
+
+      .profile-top-album-field label {
+        margin: 0;
+      }
+
+      .profile-top-album-preview {
+        margin-top: 0.34rem;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.42rem;
+      }
+
+      .profile-top-album-preview img {
+        width: 48px;
+        height: 48px;
+        border-radius: 0.45rem;
+        border: 1px solid #334155;
+        object-fit: cover;
+        background: #0f172a;
+      }
+
+      .profile-top-album-preview span {
+        color: #94a3b8;
+        font-size: 0.7rem;
+      }
+
+      .profile-section .save-profile-button {
+        border: 1px solid #22c55e;
+        border-radius: 0.45rem;
+        background: #166534;
+        color: #f0fdf4;
+        padding: 0.34rem 0.45rem;
+        text-align: center;
+        font-size: 0.74rem;
+        cursor: pointer;
+      }
+
+      .profile-section .profile-save-status {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 0.68rem;
+      }
+
+      .profile-view {
+        text-align: left;
+      }
+
+      .profile-view[hidden] {
         display: none;
+      }
+
+      .profile-card {
+        border: 1px solid #334155;
+        border-radius: 0.8rem;
+        background: #0f172a;
+        padding: 0.65rem;
+      }
+
+      .profile-card h2 {
+        margin: 0 0 0.4rem;
+        font-size: 1rem;
+      }
+
+      .profile-primary-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+      }
+
+      .profile-primary-actions button {
+        border: 1px solid #334155;
+        border-radius: 0.45rem;
+        background: #1e293b;
+        color: #f8fafc;
+        padding: 0.34rem 0.5rem;
+        font-size: 0.75rem;
+        cursor: pointer;
       }
 
       .reviews-view {
@@ -565,7 +695,120 @@
         border: 2px solid rgba(226, 232, 240, 0.82);
         overflow: hidden;
         box-shadow: 0 8px 20px rgba(15, 23, 42, 0.45);
+        pointer-events: auto;
+        user-select: none;
+        touch-action: none;
+        cursor: grab;
         animation: floatUserBubble var(--duration, 18s) ease-in-out var(--delay, 0s) infinite alternate;
+      }
+
+      .active-user-bubble.dragging {
+        cursor: grabbing;
+        animation-play-state: paused;
+      }
+
+      .active-user-bubble.expanded {
+        width: min(78vw, 290px);
+        height: auto;
+        min-height: 42px;
+        border-radius: 0.82rem;
+        animation-play-state: paused;
+        z-index: 90;
+        background: rgba(15, 23, 42, 0.94);
+      }
+
+      .active-user-bubble.expanded > img,
+      .active-user-bubble.expanded > .active-user-letter {
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        margin: 0.35rem;
+        border: 1px solid rgba(148, 163, 184, 0.55);
+      }
+
+      .active-user-bubble-details {
+        display: none;
+      }
+
+      .active-user-bubble.expanded .active-user-bubble-details {
+        display: block;
+        padding: 0.25rem 0.48rem 0.48rem;
+      }
+
+      .active-user-detail-name {
+        margin: 0 0 0.2rem;
+        color: #f8fafc;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .active-user-detail-label {
+        margin: 0.2rem 0 0.06rem;
+        color: #7dd3fc;
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .active-user-detail-value {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 0.68rem;
+        line-height: 1.3;
+        word-break: break-word;
+      }
+
+      .active-user-detail-empty {
+        color: #94a3b8;
+      }
+
+      .active-user-top-albums-list {
+        list-style: none;
+        margin: 0.16rem 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.24rem;
+      }
+
+      .active-user-top-album-item {
+        display: flex;
+        align-items: center;
+        gap: 0.34rem;
+        color: #e2e8f0;
+        font-size: 0.67rem;
+      }
+
+      .active-user-top-album-art {
+        width: 30px;
+        height: 30px;
+        border-radius: 0.35rem;
+        overflow: hidden;
+        flex: 0 0 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #1e293b;
+        border: 1px solid #334155;
+      }
+
+      .active-user-top-album-art img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .active-user-top-album-placeholder {
+        color: #94a3b8;
+        font-size: 0.8rem;
+      }
+
+      .active-user-top-album-title {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .active-user-bubble img {
@@ -799,6 +1042,10 @@
         overflow: visible;
       }
 
+      .album-card.album-opening {
+        animation: albumCardOpen 520ms cubic-bezier(0.18, 0.84, 0.28, 1);
+      }
+
       .cover-button {
         width: 100%;
         padding: 0;
@@ -908,6 +1155,10 @@
         opacity: 1;
       }
 
+      .album-card.album-opening .vinyl-overlay {
+        animation: albumDiscReveal 520ms cubic-bezier(0.22, 0.82, 0.22, 1);
+      }
+
       .album-card.expanded .vinyl-disc-primary {
         animation: spinVinyl 2.4s linear infinite;
       }
@@ -918,6 +1169,10 @@
 
       .album-card.expanded .vinyl-disc-secondary {
         animation: spinVinylSecondary 3.1s linear infinite reverse;
+      }
+
+      .album-card.album-opening .cover-button img {
+        animation: albumCoverSettle 420ms ease-out;
       }
 
       @keyframes spinVinyl {
@@ -961,6 +1216,74 @@
         transform: translateY(0);
         overflow: visible;
         padding: 0.6rem 0.65rem 0.75rem;
+      }
+
+      .album-card.album-opening .album-details {
+        animation: albumDetailsEnter 460ms ease-out;
+      }
+
+      @keyframes albumCardOpen {
+        0% {
+          transform: scale(0.94);
+          box-shadow: 0 0 0 0 rgba(125, 211, 252, 0), 0 10px 28px rgba(2, 6, 23, 0.22);
+        }
+        52% {
+          transform: scale(1.04);
+          box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.26), 0 20px 35px rgba(2, 6, 23, 0.36);
+        }
+        100% {
+          transform: scale(1.02);
+          box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.18), 0 14px 30px rgba(2, 6, 23, 0.28);
+        }
+      }
+
+      @keyframes albumDiscReveal {
+        0% {
+          opacity: 0;
+          transform: translateY(-50%) translateX(24%) scale(0.82);
+          filter: saturate(0.82) brightness(0.9);
+        }
+        68% {
+          opacity: 1;
+          transform: translateY(-50%) translateX(-5%) scale(1.03);
+          filter: saturate(1.1) brightness(1.03);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(-50%) translateX(0) scale(1);
+          filter: saturate(1) brightness(1);
+        }
+      }
+
+      @keyframes albumCoverSettle {
+        0% {
+          transform: scale(1.05);
+          filter: brightness(1.08);
+        }
+        100% {
+          transform: scale(1);
+          filter: brightness(1);
+        }
+      }
+
+      @keyframes albumDetailsEnter {
+        0% {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .album-card.album-opening,
+        .album-card.album-opening .vinyl-overlay,
+        .album-card.album-opening .cover-button img,
+        .album-card.album-opening .album-details {
+          animation: none;
+        }
       }
 
       .album-card h2 {
@@ -1110,10 +1433,7 @@
 
     <section id="profile-hub" class="profile-hub" hidden>
       <div id="profile-menu" class="profile-menu" hidden>
-        <p id="profile-menu-user" class="profile-menu-user"></p>
-        <button id="change-photo" type="button">Cambiar foto</button>
-        <input id="change-photo-input" type="file" accept="image/*" />
-        <button id="view-reviews" type="button">Ver reseñas</button>
+        <button id="open-profile" type="button">Perfil</button>
         <button id="logout-profile" type="button">Cerrar sesion</button>
       </div>
       <button id="profile-avatar-button" class="profile-avatar-button" type="button" aria-expanded="false" aria-controls="profile-menu">
@@ -1144,6 +1464,83 @@
           <button id="reviews-back" class="back-button" type="button">Volver</button>
         </div>
         <ul id="my-reviews-list" class="my-reviews-list"></ul>
+      </section>
+      <section id="profile-view" class="profile-view" hidden>
+        <div class="reviews-header">
+          <h2>Perfil</h2>
+          <button id="profile-back" class="back-button" type="button">Volver</button>
+        </div>
+        <article class="profile-card">
+          <p id="profile-menu-user" class="profile-menu-user"></p>
+          <div class="profile-primary-actions">
+            <button id="change-photo" type="button">Cambiar foto</button>
+            <input id="change-photo-input" type="file" accept="image/*" hidden />
+            <button id="view-reviews" type="button">Ver reseñas</button>
+          </div>
+          <section class="profile-section" aria-label="Perfil">
+            <label for="profile-description">Descripcion</label>
+            <textarea id="profile-description" maxlength="150" placeholder="Escribe algo sobre ti"></textarea>
+            <label for="profile-instagram">Instagram</label>
+            <input id="profile-instagram" type="text" maxlength="40" placeholder="tu_usuario" />
+
+            <div class="profile-top-album-block">
+              <p class="profile-top-album-heading">Top album 1</p>
+              <div class="profile-top-album-grid">
+                <div class="profile-top-album-field">
+                  <label for="profile-top-album-1">Album name</label>
+                  <input id="profile-top-album-1" type="text" maxlength="150" placeholder="Album favorito 1" />
+                </div>
+                <div class="profile-top-album-field">
+                  <label for="profile-top-album-1-artist">Album artist</label>
+                  <input id="profile-top-album-1-artist" type="text" maxlength="120" placeholder="Artista album 1" />
+                </div>
+              </div>
+              <div class="profile-top-album-preview">
+                <img id="profile-top-album-1-cover" alt="Preview portada top album 1" hidden />
+                <span id="profile-top-album-1-cover-empty">Sin portada</span>
+              </div>
+            </div>
+
+            <div class="profile-top-album-block">
+              <p class="profile-top-album-heading">Top album 2</p>
+              <div class="profile-top-album-grid">
+                <div class="profile-top-album-field">
+                  <label for="profile-top-album-2">Album name</label>
+                  <input id="profile-top-album-2" type="text" maxlength="150" placeholder="Album favorito 2" />
+                </div>
+                <div class="profile-top-album-field">
+                  <label for="profile-top-album-2-artist">Album artist</label>
+                  <input id="profile-top-album-2-artist" type="text" maxlength="120" placeholder="Artista album 2" />
+                </div>
+              </div>
+              <div class="profile-top-album-preview">
+                <img id="profile-top-album-2-cover" alt="Preview portada top album 2" hidden />
+                <span id="profile-top-album-2-cover-empty">Sin portada</span>
+              </div>
+            </div>
+
+            <div class="profile-top-album-block">
+              <p class="profile-top-album-heading">Top album 3</p>
+              <div class="profile-top-album-grid">
+                <div class="profile-top-album-field">
+                  <label for="profile-top-album-3">Album name</label>
+                  <input id="profile-top-album-3" type="text" maxlength="150" placeholder="Album favorito 3" />
+                </div>
+                <div class="profile-top-album-field">
+                  <label for="profile-top-album-3-artist">Album artist</label>
+                  <input id="profile-top-album-3-artist" type="text" maxlength="120" placeholder="Artista album 3" />
+                </div>
+              </div>
+              <div class="profile-top-album-preview">
+                <img id="profile-top-album-3-cover" alt="Preview portada top album 3" hidden />
+                <span id="profile-top-album-3-cover-empty">Sin portada</span>
+              </div>
+            </div>
+
+            <button id="save-profile" class="save-profile-button" type="button">Guardar perfil</button>
+            <p id="profile-save-status" class="profile-save-status"></p>
+          </section>
+        </article>
       </section>
     </main>
     <script src="./app.js?v=20260421-3"></script>

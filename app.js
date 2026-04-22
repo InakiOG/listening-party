@@ -5,6 +5,8 @@ const appState = {
   sortDirection: "desc"
 };
 
+let pendingAlbumOpenAnimationId = null;
+
 const sessionState = {
   currentUser: null
 };
@@ -18,9 +20,15 @@ let currentNowPlaying = null;
 const bubbleUiState = new Map();
 let activeBubbleDrag = null;
 let lastBubbleSignature = "";
+const activeUserBubbleUiState = new Map();
+let activeUserBubbleDrag = null;
 const userPhotoCache = new Map();
 const activeUserBubbleColorCache = new Map();
+const topAlbumCoverCache = new Map();
+const topAlbumCoverPending = new Map();
 let lastActiveUsersSignature = "";
+let lastRenderedActiveUsers = [];
+let viewBeforeReviews = "main";
 
 const VINYL_COLOR_RULES = [
   { key: "grape", color: "#7e22ce" },
@@ -47,6 +55,8 @@ const ACTIVE_USER_BUBBLE_COLORS = [
   "#a855f7",
   "#ec4899"
 ];
+
+const ACTIVE_USERS_POLL_INTERVAL_MS = 2000;
 
 function isAdminUser() {
   return String(sessionState.currentUser?.accountName || "").trim().toLowerCase() === "administrador";
@@ -324,6 +334,28 @@ async function apiUpdatePhoto(name, photoDataUrl) {
   return payload.user || null;
 }
 
+async function apiUpdateProfile(name, description, instagramUsername, topAlbums) {
+  const response = await fetch("/api/users/profile", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name,
+      description,
+      instagramUsername,
+      topAlbums
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo guardar el perfil.");
+  }
+
+  const payload = await response.json();
+  return payload.user || null;
+}
+
 async function apiGetMyReviews(name) {
   const response = await fetch(`/api/users/reviews?name=${encodeURIComponent(name)}&t=${Date.now()}`, {
     cache: "no-store"
@@ -437,6 +469,223 @@ function getActiveUserLetter(user) {
   return Array.from(trimmed)[0].toUpperCase();
 }
 
+function normalizeProfileDescription(value) {
+  return String(value || "").trim().slice(0, 150);
+}
+
+function normalizeInstagramHandle(value) {
+  return String(value || "").trim().replace(/^@+/, "").slice(0, 40);
+}
+
+function normalizeTopAlbums(topAlbums) {
+  const source = Array.isArray(topAlbums) ? topAlbums : [];
+  const normalized = source
+    .slice(0, 3)
+    .map((value) => {
+      if (value && typeof value === "object") {
+        return {
+          title: String(value.title || "").trim().slice(0, 150),
+          artist: String(value.artist || "").trim().slice(0, 120)
+        };
+      }
+
+      return {
+        title: String(value || "").trim().slice(0, 150),
+        artist: ""
+      };
+    });
+
+  while (normalized.length < 3) {
+    normalized.push({
+      title: "",
+      artist: ""
+    });
+  }
+
+  return normalized;
+}
+
+function getTopAlbumsFromUser(user) {
+  if (Array.isArray(user?.topAlbums)) {
+    return normalizeTopAlbums(user.topAlbums);
+  }
+
+  return normalizeTopAlbums([
+    { title: user?.topAlbum1 || "", artist: user?.topAlbum1Artist || "" },
+    { title: user?.topAlbum2 || "", artist: user?.topAlbum2Artist || "" },
+    { title: user?.topAlbum3 || "", artist: user?.topAlbum3Artist || "" }
+  ]);
+}
+
+function refreshActiveUsersBubbleLayer() {
+  if (!lastRenderedActiveUsers.length) {
+    return;
+  }
+
+  lastActiveUsersSignature = "";
+  renderActiveUserBubbles(lastRenderedActiveUsers);
+}
+
+function getTopAlbumCoverCacheKey(albumTitle, albumArtist) {
+  const titleKey = String(albumTitle || "").trim().toLowerCase();
+  const artistKey = String(albumArtist || "").trim().toLowerCase();
+  if (!titleKey && !artistKey) {
+    return "";
+  }
+
+  return `${titleKey}::${artistKey}`;
+}
+
+function clearTopAlbumCoverCacheEntry(albumTitle, albumArtist) {
+  const key = getTopAlbumCoverCacheKey(albumTitle, albumArtist);
+  if (!key) {
+    return;
+  }
+
+  topAlbumCoverCache.delete(key);
+  topAlbumCoverPending.delete(key);
+}
+
+function getProfileTopAlbumEntriesFromInputs() {
+  const album1 = document.getElementById("profile-top-album-1");
+  const artist1 = document.getElementById("profile-top-album-1-artist");
+  const album2 = document.getElementById("profile-top-album-2");
+  const artist2 = document.getElementById("profile-top-album-2-artist");
+  const album3 = document.getElementById("profile-top-album-3");
+  const artist3 = document.getElementById("profile-top-album-3-artist");
+
+  return normalizeTopAlbums([
+    { title: album1?.value || "", artist: artist1?.value || "" },
+    { title: album2?.value || "", artist: artist2?.value || "" },
+    { title: album3?.value || "", artist: artist3?.value || "" }
+  ]);
+}
+
+function refreshProfileTopAlbumPreviews() {
+  const entries = getProfileTopAlbumEntriesFromInputs();
+
+  entries.forEach((entry, index) => {
+    const image = document.getElementById(`profile-top-album-${index + 1}-cover`);
+    const emptyLabel = document.getElementById(`profile-top-album-${index + 1}-cover-empty`);
+
+    if (!image || !emptyLabel) {
+      return;
+    }
+
+    if (!entry.title) {
+      image.hidden = true;
+      image.removeAttribute("src");
+      emptyLabel.textContent = "Sin portada";
+      return;
+    }
+
+    const coverUrl = ensureTopAlbumCover(entry.title, entry.artist);
+
+    if (coverUrl) {
+      image.src = coverUrl;
+      image.hidden = false;
+      emptyLabel.textContent = "";
+      return;
+    }
+
+    image.hidden = true;
+    image.removeAttribute("src");
+    emptyLabel.textContent = "Buscando portada...";
+  });
+}
+
+async function fetchTopAlbumCover(albumTitle, albumArtist) {
+  const title = String(albumTitle || "").trim();
+  const artist = String(albumArtist || "").trim();
+  const query = [artist, title].filter(Boolean).join(" ");
+
+  if (!query) {
+    return "";
+  }
+
+  function normalizeForMatch(s) {
+    return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  function artworkFrom(result) {
+    const url = String(result?.artworkUrl100 || result?.artworkUrl60 || "").trim();
+    return url ? url.replace(/100x100bb|60x60bb/, "600x600bb") : "";
+  }
+
+  try {
+    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=10`);
+    if (!response.ok) {
+      return "";
+    }
+
+    const payload = await response.json();
+    const results = Array.isArray(payload?.results) ? payload.results : [];
+
+    if (!results.length) {
+      return "";
+    }
+
+    const normTitle = normalizeForMatch(title);
+    const normArtist = normalizeForMatch(artist);
+
+    // Exact match on both album and artist
+    if (normTitle && normArtist) {
+      const exact = results.find(r =>
+        normalizeForMatch(r.collectionName || "") === normTitle &&
+        normalizeForMatch(r.artistName || "") === normArtist
+      );
+      if (exact) return artworkFrom(exact);
+    }
+
+    // Exact match on album title only
+    if (normTitle) {
+      const byTitle = results.find(r => normalizeForMatch(r.collectionName || "") === normTitle);
+      if (byTitle) return artworkFrom(byTitle);
+    }
+
+    // Exact match on artist only
+    if (normArtist) {
+      const byArtist = results.find(r => normalizeForMatch(r.artistName || "") === normArtist);
+      if (byArtist) return artworkFrom(byArtist);
+    }
+
+    return artworkFrom(results[0]);
+  } catch {
+    return "";
+  }
+}
+
+function ensureTopAlbumCover(albumTitle, albumArtist) {
+  const key = getTopAlbumCoverCacheKey(albumTitle, albumArtist);
+
+  if (!key) {
+    return "";
+  }
+
+  if (topAlbumCoverCache.has(key)) {
+    return topAlbumCoverCache.get(key) || "";
+  }
+
+  if (topAlbumCoverPending.has(key)) {
+    return "";
+  }
+
+  const task = fetchTopAlbumCover(albumTitle, albumArtist)
+    .then((url) => {
+      topAlbumCoverCache.set(key, url || "");
+      topAlbumCoverPending.delete(key);
+      refreshActiveUsersBubbleLayer();
+      refreshProfileTopAlbumPreviews();
+    })
+    .catch(() => {
+      topAlbumCoverCache.set(key, "");
+      topAlbumCoverPending.delete(key);
+    });
+
+  topAlbumCoverPending.set(key, task);
+  return "";
+}
+
 function renderActiveUserBubbles(users) {
   const layer = document.getElementById("active-users-layer");
   if (!layer) {
@@ -444,10 +693,18 @@ function renderActiveUserBubbles(users) {
   }
 
   const normalizedUsers = Array.isArray(users) ? users : [];
+  const limitedUsers = normalizedUsers.slice(0, 14);
+  lastRenderedActiveUsers = limitedUsers;
   const signature = JSON.stringify(
-    normalizedUsers.map((user) => ({
+    limitedUsers.map((user) => ({
       name: String(user?.name || ""),
-      photoDataUrl: String(user?.photoDataUrl || "")
+      photoDataUrl: String(user?.photoDataUrl || ""),
+      description: normalizeProfileDescription(user?.description || ""),
+      instagramUsername: normalizeInstagramHandle(user?.instagramUsername || ""),
+      topAlbums: getTopAlbumsFromUser(user).map((entry) => ({
+        title: entry.title,
+        artist: entry.artist
+      }))
     }))
   );
 
@@ -455,33 +712,80 @@ function renderActiveUserBubbles(users) {
     return;
   }
 
-  if (!normalizedUsers.length) {
+  if (!limitedUsers.length) {
     layer.innerHTML = "";
+    lastRenderedActiveUsers = [];
     lastActiveUsersSignature = signature;
     return;
   }
 
-  layer.innerHTML = normalizedUsers
-    .slice(0, 14)
+  layer.innerHTML = limitedUsers
     .map((user, index) => {
+      const userKey = getActiveUserKey(user) || `${String(user?.name || "").toLowerCase()}::${index}`;
+      const encodedUserKey = encodeURIComponent(userKey);
+      const savedState = activeUserBubbleUiState.get(userKey);
+      const expanded = Boolean(savedState?.expanded);
       const safeName = escapeHtml(String(user?.name || "Usuario"));
       const photoUrl = String(user?.photoDataUrl || "").trim();
       const hasPhoto = Boolean(photoUrl);
       const safePhotoUrl = escapeHtml(photoUrl);
       const letter = escapeHtml(getActiveUserLetter(user));
       const color = escapeHtml(getActiveUserBubbleColor(user));
-      const left = 4 + ((index * 17) % 88);
-      const top = 10 + ((index * 23) % 80);
+      const description = escapeHtml(normalizeProfileDescription(user?.description || ""));
+      const instagram = escapeHtml(normalizeInstagramHandle(user?.instagramUsername || ""));
+      const topAlbums = getTopAlbumsFromUser(user).filter((entry) => entry.title);
+      const defaultLeft = 4 + ((index * 17) % 88);
+      const defaultTop = 10 + ((index * 23) % 80);
+      const left = savedState?.left ?? defaultLeft;
+      const top = savedState?.top ?? defaultTop;
       const delay = (index % 5) * -1.25;
       const duration = 14 + (index % 6) * 2;
       const driftX = 14 + (index % 7) * 5;
       const driftY = -10 - (index % 5) * 4;
+      const descriptionMarkup = description
+        ? `<p class="active-user-detail-value">${description}</p>`
+        : `<p class="active-user-detail-value active-user-detail-empty">Sin descripcion.</p>`;
+      const instagramMarkup = instagram
+        ? `<p class="active-user-detail-value">@${instagram}</p>`
+        : `<p class="active-user-detail-value active-user-detail-empty">Sin Instagram.</p>`;
+      const topAlbumsMarkup = topAlbums.length
+        ? topAlbums
+            .map((entry) => {
+              const safeAlbumTitle = escapeHtml(entry.title);
+              const safeAlbumArtist = escapeHtml(entry.artist || "");
+              const displayText = safeAlbumArtist
+                ? `${safeAlbumTitle} - ${safeAlbumArtist}`
+                : safeAlbumTitle;
+              const coverUrl = ensureTopAlbumCover(entry.title, entry.artist);
+              const safeCoverUrl = escapeHtml(coverUrl);
+              const artworkMarkup = safeCoverUrl
+                ? `<img src="${safeCoverUrl}" alt="Portada de ${safeAlbumTitle}" loading="lazy" />`
+                : `<span class="active-user-top-album-placeholder">♪</span>`;
+
+              return `
+                <li class="active-user-top-album-item">
+                  <span class="active-user-top-album-art">${artworkMarkup}</span>
+                  <span class="active-user-top-album-title">${displayText}</span>
+                </li>
+              `;
+            })
+            .join("")
+        : `<li class="active-user-top-album-item active-user-detail-empty">Sin top albums.</li>`;
 
       return `
-        <article class="active-user-bubble" title="${safeName}" style="left:${left}%;top:${top}%;--delay:${delay}s;--duration:${duration}s;--drift-x:${driftX}px;--drift-y:${driftY}px;">
+        <article class="active-user-bubble ${expanded ? "expanded" : ""}" data-user-key="${encodedUserKey}" title="${safeName}" style="left:${left}%;top:${top}%;--delay:${delay}s;--duration:${duration}s;--drift-x:${driftX}px;--drift-y:${driftY}px;">
           ${hasPhoto
             ? `<img src="${safePhotoUrl}" alt="Foto de ${safeName}" loading="lazy" />`
             : `<span class="active-user-letter" style="background:${color};">${letter}</span>`}
+          <div class="active-user-bubble-details">
+            <p class="active-user-detail-name">${safeName}</p>
+            <p class="active-user-detail-label">Descripcion</p>
+            ${descriptionMarkup}
+            <p class="active-user-detail-label">Instagram</p>
+            ${instagramMarkup}
+            <p class="active-user-detail-label">Top albums</p>
+            <ul class="active-user-top-albums-list">${topAlbumsMarkup}</ul>
+          </div>
         </article>
       `;
     })
@@ -502,7 +806,17 @@ function startActiveUsersPolling() {
   };
 
   refresh();
-  window.setInterval(refresh, 7000);
+  window.setInterval(refresh, ACTIVE_USERS_POLL_INTERVAL_MS);
+}
+
+function refreshActiveUsersNow() {
+  return apiGetActiveUsers()
+    .then((users) => {
+      renderActiveUserBubbles(users);
+    })
+    .catch(() => {
+      // Ignore transient refresh failures.
+    });
 }
 
 function setCurrentUser(user) {
@@ -510,6 +824,15 @@ function setCurrentUser(user) {
   const profileHub = document.getElementById("profile-hub");
   const profileAvatar = document.getElementById("profile-avatar");
   const profileMenuUser = document.getElementById("profile-menu-user");
+  const profileDescription = document.getElementById("profile-description");
+  const profileInstagram = document.getElementById("profile-instagram");
+  const profileTopAlbum1 = document.getElementById("profile-top-album-1");
+  const profileTopAlbum1Artist = document.getElementById("profile-top-album-1-artist");
+  const profileTopAlbum2 = document.getElementById("profile-top-album-2");
+  const profileTopAlbum2Artist = document.getElementById("profile-top-album-2-artist");
+  const profileTopAlbum3 = document.getElementById("profile-top-album-3");
+  const profileTopAlbum3Artist = document.getElementById("profile-top-album-3-artist");
+  const profileSaveStatus = document.getElementById("profile-save-status");
   const reviewerName = document.getElementById("reviewer-name");
   const nowPlayingControls = document.getElementById("now-playing-controls");
 
@@ -520,6 +843,33 @@ function setCurrentUser(user) {
     }
     if (reviewerName) {
       reviewerName.value = "";
+    }
+    if (profileDescription) {
+      profileDescription.value = "";
+    }
+    if (profileInstagram) {
+      profileInstagram.value = "";
+    }
+    if (profileSaveStatus) {
+      profileSaveStatus.textContent = "";
+    }
+    if (profileTopAlbum1) {
+      profileTopAlbum1.value = "";
+    }
+    if (profileTopAlbum2) {
+      profileTopAlbum2.value = "";
+    }
+    if (profileTopAlbum1Artist) {
+      profileTopAlbum1Artist.value = "";
+    }
+    if (profileTopAlbum2Artist) {
+      profileTopAlbum2Artist.value = "";
+    }
+    if (profileTopAlbum3Artist) {
+      profileTopAlbum3Artist.value = "";
+    }
+    if (profileTopAlbum3) {
+      profileTopAlbum3.value = "";
     }
     if (nowPlayingControls) {
       nowPlayingControls.hidden = true;
@@ -540,6 +890,40 @@ function setCurrentUser(user) {
 
   if (profileMenuUser) {
     profileMenuUser.textContent = `Perfil: ${sessionState.currentUser.name}`;
+  }
+
+  if (profileDescription) {
+    profileDescription.value = String(sessionState.currentUser.description || "").trim();
+  }
+
+  if (profileInstagram) {
+    profileInstagram.value = String(sessionState.currentUser.instagramUsername || "").trim();
+  }
+
+  const topAlbums = getTopAlbumsFromUser(sessionState.currentUser);
+  if (profileTopAlbum1) {
+    profileTopAlbum1.value = topAlbums[0]?.title || "";
+  }
+  if (profileTopAlbum1Artist) {
+    profileTopAlbum1Artist.value = topAlbums[0]?.artist || "";
+  }
+  if (profileTopAlbum2) {
+    profileTopAlbum2.value = topAlbums[1]?.title || "";
+  }
+  if (profileTopAlbum2Artist) {
+    profileTopAlbum2Artist.value = topAlbums[1]?.artist || "";
+  }
+  if (profileTopAlbum3) {
+    profileTopAlbum3.value = topAlbums[2]?.title || "";
+  }
+  if (profileTopAlbum3Artist) {
+    profileTopAlbum3Artist.value = topAlbums[2]?.artist || "";
+  }
+
+  refreshProfileTopAlbumPreviews();
+
+  if (profileSaveStatus) {
+    profileSaveStatus.textContent = "";
   }
 
   if (reviewerName) {
@@ -646,18 +1030,56 @@ function openNowPlayingAlbumInGrid() {
   }
 
   const reviewsView = document.getElementById("reviews-view");
+  const profileView = document.getElementById("profile-view");
   if (reviewsView && !reviewsView.hidden) {
+    showMainView();
+  }
+  if (profileView && !profileView.hidden) {
     showMainView();
   }
 
   appState.expandedAlbumId = album.id;
+  pendingAlbumOpenAnimationId = album.id;
   renderAlbums();
+
+  if (pendingAlbumOpenAnimationId) {
+    runAlbumOpenAnimation(pendingAlbumOpenAnimationId);
+    pendingAlbumOpenAnimationId = null;
+  }
 
   const coverButton = Array.from(document.querySelectorAll(".cover-button"))
     .find((element) => String(element.dataset.albumId || "") === String(album.id));
   if (coverButton && typeof coverButton.scrollIntoView === "function") {
     coverButton.scrollIntoView({ behavior: "smooth", block: "center" });
   }
+}
+
+function runAlbumOpenAnimation(albumId) {
+  const container = document.getElementById("albums");
+
+  if (!container || albumId === null || albumId === undefined) {
+    return;
+  }
+
+  const target = Array.from(container.querySelectorAll(".album-card.expanded"))
+    .find((element) => String(element.dataset.albumId || "") === String(albumId));
+
+  if (!target) {
+    return;
+  }
+
+  target.classList.remove("album-opening");
+
+  window.requestAnimationFrame(() => {
+    target.classList.add("album-opening");
+
+    const clearAnimationClass = () => {
+      target.classList.remove("album-opening");
+    };
+
+    target.addEventListener("animationend", clearAnimationClass, { once: true });
+    window.setTimeout(clearAnimationClass, 900);
+  });
 }
 
 function applyNowPlayingDiscVisual(nowPlaying) {
@@ -756,6 +1178,7 @@ function toggleProfileMenu() {
 function showMainView() {
   const mainView = document.getElementById("main-view");
   const reviewsView = document.getElementById("reviews-view");
+  const profileView = document.getElementById("profile-view");
 
   if (mainView) {
     mainView.hidden = false;
@@ -763,6 +1186,28 @@ function showMainView() {
 
   if (reviewsView) {
     reviewsView.hidden = true;
+  }
+
+  if (profileView) {
+    profileView.hidden = true;
+  }
+}
+
+function openProfileView() {
+  const mainView = document.getElementById("main-view");
+  const reviewsView = document.getElementById("reviews-view");
+  const profileView = document.getElementById("profile-view");
+
+  if (mainView) {
+    mainView.hidden = true;
+  }
+
+  if (reviewsView) {
+    reviewsView.hidden = true;
+  }
+
+  if (profileView) {
+    profileView.hidden = false;
   }
 }
 
@@ -815,9 +1260,16 @@ async function openMyReviewsView() {
 
     const mainView = document.getElementById("main-view");
     const reviewsView = document.getElementById("reviews-view");
+    const profileView = document.getElementById("profile-view");
+
+    viewBeforeReviews = profileView && !profileView.hidden ? "profile" : "main";
 
     if (mainView) {
       mainView.hidden = true;
+    }
+
+    if (profileView) {
+      profileView.hidden = true;
     }
 
     if (reviewsView) {
@@ -897,7 +1349,7 @@ function renderAlbums() {
         : "";
 
       return `
-        <article class="album-card ${isExpanded ? "expanded" : ""}">
+        <article class="album-card ${isExpanded ? "expanded" : ""}" data-album-id="${escapeHtml(String(album.id))}">
           <button
             type="button"
             class="cover-button"
@@ -1025,8 +1477,15 @@ function setupAlbumInteractions() {
     }
 
     const albumId = trigger.dataset.albumId;
-    appState.expandedAlbumId = appState.expandedAlbumId === albumId ? null : albumId;
+    const nextExpandedAlbumId = appState.expandedAlbumId === albumId ? null : albumId;
+    pendingAlbumOpenAnimationId = nextExpandedAlbumId;
+    appState.expandedAlbumId = nextExpandedAlbumId;
     renderAlbums();
+
+    if (pendingAlbumOpenAnimationId) {
+      runAlbumOpenAnimation(pendingAlbumOpenAnimationId);
+      pendingAlbumOpenAnimationId = null;
+    }
 
     if (appState.expandedAlbumId) {
       const expandedCard = container.querySelector(".album-card.expanded");
@@ -1572,6 +2031,103 @@ function setupBubbleInteractions() {
   bubbleLayer.addEventListener("pointercancel", endDrag);
 }
 
+function setupActiveUserBubbleInteractions() {
+  const activeUsersLayer = document.getElementById("active-users-layer");
+
+  if (!activeUsersLayer) {
+    return;
+  }
+
+  activeUsersLayer.addEventListener("pointerdown", (event) => {
+    const bubble = event.target.closest(".active-user-bubble");
+
+    if (!bubble) {
+      return;
+    }
+
+    const layerRect = activeUsersLayer.getBoundingClientRect();
+    const bubbleRect = bubble.getBoundingClientRect();
+    const bubbleId = bubble.dataset.userKey ? decodeURIComponent(bubble.dataset.userKey) : "";
+
+    activeUserBubbleDrag = {
+      bubble,
+      bubbleId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originLeftPx: bubbleRect.left - layerRect.left,
+      originTopPx: bubbleRect.top - layerRect.top,
+      moved: false
+    };
+
+    bubble.classList.add("dragging");
+    bubble.setPointerCapture(event.pointerId);
+  });
+
+  activeUsersLayer.addEventListener("pointermove", (event) => {
+    if (!activeUserBubbleDrag || activeUserBubbleDrag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const layerRect = activeUsersLayer.getBoundingClientRect();
+    const bubbleRect = activeUserBubbleDrag.bubble.getBoundingClientRect();
+    const deltaX = event.clientX - activeUserBubbleDrag.startX;
+    const deltaY = event.clientY - activeUserBubbleDrag.startY;
+    const travel = Math.hypot(deltaX, deltaY);
+
+    if (travel > 4) {
+      activeUserBubbleDrag.moved = true;
+    }
+
+    const nextLeft = activeUserBubbleDrag.originLeftPx + deltaX;
+    const nextTop = activeUserBubbleDrag.originTopPx + deltaY;
+    const maxLeft = layerRect.width - bubbleRect.width;
+    const maxTop = layerRect.height - bubbleRect.height;
+    const boundedLeft = Math.max(0, Math.min(maxLeft, nextLeft));
+    const boundedTop = Math.max(0, Math.min(maxTop, nextTop));
+    const leftPercent = (boundedLeft / layerRect.width) * 100;
+    const topPercent = (boundedTop / layerRect.height) * 100;
+
+    activeUserBubbleDrag.bubble.style.left = `${leftPercent}%`;
+    activeUserBubbleDrag.bubble.style.top = `${topPercent}%`;
+
+    if (activeUserBubbleDrag.bubbleId) {
+      const current = activeUserBubbleUiState.get(activeUserBubbleDrag.bubbleId) || {};
+      activeUserBubbleUiState.set(activeUserBubbleDrag.bubbleId, {
+        ...current,
+        left: leftPercent,
+        top: topPercent
+      });
+    }
+  });
+
+  const endDrag = (event) => {
+    if (!activeUserBubbleDrag || activeUserBubbleDrag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const { bubble, bubbleId, moved } = activeUserBubbleDrag;
+
+    bubble.classList.remove("dragging");
+    bubble.releasePointerCapture(event.pointerId);
+
+    if (!moved && bubbleId) {
+      const current = activeUserBubbleUiState.get(bubbleId) || {};
+      const nextExpanded = !current.expanded;
+      activeUserBubbleUiState.set(bubbleId, {
+        ...current,
+        expanded: nextExpanded
+      });
+      bubble.classList.toggle("expanded", nextExpanded);
+    }
+
+    activeUserBubbleDrag = null;
+  };
+
+  activeUsersLayer.addEventListener("pointerup", endDrag);
+  activeUsersLayer.addEventListener("pointercancel", endDrag);
+}
+
 function showReviewStatus(message) {
   const status = document.getElementById("review-status");
 
@@ -1846,10 +2402,25 @@ function setupAuthInteractions() {
   const changePhotoButton = document.getElementById("change-photo");
   const changePhotoInput = document.getElementById("change-photo-input");
   const viewReviewsButton = document.getElementById("view-reviews");
+  const openProfileButton = document.getElementById("open-profile");
+  const profileDescription = document.getElementById("profile-description");
+  const profileInstagram = document.getElementById("profile-instagram");
+  const profileTopAlbum1 = document.getElementById("profile-top-album-1");
+  const profileTopAlbum1Artist = document.getElementById("profile-top-album-1-artist");
+  const profileTopAlbum2 = document.getElementById("profile-top-album-2");
+  const profileTopAlbum2Artist = document.getElementById("profile-top-album-2-artist");
+  const profileTopAlbum3 = document.getElementById("profile-top-album-3");
+  const profileTopAlbum3Artist = document.getElementById("profile-top-album-3-artist");
+  const profileTopAlbum1Cover = document.getElementById("profile-top-album-1-cover");
+  const profileTopAlbum2Cover = document.getElementById("profile-top-album-2-cover");
+  const profileTopAlbum3Cover = document.getElementById("profile-top-album-3-cover");
+  const saveProfileButton = document.getElementById("save-profile");
+  const profileSaveStatus = document.getElementById("profile-save-status");
   const logoutButton = document.getElementById("logout-profile");
   const reviewsBackButton = document.getElementById("reviews-back");
+  const profileBackButton = document.getElementById("profile-back");
 
-  if (!authName || !authPassword || !authPhoto || !loginButton || !registerButton || !avatarButton || !changePhotoButton || !changePhotoInput || !viewReviewsButton || !logoutButton || !reviewsBackButton) {
+  if (!authName || !authPassword || !authPhoto || !loginButton || !registerButton || !avatarButton || !changePhotoButton || !changePhotoInput || !viewReviewsButton || !openProfileButton || !profileDescription || !profileInstagram || !profileTopAlbum1 || !profileTopAlbum1Artist || !profileTopAlbum2 || !profileTopAlbum2Artist || !profileTopAlbum3 || !profileTopAlbum3Artist || !profileTopAlbum1Cover || !profileTopAlbum2Cover || !profileTopAlbum3Cover || !saveProfileButton || !profileSaveStatus || !logoutButton || !reviewsBackButton || !profileBackButton) {
     return;
   }
 
@@ -1933,6 +2504,11 @@ function setupAuthInteractions() {
     toggleProfileMenu();
   });
 
+  openProfileButton.addEventListener("click", () => {
+    closeProfileMenu();
+    openProfileView();
+  });
+
   changePhotoButton.addEventListener("click", () => {
     changePhotoInput.click();
   });
@@ -1952,6 +2528,7 @@ function setupAuthInteractions() {
       const photoDataUrl = await readFileAsDataUrl(file);
       const updatedUser = await apiUpdatePhoto(sessionState.currentUser.name, photoDataUrl);
       setCurrentUser(updatedUser);
+      await refreshActiveUsersNow();
       closeProfileMenu();
       showReviewStatus("Foto de perfil actualizada.");
     } catch (error) {
@@ -1966,11 +2543,78 @@ function setupAuthInteractions() {
     await openMyReviewsView();
   });
 
+  const topAlbumInputs = [
+    profileTopAlbum1,
+    profileTopAlbum1Artist,
+    profileTopAlbum2,
+    profileTopAlbum2Artist,
+    profileTopAlbum3,
+    profileTopAlbum3Artist
+  ];
+
+  topAlbumInputs.forEach((input) => {
+    input.addEventListener("input", () => {
+      refreshProfileTopAlbumPreviews();
+    });
+  });
+
+  saveProfileButton.addEventListener("click", async () => {
+    if (!sessionState.currentUser?.name) {
+      profileSaveStatus.textContent = "Inicia sesion para editar tu perfil.";
+      return;
+    }
+
+    const description = normalizeProfileDescription(profileDescription.value || "");
+    const instagramUsername = normalizeInstagramHandle(profileInstagram.value || "");
+    const previousTopAlbums = getTopAlbumsFromUser(sessionState.currentUser);
+    const topAlbums = normalizeTopAlbums([
+      {
+        title: profileTopAlbum1.value,
+        artist: profileTopAlbum1Artist.value
+      },
+      {
+        title: profileTopAlbum2.value,
+        artist: profileTopAlbum2Artist.value
+      },
+      {
+        title: profileTopAlbum3.value,
+        artist: profileTopAlbum3Artist.value
+      }
+    ]);
+
+    try {
+      profileSaveStatus.textContent = "Guardando...";
+      const updatedUser = await apiUpdateProfile(sessionState.currentUser.name, description, instagramUsername, topAlbums);
+      previousTopAlbums.forEach((entry) => {
+        clearTopAlbumCoverCacheEntry(entry.title, entry.artist);
+      });
+      topAlbums.forEach((entry) => {
+        clearTopAlbumCoverCacheEntry(entry.title, entry.artist);
+      });
+      setCurrentUser(updatedUser);
+      refreshProfileTopAlbumPreviews();
+      await refreshActiveUsersNow();
+      profileSaveStatus.textContent = "Perfil actualizado.";
+      showReviewStatus("Perfil actualizado.");
+    } catch (error) {
+      profileSaveStatus.textContent = error instanceof Error ? error.message : "No se pudo guardar el perfil.";
+    }
+  });
+
   logoutButton.addEventListener("click", async () => {
     await logoutUser();
   });
 
   reviewsBackButton.addEventListener("click", () => {
+    if (viewBeforeReviews === "profile") {
+      openProfileView();
+      return;
+    }
+
+    showMainView();
+  });
+
+  profileBackButton.addEventListener("click", () => {
     showMainView();
   });
 
@@ -2049,6 +2693,7 @@ async function bootSession() {
   setupAlbumSortControls();
   setupNowPlayingInteractions();
   setupBubbleInteractions();
+  setupActiveUserBubbleInteractions();
   setupAuthInteractions();
   startNowPlayingPolling();
   startActiveUsersPolling();
