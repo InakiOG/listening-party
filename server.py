@@ -27,6 +27,7 @@ ADMIN_ACCOUNT_NAME = "administrador"
 SESSION_COOKIE_NAME = "listening_party_session"
 SESSION_USER_COOKIE_NAME = "listening_party_user"
 SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 10
+ACTIVE_USER_WINDOW_SECONDS = 90
 
 
 def ensure_reviews_db():
@@ -283,6 +284,22 @@ def collect_reviewing_attendees(party_reviews):
     return attendees
 
 
+def collect_session_listeners(session_payload, users_store):
+    listeners = []
+    seen = set()
+    for user_key in get_session_sticky_attendee_keys(session_payload):
+        profile = sanitize_user_profile(users_store.get(user_key))
+        name = str(profile.get("name", user_key) if profile else user_key).strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        listeners.append(name)
+    return listeners
+
+
 def upsert_party_record_snapshot(session_payload, users_store, credentials_store, reviews_store, finalized=False):
     if not session_payload or not session_payload.get("albumsPlayed"):
         return None
@@ -295,6 +312,7 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
     session_date_key = get_session_date_key(session_payload)
     party_reviews = collect_reviews_for_albums(reviews_store, session_payload.get("albumsPlayed", []), session_date_key)
     attendees = collect_reviewing_attendees(party_reviews)
+    listeners = collect_session_listeners(session_payload, users_store)
     now_iso = datetime.now(timezone.utc).isoformat()
 
     records_store = read_party_records_store()
@@ -314,6 +332,7 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
         "startedAt": started_at,
         "savedAt": now_iso,
         "attendees": attendees,
+        "listeners": listeners,
         "albumsPlayed": session_payload.get("albumsPlayed", []),
         "reviews": party_reviews
     }
@@ -438,6 +457,109 @@ def read_session_token(credentials_entry):
     return str(credentials_entry.get("sessionToken", "")).strip()
 
 
+def read_session_last_seen(credentials_entry):
+    if not isinstance(credentials_entry, dict):
+        return ""
+
+    return str(credentials_entry.get("sessionLastSeenAt", "")).strip()
+
+
+def parse_iso_datetime(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc)
+
+
+def is_recent_active_session(credentials_entry, now_utc):
+    session_token = read_session_token(credentials_entry)
+    if not session_token:
+        return False
+
+    last_seen = parse_iso_datetime(read_session_last_seen(credentials_entry))
+    if not last_seen:
+        return False
+
+    return (now_utc - last_seen).total_seconds() <= ACTIVE_USER_WINDOW_SECONDS
+
+
+def touch_session_activity(credentials_store, user_key):
+    if not user_key:
+        return False
+
+    entry = credentials_store.get(user_key)
+    if not isinstance(entry, dict):
+        return False
+
+    if not read_session_token(entry):
+        return False
+
+    entry["sessionLastSeenAt"] = datetime.now(timezone.utc).isoformat()
+    credentials_store[user_key] = entry
+    return True
+
+
+def get_session_sticky_attendee_keys(session_payload):
+    if not isinstance(session_payload, dict):
+        return []
+
+    raw_keys = session_payload.get("stickyAttendeeKeys", [])
+    if not isinstance(raw_keys, list):
+        return []
+
+    unique = []
+    seen = set()
+    for key in raw_keys:
+        normalized = normalize_user_key(key)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        unique.append(normalized)
+
+    return unique
+
+
+def add_session_sticky_attendee(session_payload, user_key):
+    if not isinstance(session_payload, dict):
+        return False
+
+    normalized = normalize_user_key(user_key)
+    if not normalized:
+        return False
+
+    existing = get_session_sticky_attendee_keys(session_payload)
+    if normalized in existing:
+        return False
+
+    existing.append(normalized)
+    session_payload["stickyAttendeeKeys"] = existing
+    return True
+
+
+def seed_session_sticky_attendees_from_recent(session_payload, credentials_store, now_utc):
+    if not isinstance(session_payload, dict):
+        return False
+
+    changed = False
+    for user_key, credentials_entry in credentials_store.items():
+        if not is_recent_active_session(credentials_entry, now_utc):
+            continue
+
+        if add_session_sticky_attendee(session_payload, user_key):
+            changed = True
+
+    return changed
+
+
 def build_session_cookie(token):
     return (
         f"{SESSION_COOKIE_NAME}={token}; Path=/; Max-Age={SESSION_COOKIE_MAX_AGE}; "
@@ -520,7 +642,8 @@ def reconcile_auth_stores(users_store, credentials_store):
             "password": password,
             "createdAt": str(raw_credentials.get("createdAt", profile_created_at)).strip() or profile_created_at,
             "sessionToken": str(raw_credentials.get("sessionToken", "")).strip(),
-            "sessionCreatedAt": str(raw_credentials.get("sessionCreatedAt", "")).strip()
+            "sessionCreatedAt": str(raw_credentials.get("sessionCreatedAt", "")).strip(),
+            "sessionLastSeenAt": str(raw_credentials.get("sessionLastSeenAt", "")).strip()
         }
 
     admin_profile = normalized_users.get(ADMIN_USER_KEY)
@@ -553,7 +676,8 @@ def reconcile_auth_stores(users_store, credentials_store):
         "password": ADMIN_DEFAULT_PASSWORD,
         "createdAt": str(admin_credentials.get("createdAt", admin_created_at)).strip() or admin_created_at,
         "sessionToken": str(admin_credentials.get("sessionToken", "")).strip(),
-        "sessionCreatedAt": str(admin_credentials.get("sessionCreatedAt", "")).strip()
+        "sessionCreatedAt": str(admin_credentials.get("sessionCreatedAt", "")).strip(),
+        "sessionLastSeenAt": str(admin_credentials.get("sessionLastSeenAt", "")).strip()
     }
 
     for user_key, profile in normalized_users.items():
@@ -680,6 +804,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         credentials_entry = {}
                     credentials_entry["sessionToken"] = restored_token
                     credentials_entry["sessionCreatedAt"] = datetime.now(timezone.utc).isoformat()
+                    credentials_entry["sessionLastSeenAt"] = datetime.now(timezone.utc).isoformat()
                     credentials_store[user_key] = credentials_entry
                     write_credentials_store(credentials_store)
                     restored_headers = [
@@ -687,7 +812,12 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         ("Set-Cookie", build_user_cookie(user_key))
                     ]
                 elif user_profile and user_key:
+                    if touch_session_activity(credentials_store, user_key):
+                        write_credentials_store(credentials_store)
                     restored_headers = [("Set-Cookie", build_user_cookie(user_key))]
+
+                if user_profile and user_key and _current_session and _current_session.get("albumsPlayed"):
+                    add_session_sticky_attendee(_current_session, user_key)
 
             self._send_json(
                 {
@@ -717,24 +847,43 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             return
 
         if parsed.path == "/api/users/active":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+
             with REVIEWS_LOCK:
                 users_store = read_users_store()
                 credentials_store = read_credentials_store()
                 users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
                 write_users_store(users_store)
-                write_credentials_store(credentials_store)
+                caller_key = find_user_key_by_session_token(credentials_store, session_token)
+                credentials_changed = touch_session_activity(credentials_store, caller_key)
+                if _current_session and _current_session.get("albumsPlayed"):
+                    add_session_sticky_attendee(_current_session, caller_key)
 
-                active_users = []
+                active_users_by_key = {}
+                now_utc = datetime.now(timezone.utc)
                 for user_key, credentials_entry in credentials_store.items():
-                    token = read_session_token(credentials_entry)
-                    if not token:
+                    if not is_recent_active_session(credentials_entry, now_utc):
                         continue
 
                     profile = sanitize_user_profile(users_store.get(user_key))
                     if not profile:
                         continue
 
-                    active_users.append(profile)
+                    active_users_by_key[normalize_user_key(profile.get("name", user_key))] = profile
+
+                if _current_session and _current_session.get("albumsPlayed"):
+                    for sticky_key in get_session_sticky_attendee_keys(_current_session):
+                        profile = sanitize_user_profile(users_store.get(sticky_key))
+                        if not profile:
+                            continue
+
+                        active_users_by_key[sticky_key] = profile
+
+                active_users = list(active_users_by_key.values())
+
+                if credentials_changed:
+                    write_credentials_store(credentials_store)
 
                 active_users.sort(key=lambda user: str(user.get("name", "")).lower())
 
@@ -1078,8 +1227,15 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     _current_session = {
                         "id": datetime.now(timezone.utc).isoformat(),
                         "startedAt": datetime.now(timezone.utc).isoformat(),
-                        "albumsPlayed": []
+                        "albumsPlayed": [],
+                        "stickyAttendeeKeys": []
                     }
+                    seed_session_sticky_attendees_from_recent(
+                        _current_session,
+                        credentials_store,
+                        datetime.now(timezone.utc)
+                    )
+                add_session_sticky_attendee(_current_session, actor_key)
                 already_tracked = any(
                     str(a.get("title", "")).lower() == album_title.lower()
                     for a in _current_session["albumsPlayed"]
@@ -1155,8 +1311,11 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "password": password,
                     "createdAt": datetime.now(timezone.utc).isoformat(),
                     "sessionToken": session_token,
-                    "sessionCreatedAt": datetime.now(timezone.utc).isoformat()
+                    "sessionCreatedAt": datetime.now(timezone.utc).isoformat(),
+                    "sessionLastSeenAt": datetime.now(timezone.utc).isoformat()
                 }
+                if _current_session and _current_session.get("albumsPlayed"):
+                    add_session_sticky_attendee(_current_session, user_key)
                 write_users_store(users_store)
                 write_credentials_store(credentials_store)
 
@@ -1221,7 +1380,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     credentials_entry = {}
                 credentials_entry["sessionToken"] = session_token
                 credentials_entry["sessionCreatedAt"] = datetime.now(timezone.utc).isoformat()
+                credentials_entry["sessionLastSeenAt"] = datetime.now(timezone.utc).isoformat()
                 credentials_store[user_key] = credentials_entry
+                if _current_session and _current_session.get("albumsPlayed"):
+                    add_session_sticky_attendee(_current_session, user_key)
                 write_credentials_store(credentials_store)
 
             self._send_json(
@@ -1246,6 +1408,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         entry = {}
                     entry["sessionToken"] = ""
                     entry["sessionCreatedAt"] = ""
+                    entry["sessionLastSeenAt"] = ""
                     credentials_store[user_key] = entry
                     write_credentials_store(credentials_store)
 

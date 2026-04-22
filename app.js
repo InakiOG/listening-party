@@ -1109,6 +1109,11 @@ function getSortedAlbums() {
         if (value !== 0) {
           return value * direction;
         }
+      } else if (sortBy === "genre") {
+        const value = String(a.primaryGenre || "").localeCompare(String(b.primaryGenre || ""), undefined, { sensitivity: "base" });
+        if (value !== 0) {
+          return value * direction;
+        }
       } else if (sortBy === "title") {
         const value = String(a.title || "").localeCompare(String(b.title || ""), undefined, { sensitivity: "base" });
         if (value !== 0) {
@@ -1548,6 +1553,9 @@ function renderMyParties(parties) {
     const attendees = (Array.isArray(party.attendees) ? party.attendees : [])
       .map((a) => escapeHtml(String(a || "")))
       .join(", ");
+    const listeners = (Array.isArray(party.listeners) ? party.listeners : [])
+      .map((l) => escapeHtml(String(l || "")))
+      .join(", ");
     const albumsMarkup = buildPartyAlbumsMarkup(party);
     const pictureMarkup = buildPartyPictureMarkup(party);
 
@@ -1556,6 +1564,8 @@ function renderMyParties(parties) {
         <p class="party-record-date">${date}</p>
         <p class="party-section-label">Asistentes</p>
         <p class="party-attendees">${attendees || "—"}</p>
+        <p class="party-section-label">Listeners</p>
+        <p class="party-attendees">${listeners || "—"}</p>
         ${pictureMarkup}
         <p class="party-section-label">Albums</p>
         ${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}
@@ -1602,6 +1612,9 @@ function renderPartyRecords(parties) {
     const attendees = (Array.isArray(party.attendees) ? party.attendees : [])
       .map((a) => escapeHtml(String(a || "")))
       .join(", ");
+    const listeners = (Array.isArray(party.listeners) ? party.listeners : [])
+      .map((l) => escapeHtml(String(l || "")))
+      .join(", ");
     const pictureMarkup = buildPartyPictureMarkup(party);
 
     const albumsMarkup = (Array.isArray(party.albumsPlayed) ? party.albumsPlayed : [])
@@ -1644,6 +1657,8 @@ function renderPartyRecords(parties) {
         <p class="party-record-date">${date}</p>
         <p class="party-section-label">Asistentes</p>
         <p class="party-attendees">${attendees || "—"}</p>
+        <p class="party-section-label">Listeners</p>
+        <p class="party-attendees">${listeners || "—"}</p>
         ${pictureMarkup}
         <p class="party-section-label">Albums</p>
         <div class="party-albums-grid">${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}</div>
@@ -1729,12 +1744,17 @@ function showPartyBriefPopup(party) {
   const attendees = (Array.isArray(party.attendees) ? party.attendees : [])
     .map((a) => escapeHtml(String(a || "")))
     .join(", ");
+  const listeners = (Array.isArray(party.listeners) ? party.listeners : [])
+    .map((l) => escapeHtml(String(l || "")))
+    .join(", ");
 
   const albumsMarkup = buildPartyAlbumsMarkup(party);
 
   contentEl.innerHTML = `
     <p class="party-section-label">Asistentes</p>
     <p class="party-attendees">${attendees || "—"}</p>
+    <p class="party-section-label">Listeners</p>
+    <p class="party-attendees">${listeners || "—"}</p>
     <p class="party-section-label">Albums</p>
     ${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}
   `;
@@ -2075,12 +2095,30 @@ function buildGroupedAlbumsHtml() {
   }).join("");
 }
 
+function animateGroupPilesIn(container) {
+  const piles = container.querySelectorAll(".group-pile");
+  piles.forEach((pile, i) => {
+    pile.style.setProperty("--pile-in-delay", `${i * 40}ms`);
+    pile.classList.add("pile-entering");
+    pile.addEventListener("animationend", () => pile.classList.remove("pile-entering"), { once: true });
+  });
+}
+
+function updateAlbumCountBadge() {
+  const badge = document.getElementById("album-count");
+  if (!badge) return;
+  const count = appState.albums.length;
+  badge.textContent = count > 0 ? String(count) : "";
+}
+
 function renderAlbums() {
   const container = document.getElementById("albums");
 
   if (!container) {
     return;
   }
+
+  updateAlbumCountBadge();
 
   if (!appState.albums.length) {
     container.innerHTML = "";
@@ -2089,6 +2127,7 @@ function renderAlbums() {
 
   if (appState.groupBy) {
     container.innerHTML = buildGroupedAlbumsHtml();
+    animateGroupPilesIn(container);
     return;
   }
 
@@ -2101,12 +2140,13 @@ function updateSortDirectionButtonLabel() {
     return;
   }
 
-  directionButton.textContent = appState.sortDirection === "asc" ? "Ascendente" : "Descendente";
+  directionButton.textContent = appState.sortDirection === "asc" ? "↑" : "↓";
 }
 
 function setupAlbumSortControls() {
   const sortBySelect = document.getElementById("album-sort-by");
   const directionButton = document.getElementById("album-sort-direction");
+  const shuffleButton = document.getElementById("album-shuffle");
 
   if (!sortBySelect || !directionButton) {
     return;
@@ -2117,7 +2157,7 @@ function setupAlbumSortControls() {
 
   const applySortBySelection = () => {
     const selected = String(sortBySelect.value || "date");
-    appState.sortBy = ["date", "score", "title"].includes(selected) ? selected : "date";
+    appState.sortBy = ["date", "score", "title", "artist", "genre"].includes(selected) ? selected : "date";
     sortAlbumsInState();
     renderAlbums();
   };
@@ -2131,6 +2171,18 @@ function setupAlbumSortControls() {
     sortAlbumsInState();
     renderAlbums();
   });
+
+  if (shuffleButton) {
+    shuffleButton.addEventListener("click", () => {
+      if (!appState.albums.length) {
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * appState.albums.length);
+      const randomAlbum = appState.albums[randomIndex] || null;
+      openAlbumInGrid(randomAlbum, true);
+    });
+  }
 
   const groupByArtistButton = document.getElementById("group-by-artist");
   const groupByGenreButton = document.getElementById("group-by-genre");
@@ -2597,6 +2649,7 @@ function hideNowPlaying() {
 
   currentNowPlaying = null;
   renderReviewBubbles([], "");
+  document.documentElement.style.setProperty("--layout-top-space", "0rem");
 }
 
 function getSongKey(nowPlaying) {
@@ -3308,6 +3361,36 @@ function setupActiveUserBubbleInteractions() {
   activeUsersLayer.addEventListener("pointercancel", endDrag);
 }
 
+function setupBubbleOutsideClickHandler() {
+  document.addEventListener("pointerdown", (event) => {
+    // Close expanded review bubbles
+    const expandedReview = document.querySelector(".review-bubble.expanded");
+    if (expandedReview && !expandedReview.contains(event.target)) {
+      const bubbleId = expandedReview.dataset.reviewId
+        ? decodeURIComponent(expandedReview.dataset.reviewId)
+        : null;
+      if (bubbleId) {
+        const current = bubbleUiState.get(bubbleId) || {};
+        bubbleUiState.set(bubbleId, { ...current, expanded: false });
+      }
+      expandedReview.classList.remove("expanded");
+    }
+
+    // Close expanded active-user bubbles
+    const expandedUser = document.querySelector(".active-user-bubble.expanded");
+    if (expandedUser && !expandedUser.contains(event.target)) {
+      const bubbleId = expandedUser.dataset.userKey
+        ? decodeURIComponent(expandedUser.dataset.userKey)
+        : null;
+      if (bubbleId) {
+        const current = activeUserBubbleUiState.get(bubbleId) || {};
+        activeUserBubbleUiState.set(bubbleId, { ...current, expanded: false });
+      }
+      expandedUser.classList.remove("expanded");
+    }
+  }, { capture: true });
+}
+
 function showReviewStatus(message) {
   const status = document.getElementById("review-status");
 
@@ -3565,6 +3648,7 @@ function renderNowPlaying(nowPlaying) {
     cover.alt = `${nowPlaying.albumTitle} album cover`;
     section.hidden = false;
     lastNowPlayingSignature = signature;
+    document.documentElement.style.setProperty("--layout-top-space", "5.5rem");
   }
 
   if (stopControls) {
@@ -4332,6 +4416,7 @@ async function bootSession() {
   setupNowPlayingInteractions();
   setupBubbleInteractions();
   setupActiveUserBubbleInteractions();
+  setupBubbleOutsideClickHandler();
   setupPartyPictureLightboxInteractions();
   setupAuthInteractions();
   setupAddAlbumModal();
