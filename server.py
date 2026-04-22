@@ -8,7 +8,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-from discogs_scraper import update_collection_cache
+from discogs_scraper import backfill_missing_tracks, update_collection_cache
 
 ROOT = Path(__file__).resolve().parent
 REVIEWS_DB_PATH = ROOT / "reviews-db.json"
@@ -946,6 +946,8 @@ def run_server(port=8000, refresh_discogs=False):
             print(f"Discogs collection refresh skipped: {error}")
     else:
         print("Using local discogs-collection.json cache (no startup refresh).")
+
+    threading.Thread(target=backfill_missing_tracks, daemon=True).start()
 
     ensure_reviews_db()
     ensure_users_db()

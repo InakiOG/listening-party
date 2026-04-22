@@ -810,7 +810,7 @@ function renderActiveUserBubbles(users) {
         ? `<p class="active-user-detail-value">${description}</p>`
         : `<p class="active-user-detail-value active-user-detail-empty">Sin descripcion.</p>`;
       const instagramMarkup = instagram
-        ? `<p class="active-user-detail-value">@${instagram}</p>`
+        ? `<p class="active-user-detail-value"><button type="button" class="active-user-instagram-link" data-instagram="${instagram}">@${instagram}</button></p>`
         : `<p class="active-user-detail-value active-user-detail-empty">Sin Instagram.</p>`;
       const topAlbumsMarkup = topAlbums.length
         ? topAlbums
@@ -2103,6 +2103,13 @@ function setupActiveUserBubbleInteractions() {
   }
 
   activeUsersLayer.addEventListener("pointerdown", (event) => {
+    const igBtn = event.target.closest(".active-user-instagram-link");
+    if (igBtn) {
+      event.stopPropagation();
+      window.open(`https://instagram.com/${igBtn.dataset.instagram}`, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     const bubble = event.target.closest(".active-user-bubble");
 
     if (!bubble) {

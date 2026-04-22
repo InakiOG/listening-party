@@ -1,5 +1,6 @@
 import hashlib
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -242,6 +243,175 @@ def update_collection_cache(max_pages=100):
 
     OUTPUT_PATH.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     return payload
+
+
+MUSICBRAINZ_USER_AGENT = "ListeningParty/1.0 (inakisebastianorozcogarcia@gmail.com)"
+
+
+def fetch_tracks_from_musicbrainz(title, artist):
+    query_parts = []
+    if artist:
+        query_parts.append(f'artist:"{artist}"')
+    if title:
+        query_parts.append(f'release:"{title}"')
+    if not query_parts:
+        return []
+
+    search_query = urlencode({"query": " AND ".join(query_parts), "fmt": "json", "limit": "5"})
+    search_request = Request(
+        f"https://musicbrainz.org/ws/2/release/?{search_query}",
+        headers={"User-Agent": MUSICBRAINZ_USER_AGENT, "Accept": "application/json"}
+    )
+
+    with urlopen(search_request, timeout=15) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        search_payload = json.loads(response.read().decode(charset, errors="replace"))
+
+    releases = search_payload.get("releases") or []
+    if not releases:
+        return []
+
+    mbid = releases[0].get("id", "")
+    if not mbid:
+        return []
+
+    time.sleep(1)
+
+    detail_request = Request(
+        f"https://musicbrainz.org/ws/2/release/{mbid}?inc=recordings&fmt=json",
+        headers={"User-Agent": MUSICBRAINZ_USER_AGENT, "Accept": "application/json"}
+    )
+
+    with urlopen(detail_request, timeout=15) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        detail_payload = json.loads(response.read().decode(charset, errors="replace"))
+
+    tracks = []
+    for medium in detail_payload.get("media") or []:
+        for track in medium.get("tracks") or []:
+            track_title = str(track.get("title") or "").strip()
+            if track_title:
+                tracks.append(track_title)
+
+    return tracks
+
+
+def fetch_tracks_from_itunes(title, artist):
+    term = " ".join(filter(None, [artist, title]))
+    if not term:
+        return []
+
+    query = urlencode({"term": term, "entity": "song", "limit": "50"})
+    request = Request(
+        f"https://itunes.apple.com/search?{query}",
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"}
+    )
+
+    with urlopen(request, timeout=15) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        payload = json.loads(response.read().decode(charset, errors="replace"))
+
+    results = payload.get("results") or []
+
+    def norm(s):
+        return str(s or "").lower().replace(" ", "")
+
+    norm_title = norm(title)
+    matching = [
+        r for r in results
+        if isinstance(r, dict)
+        and norm_title
+        and norm_title in norm(r.get("collectionName", ""))
+    ]
+
+    if not matching:
+        matching = results
+
+    matching.sort(key=lambda r: int(r.get("trackNumber") or 0))
+
+    seen = set()
+    tracks = []
+    for r in matching:
+        track_name = str(r.get("trackName") or "").strip()
+        if track_name and track_name not in seen:
+            seen.add(track_name)
+            tracks.append(track_name)
+
+    return tracks
+
+
+def backfill_missing_tracks():
+    existing_payload = load_existing_output()
+    if not isinstance(existing_payload, dict):
+        print("Track backfill skipped: no collection cache found.")
+        return
+
+    items = existing_payload.get("items")
+    if not isinstance(items, list):
+        print("Track backfill skipped: items list missing.")
+        return
+
+    pending = [item for item in items if isinstance(item, dict) and not item.get("tracks")]
+    if not pending:
+        print("Track backfill: all albums already have tracks.")
+        return
+
+    print(f"Track backfill: fetching tracks for {len(pending)} album(s)...")
+    filled = 0
+
+    for item in pending:
+        album_title = item.get("title", "")
+        album_artist = item.get("artist", "")
+        release_id = item.get("discogsId")
+        tracks = []
+        source = None
+
+        # 1. Discogs
+        if release_id:
+            try:
+                details = fetch_release_details(release_id)
+                tracks = summarize_tracklist(details.get("tracklist"))
+                if tracks:
+                    source = "Discogs"
+                    if not item.get("year"):
+                        year = details.get("year")
+                        if isinstance(year, int) and year > 0:
+                            item["year"] = year
+            except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
+                print(f"    Discogs failed for {album_title!r}: {error}")
+            time.sleep(1)
+
+        # 2. MusicBrainz
+        if not tracks:
+            try:
+                tracks = fetch_tracks_from_musicbrainz(album_title, album_artist)
+                if tracks:
+                    source = "MusicBrainz"
+            except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
+                print(f"    MusicBrainz failed for {album_title!r}: {error}")
+            time.sleep(1)
+
+        # 3. iTunes
+        if not tracks:
+            try:
+                tracks = fetch_tracks_from_itunes(album_title, album_artist)
+                if tracks:
+                    source = "iTunes"
+            except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
+                print(f"    iTunes failed for {album_title!r}: {error}")
+
+        item["tracks"] = tracks
+        if tracks:
+            filled += 1
+            print(f"  [{filled}/{len(pending)}] {album_title!r}: {len(tracks)} track(s) via {source}")
+        else:
+            print(f"  [{len(pending)}] {album_title!r}: no tracks found on any source")
+
+        time.sleep(1)
+
+    existing_payload["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    OUTPUT_PATH.write_text(json.dumps(existing_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Track backfill complete: {filled} album(s) updated.")
 
 
 if __name__ == "__main__":
