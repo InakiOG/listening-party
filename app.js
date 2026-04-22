@@ -1167,20 +1167,36 @@ function findAlbumByNowPlaying(nowPlaying) {
   }) || null;
 }
 
-function openNowPlayingAlbumInGrid() {
-  const album = findAlbumByNowPlaying(currentNowPlaying);
+function getAlbumGroupKey(album) {
   if (!album) {
-    showReviewStatus("No se encontro el album en la lista.");
+    return null;
+  }
+
+  if (appState.groupBy === "genre") {
+    return album.primaryGenre || "Sin género";
+  }
+
+  if (appState.groupBy === "artist") {
+    return album.artist || "Unknown";
+  }
+
+  return null;
+}
+
+function openAlbumInGrid(album, showMain = true) {
+  if (!album) {
     return;
   }
 
-  const reviewsView = document.getElementById("reviews-view");
-  const profileView = document.getElementById("profile-view");
-  if (reviewsView && !reviewsView.hidden) {
-    showMainView();
+  if (showMain) {
+    const mainView = document.getElementById("main-view");
+    if (!mainView || mainView.hidden) {
+      showMainView();
+    }
   }
-  if (profileView && !profileView.hidden) {
-    showMainView();
+
+  if (appState.groupBy) {
+    appState.expandedGroupKey = getAlbumGroupKey(album);
   }
 
   appState.expandedAlbumId = album.id;
@@ -1197,6 +1213,25 @@ function openNowPlayingAlbumInGrid() {
   if (coverButton && typeof coverButton.scrollIntoView === "function") {
     coverButton.scrollIntoView({ behavior: "smooth", block: "center" });
   }
+}
+
+function openNowPlayingAlbumInGrid() {
+  const album = findAlbumByNowPlaying(currentNowPlaying);
+  if (!album) {
+    showReviewStatus("No se encontro el album en la lista.");
+    return;
+  }
+
+  const reviewsView = document.getElementById("reviews-view");
+  const profileView = document.getElementById("profile-view");
+  if (reviewsView && !reviewsView.hidden) {
+    showMainView();
+  }
+  if (profileView && !profileView.hidden) {
+    showMainView();
+  }
+
+  openAlbumInGrid(album, false);
 }
 
 function runAlbumOpenAnimation(albumId) {
@@ -1446,6 +1481,45 @@ function buildPartyAlbumsMarkup(party) {
   }).join("");
 }
 
+function buildPartyPictureMarkup(party) {
+  const partyPicture = String(party?.partyPicture || "").trim();
+  if (!partyPicture) {
+    return "";
+  }
+
+  const safePicture = escapeHtml(partyPicture);
+  const safeDate = escapeHtml(formatPartyDate(party?.date || ""));
+
+  return `
+    <div class="my-party-picture-wrap">
+      <p class="party-section-label">Foto</p>
+      <button type="button" class="my-party-picture-button" data-party-picture-src="${safePicture}" aria-label="Abrir foto de la listening party">
+        <img src="${safePicture}" alt="Foto de listening party del ${safeDate}" loading="lazy" />
+      </button>
+    </div>
+  `;
+}
+
+function openPartyPictureLightbox(imageSrc, altText) {
+  const overlay = document.getElementById("party-picture-lightbox");
+  const image = document.getElementById("party-picture-lightbox-image");
+  if (!overlay || !image || !imageSrc) return;
+
+  image.src = imageSrc;
+  image.alt = altText || "Foto de listening party";
+  overlay.hidden = false;
+}
+
+function closePartyPictureLightbox() {
+  const overlay = document.getElementById("party-picture-lightbox");
+  const image = document.getElementById("party-picture-lightbox-image");
+  if (overlay) overlay.hidden = true;
+  if (image) {
+    image.removeAttribute("src");
+    image.alt = "";
+  }
+}
+
 function renderMyParties(parties) {
   const list = document.getElementById("my-parties-list");
   if (!list) return;
@@ -1461,16 +1535,43 @@ function renderMyParties(parties) {
       .map((a) => escapeHtml(String(a || "")))
       .join(", ");
     const albumsMarkup = buildPartyAlbumsMarkup(party);
+    const pictureMarkup = buildPartyPictureMarkup(party);
 
     return `
       <article class="party-record-card">
         <p class="party-record-date">${date}</p>
         <p class="party-section-label">Asistentes</p>
         <p class="party-attendees">${attendees || "—"}</p>
+        ${pictureMarkup}
         <p class="party-section-label">Albums</p>
         ${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}
       </article>`;
   }).join("");
+}
+
+function setupPartyPictureLightboxInteractions() {
+  document.addEventListener("click", (event) => {
+    const pictureButton = event.target.closest("[data-party-picture-src]");
+    if (pictureButton) {
+      const src = String(pictureButton.dataset.partyPictureSrc || "").trim();
+      if (!src) return;
+      openPartyPictureLightbox(src, "Foto de listening party");
+      return;
+    }
+
+    const closeButton = event.target.closest("#party-picture-lightbox-close");
+    const overlay = event.target.closest("#party-picture-lightbox");
+    if (closeButton || overlay === event.target) {
+      closePartyPictureLightbox();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const overlay = document.getElementById("party-picture-lightbox");
+    if (!overlay || overlay.hidden) return;
+    closePartyPictureLightbox();
+  });
 }
 
 function renderPartyRecords(parties) {
@@ -1487,6 +1588,7 @@ function renderPartyRecords(parties) {
     const attendees = (Array.isArray(party.attendees) ? party.attendees : [])
       .map((a) => escapeHtml(String(a || "")))
       .join(", ");
+    const pictureMarkup = buildPartyPictureMarkup(party);
 
     const albumsMarkup = (Array.isArray(party.albumsPlayed) ? party.albumsPlayed : [])
       .map((album) => {
@@ -1528,6 +1630,7 @@ function renderPartyRecords(parties) {
         <p class="party-record-date">${date}</p>
         <p class="party-section-label">Asistentes</p>
         <p class="party-attendees">${attendees || "—"}</p>
+        ${pictureMarkup}
         <p class="party-section-label">Albums</p>
         <div class="party-albums-grid">${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}</div>
         ${reviewsSection}
@@ -2046,6 +2149,125 @@ function setupAlbumSortControls() {
       renderAlbums();
     });
   }
+}
+
+function getAlbumSearchMatches(query) {
+  const normalizedQuery = String(query || "").trim().toLowerCase();
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  const startsWith = [];
+  const includes = [];
+
+  for (const album of appState.albums) {
+    const title = String(album?.title || "").trim();
+    const artist = String(album?.artist || "").trim();
+    const titleLower = title.toLowerCase();
+    const artistLower = artist.toLowerCase();
+
+    const titleStarts = titleLower.startsWith(normalizedQuery);
+    const artistStarts = artistLower.startsWith(normalizedQuery);
+    const titleIncludes = titleLower.includes(normalizedQuery);
+    const artistIncludes = artistLower.includes(normalizedQuery);
+
+    if (!titleIncludes && !artistIncludes) {
+      continue;
+    }
+
+    const item = { album, title, artist };
+    if (titleStarts || artistStarts) {
+      startsWith.push(item);
+    } else {
+      includes.push(item);
+    }
+  }
+
+  const sorter = (a, b) => {
+    const titleCmp = a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+    if (titleCmp !== 0) {
+      return titleCmp;
+    }
+    return a.artist.localeCompare(b.artist, undefined, { sensitivity: "base" });
+  };
+
+  startsWith.sort(sorter);
+  includes.sort(sorter);
+  return [...startsWith, ...includes].slice(0, 8);
+}
+
+function setupAlbumSearchBar() {
+  const input = document.getElementById("album-search-input");
+  const suggestions = document.getElementById("album-search-suggestions");
+  if (!input || !suggestions) {
+    return;
+  }
+
+  const hideSuggestions = () => {
+    suggestions.innerHTML = "";
+    suggestions.hidden = true;
+  };
+
+  const renderSuggestions = (matches) => {
+    if (!matches.length) {
+      hideSuggestions();
+      return;
+    }
+
+    suggestions.innerHTML = matches.map(({ album, title, artist }) => {
+      const label = artist ? `${title} - ${artist}` : title;
+      return `
+        <li>
+          <button type="button" data-album-id="${escapeHtml(String(album.id))}" title="${escapeHtml(label)}">
+            <span class="album-search-suggestion-title">${escapeHtml(title)}</span>
+            <span class="album-search-suggestion-artist">${escapeHtml(artist || "")}</span>
+          </button>
+        </li>
+      `;
+    }).join("");
+    suggestions.hidden = false;
+  };
+
+  input.addEventListener("input", () => {
+    const matches = getAlbumSearchMatches(input.value);
+    renderSuggestions(matches);
+  });
+
+  input.addEventListener("focus", () => {
+    const matches = getAlbumSearchMatches(input.value);
+    renderSuggestions(matches);
+  });
+
+  suggestions.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-album-id]");
+    if (!button) {
+      return;
+    }
+
+    const album = getAlbumById(button.dataset.albumId || "");
+    if (!album) {
+      return;
+    }
+
+    input.value = `${album.title || ""}${album.artist ? ` - ${album.artist}` : ""}`;
+    hideSuggestions();
+    openAlbumInGrid(album, true);
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (input.contains(target) || suggestions.contains(target)) {
+      return;
+    }
+    hideSuggestions();
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      hideSuggestions();
+      input.blur();
+    }
+  });
 }
 
 function animateGroupExpand(container, pileRect) {
@@ -3288,6 +3510,7 @@ function setupNowPlayingInteractions() {
 
       if (!isAdminUser()) {
         showReviewStatus("Solo administrador puede agregar fotos.");
+        pictureInput.value = "";
         return;
       }
 
@@ -4098,9 +4321,11 @@ async function bootSession() {
 
   setupAlbumInteractions();
   setupAlbumSortControls();
+  setupAlbumSearchBar();
   setupNowPlayingInteractions();
   setupBubbleInteractions();
   setupActiveUserBubbleInteractions();
+  setupPartyPictureLightboxInteractions();
   setupAuthInteractions();
   setupAddAlbumModal();
   setupLogoGravity();

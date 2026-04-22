@@ -1129,6 +1129,75 @@
         min-width: 110px;
       }
 
+      .album-search-wrap {
+        margin-top: 0.5rem;
+        position: relative;
+        text-align: left;
+      }
+
+      .album-search-input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        background: #0b1220;
+        color: #e2e8f0;
+        padding: 0.46rem 0.6rem;
+        font-size: 0.8rem;
+      }
+
+      .album-search-input::placeholder {
+        color: #64748b;
+      }
+
+      .album-search-suggestions {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 0.2rem);
+        margin: 0;
+        padding: 0.25rem;
+        list-style: none;
+        border: 1px solid #334155;
+        border-radius: 0.55rem;
+        background: #0f172a;
+        z-index: 40;
+        max-height: 260px;
+        overflow-y: auto;
+      }
+
+      .album-search-suggestions[hidden] {
+        display: none;
+      }
+
+      .album-search-suggestions button {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: #e2e8f0;
+        text-align: left;
+        padding: 0.38rem 0.42rem;
+        border-radius: 0.4rem;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+      }
+
+      .album-search-suggestions button:hover {
+        background: #1e293b;
+      }
+
+      .album-search-suggestion-title {
+        font-size: 0.78rem;
+        color: #e2e8f0;
+      }
+
+      .album-search-suggestion-artist {
+        font-size: 0.66rem;
+        color: #94a3b8;
+      }
+
       .album-card {
         position: relative;
         border-radius: 0.75rem;
@@ -1674,6 +1743,68 @@
         color: #94a3b8;
         font-weight: 400;
         font-size: 0.66rem;
+      }
+
+      .my-party-picture-wrap {
+        margin-top: 0.28rem;
+      }
+
+      .my-party-picture-button {
+        width: 92px;
+        height: 92px;
+        border: 1px solid #334155;
+        border-radius: 0.55rem;
+        background: #0b1220;
+        padding: 0;
+        overflow: hidden;
+        cursor: pointer;
+      }
+
+      .my-party-picture-button img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .party-picture-lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 130;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(2, 6, 23, 0.94);
+        box-sizing: border-box;
+      }
+
+      .party-picture-lightbox[hidden] {
+        display: none;
+      }
+
+      .party-picture-lightbox-image {
+        max-width: min(96vw, 900px);
+        max-height: 86dvh;
+        border-radius: 0.8rem;
+        border: 1px solid #334155;
+        background: #0b1220;
+        object-fit: contain;
+      }
+
+      .party-picture-lightbox-close {
+        position: absolute;
+        top: 0.9rem;
+        right: 0.9rem;
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        border: 1px solid #64748b;
+        background: rgba(15, 23, 42, 0.95);
+        color: #e2e8f0;
+        font-size: 1.2rem;
+        line-height: 1;
+        cursor: pointer;
       }
 
       .party-brief-overlay {
@@ -2436,7 +2567,7 @@
         <button id="now-playing-stop" class="now-playing-stop-button" type="button" aria-label="Terminar reproduccion actual">Terminar</button>
         <div class="now-playing-picture-upload">
           <button id="now-playing-add-picture" class="now-playing-picture-button" type="button" aria-label="Agregar foto a la sesion">📷</button>
-          <input id="now-playing-picture-input" type="file" accept="image/*" hidden />
+          <input id="now-playing-picture-input" type="file" accept="image/*" capture="environment" hidden />
         </div>
       </div>
       <button id="now-playing-toggle" class="now-playing-toggle" type="button" aria-expanded="false" aria-controls="review-panel">
@@ -2535,6 +2666,10 @@
           <button id="album-sort-direction" type="button" aria-label="Cambiar direccion de orden">Descendente</button>
           <button id="group-by-artist" type="button" class="group-by-button" aria-label="Agrupar por artista">Por artista</button>
           <button id="group-by-genre" type="button" class="group-by-button" aria-label="Agrupar por genero">Por genero</button>
+        </div>
+        <div class="album-search-wrap">
+          <input id="album-search-input" class="album-search-input" type="text" placeholder="Buscar album o artista..." autocomplete="off" />
+          <ul id="album-search-suggestions" class="album-search-suggestions" hidden></ul>
         </div>
         <section id="albums" class="albums" aria-live="polite"></section>
       </section>
@@ -2660,6 +2795,10 @@
         <button id="party-brief-close" class="party-brief-close-btn" type="button">Cerrar</button>
       </div>
     </section>
-    <script src="./app.js?v=20260421-21"></script>
+    <section id="party-picture-lightbox" class="party-picture-lightbox" hidden>
+      <button id="party-picture-lightbox-close" class="party-picture-lightbox-close" type="button" aria-label="Cerrar foto">×</button>
+      <img id="party-picture-lightbox-image" class="party-picture-lightbox-image" src="" alt="" />
+    </section>
+    <script src="./app.js?v=20260422-01"></script>
   </body>
 </html>

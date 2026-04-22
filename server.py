@@ -261,6 +261,28 @@ def collect_active_attendees(users_store, credentials_store, include_admin=True)
     return unique
 
 
+def collect_reviewing_attendees(party_reviews):
+    attendees = []
+    seen = set()
+
+    for review in party_reviews:
+        if not isinstance(review, dict):
+            continue
+
+        reviewer = str(review.get("reviewer", "")).strip()
+        if not reviewer:
+            continue
+
+        reviewer_key = reviewer.lower()
+        if reviewer_key in seen:
+            continue
+
+        seen.add(reviewer_key)
+        attendees.append(reviewer)
+
+    return attendees
+
+
 def upsert_party_record_snapshot(session_payload, users_store, credentials_store, reviews_store, finalized=False):
     if not session_payload or not session_payload.get("albumsPlayed"):
         return None
@@ -270,12 +292,9 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
     if not record_id or not started_at:
         return None
 
-    attendees = collect_active_attendees(users_store, credentials_store, include_admin=True)
-    if not attendees:
-        return None
-
     session_date_key = get_session_date_key(session_payload)
     party_reviews = collect_reviews_for_albums(reviews_store, session_payload.get("albumsPlayed", []), session_date_key)
+    attendees = collect_reviewing_attendees(party_reviews)
     now_iso = datetime.now(timezone.utc).isoformat()
 
     records_store = read_party_records_store()
@@ -292,6 +311,7 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
     record = {
         "id": record_id,
         "date": started_at[:10],
+        "startedAt": started_at,
         "savedAt": now_iso,
         "attendees": attendees,
         "albumsPlayed": session_payload.get("albumsPlayed", []),
@@ -304,8 +324,20 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
         record["partyPicture"] = party_picture
 
     finalized_at = str(existing.get("finalizedAt", "")).strip()
+    ended_at = str(existing.get("endedAt", "")).strip()
+
+    # Backfill endedAt from finalizedAt for older records that only had finalizedAt.
+    if not ended_at and finalized_at:
+        ended_at = finalized_at
+
     if finalized:
         finalized_at = now_iso
+        ended_at = now_iso
+
+    if ended_at:
+        record["endedAt"] = ended_at
+
+    # Keep finalizedAt for backward compatibility with existing clients/data.
     if finalized_at:
         record["finalizedAt"] = finalized_at
 
