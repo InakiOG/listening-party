@@ -201,6 +201,87 @@ def collect_reviews_for_albums(reviews_store, albums_played):
     return reviews
 
 
+def collect_active_attendees(users_store, credentials_store, include_admin=True):
+    attendees = []
+    for user_key, credentials_entry in credentials_store.items():
+        if not read_session_token(credentials_entry):
+            continue
+
+        profile = sanitize_user_profile(users_store.get(user_key))
+        if not profile:
+            continue
+
+        if not include_admin and profile.get("accountName") == ADMIN_ACCOUNT_NAME:
+            continue
+
+        attendee_name = str(profile.get("name", user_key)).strip()
+        if attendee_name:
+            attendees.append(attendee_name)
+
+    unique = []
+    seen = set()
+    for attendee in attendees:
+        key = attendee.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(attendee)
+
+    return unique
+
+
+def upsert_party_record_snapshot(session_payload, users_store, credentials_store, reviews_store, finalized=False):
+    if not session_payload or not session_payload.get("albumsPlayed"):
+        return None
+
+    record_id = str(session_payload.get("id", "")).strip()
+    started_at = str(session_payload.get("startedAt", "")).strip()
+    if not record_id or not started_at:
+        return None
+
+    attendees = collect_active_attendees(users_store, credentials_store, include_admin=True)
+    if not attendees:
+        return None
+
+    party_reviews = collect_reviews_for_albums(reviews_store, session_payload.get("albumsPlayed", []))
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    records_store = read_party_records_store()
+    parties = records_store.get("parties", [])
+    if not isinstance(parties, list):
+        parties = []
+
+    existing_index = next(
+        (index for index, entry in enumerate(parties) if str(entry.get("id", "")).strip() == record_id),
+        -1
+    )
+    existing = parties[existing_index] if existing_index >= 0 and isinstance(parties[existing_index], dict) else {}
+
+    record = {
+        "id": record_id,
+        "date": started_at[:10],
+        "savedAt": now_iso,
+        "attendees": attendees,
+        "albumsPlayed": session_payload.get("albumsPlayed", []),
+        "reviews": party_reviews
+    }
+
+    finalized_at = str(existing.get("finalizedAt", "")).strip()
+    if finalized:
+        finalized_at = now_iso
+    if finalized_at:
+        record["finalizedAt"] = finalized_at
+
+    if existing_index >= 0:
+        parties[existing_index] = record
+    else:
+        parties.append(record)
+
+    records_store["parties"] = parties
+    write_party_records_store(records_store)
+    return record
+
+
 def normalize_user_key(name):
     return str(name or "").strip().lower()
 
@@ -759,31 +840,17 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 if not session_to_save or not session_to_save.get("albumsPlayed"):
                     self._send_json({"error": "No hay listening party activa para finalizar."}, status_code=400)
                     return
-
-                attendees = []
-                for uk, ce in credentials_store.items():
-                    if not read_session_token(ce):
-                        continue
-                    profile = sanitize_user_profile(users_store.get(uk))
-                    if not profile or profile.get("accountName") == ADMIN_ACCOUNT_NAME:
-                        continue
-                    attendees.append(profile.get("name", uk))
-
                 reviews_store = read_reviews_store()
-                party_reviews = collect_reviews_for_albums(
-                    reviews_store, session_to_save["albumsPlayed"]
+                record = upsert_party_record_snapshot(
+                    session_to_save,
+                    users_store,
+                    credentials_store,
+                    reviews_store,
+                    finalized=True
                 )
-                record = {
-                    "id": session_to_save["id"],
-                    "date": session_to_save["startedAt"][:10],
-                    "savedAt": datetime.now(timezone.utc).isoformat(),
-                    "attendees": attendees,
-                    "albumsPlayed": session_to_save["albumsPlayed"],
-                    "reviews": party_reviews
-                }
-                records = read_party_records_store()
-                records["parties"].append(record)
-                write_party_records_store(records)
+                if not record:
+                    self._send_json({"error": "No se pudo guardar el record de la listening party."}, status_code=500)
+                    return
 
                 clear_now_playing()
                 _current_session = None
@@ -872,6 +939,15 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         "artist": album_artist,
                         "coverUrl": cover_url
                     })
+
+                reviews_store = read_reviews_store()
+                upsert_party_record_snapshot(
+                    _current_session,
+                    users_store,
+                    credentials_store,
+                    reviews_store,
+                    finalized=False
+                )
 
             self._send_json({"nowPlaying": now_playing_payload})
             return
@@ -1268,6 +1344,20 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             store[song_key] = existing
             write_reviews_store(store)
             updated_reviews = existing
+
+            if _current_session and _current_session.get("albumsPlayed"):
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                upsert_party_record_snapshot(
+                    _current_session,
+                    users_store,
+                    credentials_store,
+                    store,
+                    finalized=False
+                )
 
         self._send_json({
             "songKey": song_key,

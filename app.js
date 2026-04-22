@@ -40,18 +40,19 @@ let lastRenderedActiveUsers = [];
 let viewBeforeReviews = "main";
 
 const VINYL_COLOR_RULES = [
-  { key: "grape", color: "#7e22ce" },
-  { key: "coral", color: "#fb7185" },
-  { key: "green", color: "#16a34a" },
-  { key: "red", color: "#dc2626" },
-  { key: "blue", color: "#2563eb" },
-  { key: "yellow", color: "#eab308" },
-  { key: "orange", color: "#f97316" },
-  { key: "pink", color: "#ec4899" },
-  { key: "purple", color: "#8b5cf6" },
-  { key: "white", color: "#f8fafc" },
-  { key: "gold", color: "#ca8a04" },
-  { key: "silver", color: "#94a3b8" }
+  { key: "glow in the dark", color: "#16a34a", pattern: /\bglow[\s-]*in[\s-]*the[\s-]*dark\b/ },
+  { key: "grape", color: "#7e22ce", pattern: /\bgrape\b/ },
+  { key: "coral", color: "#fb7185", pattern: /\bcoral\b/ },
+  { key: "green", color: "#16a34a", pattern: /\bgreen\b/ },
+  { key: "red", color: "#dc2626", pattern: /\bred\b/ },
+  { key: "blue", color: "#2563eb", pattern: /\bblue\b/ },
+  { key: "yellow", color: "#eab308", pattern: /\byellow\b/ },
+  { key: "orange", color: "#f97316", pattern: /\borange\b/ },
+  { key: "pink", color: "#ec4899", pattern: /\bpink\b/ },
+  { key: "purple", color: "#8b5cf6", pattern: /\bpurple\b/ },
+  { key: "white", color: "#f8fafc", pattern: /\bwhite\b/ },
+  { key: "gold", color: "#ca8a04", pattern: /\bgold\b/ },
+  { key: "silver", color: "#94a3b8", pattern: /\bsilver\b/ }
 ];
 
 const ACTIVE_USER_BUBBLE_COLORS = [
@@ -100,6 +101,37 @@ function resolveVinylColor(rule, translucent) {
   return translucent ? withAlpha(rule.color, 0.82) : rule.color;
 }
 
+function detectAmpersandVinylGradient(text, translucent) {
+  const formatDescriptor = String(text || "").split(";")[0] || "";
+  if (!formatDescriptor.includes("&")) {
+    return "";
+  }
+
+  const colorRules = VINYL_COLOR_RULES.filter((rule) => rule.key !== "glow in the dark");
+
+  for (const firstRule of colorRules) {
+    for (const secondRule of colorRules) {
+      if (firstRule.key === secondRule.key) {
+        continue;
+      }
+
+      const pairPattern = new RegExp(
+        `${firstRule.pattern.source}\\s*&\\s*${secondRule.pattern.source}`
+      );
+
+      if (!pairPattern.test(formatDescriptor)) {
+        continue;
+      }
+
+      const firstColor = resolveVinylColor(firstRule, translucent);
+      const secondColor = resolveVinylColor(secondRule, translucent);
+      return `linear-gradient(135deg, ${firstColor} 0%, ${secondColor} 100%)`;
+    }
+  }
+
+  return "";
+}
+
 function detectVinylColors(rawText) {
   const text = String(rawText || "").toLowerCase();
 
@@ -109,7 +141,16 @@ function detectVinylColors(rawText) {
 
   const translucent = /(translucent|transparent|clear)/.test(text);
   const clearOnly = /\bclear\b/.test(text);
-  const matchedRules = VINYL_COLOR_RULES.filter((rule) => text.includes(rule.key));
+  const ampersandGradient = detectAmpersandVinylGradient(text, translucent);
+  if (ampersandGradient) {
+    return [ampersandGradient, ""];
+  }
+  const matchedRules = VINYL_COLOR_RULES.filter((rule) => {
+    if (rule.pattern instanceof RegExp) {
+      return rule.pattern.test(text);
+    }
+    return false;
+  });
 
   if (matchedRules.length >= 2) {
     return [
@@ -440,28 +481,6 @@ async function apiClearNowPlaying(actorName) {
 
   return response.json();
 }
-
-async function apiFinishListeningParty(actorName) {
-  const response = await fetch("/api/listening-party/finish", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ actorName })
-  });
-
-  if (response.status === 403) {
-    throw new Error("Solo administrador puede finalizar la listening party.");
-  }
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload?.error || "No se pudo finalizar la listening party.");
-  }
-
-  return response.json();
-}
-
 async function apiLogout() {
   const response = await fetch("/api/users/logout", {
     method: "POST",
@@ -971,8 +990,6 @@ function setCurrentUser(user) {
     }
     const addAlbumFabLogout = document.getElementById("add-album-button");
     if (addAlbumFabLogout) addAlbumFabLogout.hidden = true;
-    const finishPartyFabLogout = document.getElementById("finish-party-button");
-    if (finishPartyFabLogout) finishPartyFabLogout.hidden = true;
     renderAlbums();
     return;
   }
@@ -1035,9 +1052,6 @@ function setCurrentUser(user) {
 
   const addAlbumFab = document.getElementById("add-album-button");
   if (addAlbumFab) addAlbumFab.hidden = !isAdminUser();
-
-  const finishPartyFab = document.getElementById("finish-party-button");
-  if (finishPartyFab) finishPartyFab.hidden = !isAdminUser();
 
   const openUsersBoardButton = document.getElementById("open-users-board");
   if (openUsersBoardButton) {
@@ -1443,7 +1457,7 @@ function renderPartyRecords(parties) {
   if (!list) return;
 
   if (!parties.length) {
-    list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">No hay registros todavia. Los registros se guardan cuando el admin usa el boton END para finalizar la listening party.</p>";
+    list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">No hay registros todavia. Los registros se guardan mientras la listening party esta activa.</p>";
     return;
   }
 
@@ -2497,6 +2511,17 @@ async function fetchCurrentSongReviews() {
     renderReviewBubbles([], `${songKey}|${albumKey}|${reviewScope}`);
     showReviewStatus("No se pudieron cargar las reseñas.");
   }
+}
+
+function startReviewPolling() {
+  const refresh = () => {
+    if (currentNowPlaying) {
+      void fetchCurrentSongReviews();
+    }
+  };
+
+  refresh();
+  window.setInterval(refresh, 2000);
 }
 
 function getReviewerKey(name) {
@@ -3807,7 +3832,6 @@ async function saveAddAlbum() {
 
 function setupAddAlbumModal() {
   const fab = document.getElementById("add-album-button");
-  const finishPartyButton = document.getElementById("finish-party-button");
   const cancelBtn = document.getElementById("add-album-cancel");
   const saveBtn = document.getElementById("add-album-save");
   const titleInput = document.getElementById("add-album-title");
@@ -3819,28 +3843,6 @@ function setupAddAlbumModal() {
   const cameraInput = document.getElementById("add-album-camera-input");
 
   if (fab) fab.addEventListener("click", () => openAddAlbumModal());
-  if (finishPartyButton) {
-    finishPartyButton.addEventListener("click", async () => {
-      if (!isAdminUser() || !sessionState.currentUser?.name) {
-        showReviewStatus("Solo administrador puede finalizar la listening party.");
-        return;
-      }
-
-      const confirmed = window.confirm("Terminar listening party y guardar su record?");
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        await apiFinishListeningParty(sessionState.currentUser.name);
-        lastKnownPartyActive = false;
-        hideNowPlaying();
-        showReviewStatus("Listening party finalizada y record guardado.");
-      } catch (error) {
-        showReviewStatus(error instanceof Error ? error.message : "No se pudo finalizar la listening party.");
-      }
-    });
-  }
   if (cancelBtn) cancelBtn.addEventListener("click", () => closeAddAlbumModal());
   if (saveBtn) saveBtn.addEventListener("click", () => saveAddAlbum());
 
@@ -4049,6 +4051,7 @@ async function bootSession() {
   setupAddAlbumModal();
   setupLogoGravity();
   startNowPlayingPolling();
+  startReviewPolling();
   startActiveUsersPolling();
   startLiveAlbumsPolling();
   void bootSession();

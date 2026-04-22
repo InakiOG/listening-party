@@ -53,6 +53,31 @@ def load_existing_output():
         return None
 
 
+def _normalize_release_id(value):
+    text = str(value or "").strip()
+    return text or ""
+
+
+def build_existing_items_index(existing_payload):
+    if not isinstance(existing_payload, dict):
+        return {}
+
+    items = existing_payload.get("items")
+    if not isinstance(items, list):
+        return {}
+
+    index = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        release_id = _normalize_release_id(item.get("discogsId"))
+        if not release_id:
+            continue
+        index[release_id] = item
+
+    return index
+
+
 def summarize_artists(artists):
     names = []
 
@@ -168,6 +193,7 @@ def update_collection_cache(max_pages=100):
     collected_items = []
     seen_release_ids = set()
     existing_payload = load_existing_output()
+    existing_items_index = build_existing_items_index(existing_payload)
 
     try:
         first_page = fetch_collection_page(1)
@@ -203,6 +229,18 @@ def update_collection_cache(max_pages=100):
 
             seen_release_ids.add(release_id)
             mapped_release = map_release(release, page_number)
+            existing_item = existing_items_index.get(_normalize_release_id(release_id))
+            existing_tracks = existing_item.get("tracks") if isinstance(existing_item, dict) else None
+            has_cached_tracks = isinstance(existing_tracks, list) and len(existing_tracks) > 0
+
+            if has_cached_tracks:
+                mapped_release["tracks"] = existing_tracks
+                if not mapped_release.get("year") and isinstance(existing_item.get("year"), int):
+                    mapped_release["year"] = existing_item.get("year")
+                if not mapped_release.get("rawText"):
+                    mapped_release["rawText"] = str(existing_item.get("rawText") or "").strip()
+                collected_items.append(mapped_release)
+                continue
 
             try:
                 release_details = fetch_release_details(release_id)

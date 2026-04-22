@@ -167,11 +167,11 @@
 
       .now-playing-disc.clear-vinyl {
         background:
-          radial-gradient(circle at center, #f8fafc 0 8.2%, #cbd5e1 8.5% 10.2%, transparent 10.6%),
-          radial-gradient(circle at center, transparent 0 74%, rgba(255, 255, 255, 0.78) 74.4% 76.2%, transparent 76.6%),
-          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.28) 0 2px, rgba(203, 213, 225, 0.18) 2px 4px),
-          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.86), transparent 47%),
-          var(--disc-color);
+          radial-gradient(circle at center, transparent 0 8%, rgba(226, 232, 240, 0.9) 8.4% 10.6%, transparent 11%),
+          radial-gradient(circle at center, transparent 0 74%, rgba(226, 232, 240, 0.92) 74.4% 76.2%, transparent 76.6%),
+          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.32), transparent 47%),
+          transparent;
+        box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.95), 0 5px 14px rgba(0, 0, 0, 0.26);
       }
 
       .now-playing-disc.cd-disc {
@@ -1208,12 +1208,11 @@
 
       .vinyl-disc.clear-vinyl {
         background:
-          radial-gradient(circle at center, #f8fafc 0 8.2%, #cbd5e1 8.5% 10.2%, transparent 10.6%),
-          radial-gradient(circle at center, transparent 0 74%, rgba(255, 255, 255, 0.78) 74.4% 76.2%, transparent 76.6%),
-          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.28) 0 2px, rgba(203, 213, 225, 0.18) 2px 4px),
-          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.86), transparent 47%),
-          var(--vinyl-color);
-        box-shadow: 0 0 0 2px rgba(226, 232, 240, 0.86), 0 8px 22px rgba(0, 0, 0, 0.35);
+          radial-gradient(circle at center, transparent 0 8%, rgba(226, 232, 240, 0.92) 8.4% 10.6%, transparent 11%),
+          radial-gradient(circle at center, transparent 0 74%, rgba(226, 232, 240, 0.94) 74.4% 76.2%, transparent 76.6%),
+          radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.34), transparent 47%),
+          transparent;
+        box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.96), 0 8px 22px rgba(0, 0, 0, 0.28);
       }
 
       .cd-disc {
@@ -2097,32 +2096,6 @@
         display: none;
       }
 
-      .finish-party-fab {
-        position: fixed;
-        right: 0.65rem;
-        bottom: 8rem;
-        z-index: 80;
-        width: 44px;
-        height: 44px;
-        border-radius: 999px;
-        border: 2px solid #fb923c;
-        background: #9a3412;
-        color: #fff7ed;
-        font-size: 0.62rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-        padding: 0;
-      }
-
-      .finish-party-fab[hidden] {
-        display: none;
-      }
-
       .add-album-overlay {
         position: fixed;
         inset: 0;
@@ -2476,7 +2449,6 @@
     <section id="active-users-layer" class="active-users-layer" aria-hidden="true"></section>
     <section id="bubble-layer" class="bubble-layer" aria-hidden="true"></section>
 
-    <button id="finish-party-button" class="finish-party-fab" hidden type="button" aria-label="Finalizar listening party">END</button>
     <button id="add-album-button" class="add-album-fab" hidden type="button" aria-label="Agregar album">+</button>
 
     <section id="add-album-overlay" class="add-album-overlay" hidden>
