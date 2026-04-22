@@ -54,6 +54,41 @@
         font-size: 1.75rem;
       }
 
+      .main-logo-wrap {
+        position: relative;
+        display: inline-block;
+        margin: 0 auto 0.5rem;
+        width: min(72%, 220px);
+      }
+
+      .main-logo {
+        display: block;
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .main-logo-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.1rem;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #f8fafc;
+        -webkit-text-stroke: 1.5px #000;
+        text-shadow:
+          -2px -2px 0 #000,
+           2px -2px 0 #000,
+          -2px  2px 0 #000,
+           2px  2px 0 #000;
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+      }
+
       p {
         margin: 0;
         line-height: 1.5;
@@ -1556,6 +1591,24 @@
         gap: 0.4rem;
       }
 
+      @keyframes albumFromPile {
+        from {
+          transform: translate(var(--pile-dx, 0px), var(--pile-dy, 0px)) scale(0.5);
+          opacity: 0;
+        }
+        55% {
+          opacity: 1;
+        }
+        to {
+          transform: translate(0, 0) scale(1);
+          opacity: 1;
+        }
+      }
+
+      .album-card.from-pile {
+        animation: albumFromPile 400ms cubic-bezier(0.22, 0.84, 0.28, 1) var(--pile-delay, 0ms) both;
+      }
+
     </style>
   </head>
   <body>
@@ -1630,7 +1683,11 @@
     <main>
       <section id="main-view">
         <p class="guest-label">invitados</p>
-        <h1 id="title">Listening Party</h1>
+        <div class="main-logo-wrap">
+          <img src="./graff.png" alt="Listening Party" class="main-logo" />
+          <span class="main-logo-text">Listening Party</span>
+        </div>
+        <h1 id="title" hidden>Listening Party</h1>
         <p id="message">Bienvenido a la pagina principal.</p>
         <div class="album-sort-controls" aria-label="Orden de albumes">
           <label for="album-sort-by">Ordenar por</label>
@@ -1733,6 +1790,6 @@
         </article>
       </section>
     </main>
-    <script src="./app.js?v=20260421-4"></script>
+    <script src="./app.js?v=20260421-7"></script>
   </body>
 </html>

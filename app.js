@@ -1474,10 +1474,11 @@ function buildGroupedAlbumsHtml() {
     }
 
     const pileAlbums = albums.slice(0, 3);
+    const pileOffset = 3 - pileAlbums.length;
     const coversMarkup = pileAlbums.map((album, i) => {
       const safeCover = escapeHtml(album.coverUrl);
       const safeTitle = escapeHtml(album.title);
-      return `<span class="pile-cover pile-cover-${i}"><img src="${safeCover}" alt="${safeTitle}" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" /></span>`;
+      return `<span class="pile-cover pile-cover-${i + pileOffset}"><img src="${safeCover}" alt="${safeTitle}" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" /></span>`;
     }).join("");
     const countBadge = albums.length > 1
       ? `<span class="pile-count">${albums.length}</span>`
@@ -1585,6 +1586,35 @@ function setupAlbumSortControls() {
   }
 }
 
+function animateGroupExpand(container, pileRect) {
+  const innerGrid = container.querySelector(".group-inner-grid");
+  if (!innerGrid) return;
+
+  const cards = Array.from(innerGrid.querySelectorAll(".album-card"));
+  if (!cards.length) return;
+
+  const pileCenterX = pileRect.left + pileRect.width / 2;
+  const pileCenterY = pileRect.top + pileRect.height / 2;
+
+  cards.forEach((card, index) => {
+    const cardRect = card.getBoundingClientRect();
+    const dx = pileCenterX - (cardRect.left + cardRect.width / 2);
+    const dy = pileCenterY - (cardRect.top + cardRect.height / 2);
+
+    card.style.setProperty("--pile-dx", `${dx}px`);
+    card.style.setProperty("--pile-dy", `${dy}px`);
+    card.style.setProperty("--pile-delay", `${index * 30}ms`);
+    card.classList.add("from-pile");
+
+    card.addEventListener("animationend", () => {
+      card.classList.remove("from-pile");
+      card.style.removeProperty("--pile-dx");
+      card.style.removeProperty("--pile-dy");
+      card.style.removeProperty("--pile-delay");
+    }, { once: true });
+  });
+}
+
 function setupAlbumInteractions() {
   const container = document.getElementById("albums");
 
@@ -1642,9 +1672,11 @@ function setupAlbumInteractions() {
     const pileButton = event.target.closest(".group-pile-covers");
     if (pileButton) {
       const key = pileButton.dataset.groupKey || "";
+      const pileRect = pileButton.getBoundingClientRect();
       appState.expandedGroupKey = key;
       appState.expandedAlbumId = null;
       renderAlbums();
+      animateGroupExpand(container, pileRect);
       const expandedGroup = container.querySelector(".group-expanded");
       if (expandedGroup && typeof expandedGroup.scrollIntoView === "function") {
         expandedGroup.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -2871,6 +2903,7 @@ async function bootSession() {
 
   if (!isMobileDevice || !isLocal) {
     if (title) {
+      title.hidden = false;
       title.textContent = "Acceso restringido";
     }
     if (message) {
@@ -2886,7 +2919,7 @@ async function bootSession() {
   }
 
   if (message) {
-    message.textContent = "Toca cualquier album para ver los detalles. Toca de nuevo para contraerlo.";
+    message.textContent = "Página creada por mi (Claude y Copilot también) para tener a la música y la gente que quiero más cerca de mi corazón.";
   }
 
   setupAlbumInteractions();
