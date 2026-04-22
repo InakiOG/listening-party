@@ -3386,6 +3386,7 @@ function setupAuthInteractions() {
         throw new Error("No se encontro el usuario.");
       }
       setCurrentUser(user);
+      await refreshActiveUsersNow();
       setAuthStatus("");
     } catch (error) {
       setAuthStatus(error instanceof Error ? error.message : "No se pudo iniciar sesion.");
@@ -3415,6 +3416,7 @@ function setupAuthInteractions() {
         throw new Error("No se pudo crear el perfil.");
       }
       setCurrentUser(user);
+      await refreshActiveUsersNow();
       authPhoto.value = "";
       authPassword.value = "";
       setAuthStatus("");
