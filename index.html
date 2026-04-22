@@ -1254,6 +1254,11 @@
         animation: spinVinylSecondary 3.1s linear infinite reverse;
       }
 
+      .album-card.expanded .vinyl-disc.cd-disc-secondary {
+        animation: spinCdSecondary 3.1s linear infinite reverse;
+        transform: translateX(26%) scale(0.76);
+      }
+
       .album-card.album-opening .cover-button img {
         animation: albumCoverSettle 420ms ease-out;
       }
@@ -1282,6 +1287,15 @@
         }
         to {
           transform: rotate(360deg);
+        }
+      }
+
+      @keyframes spinCdSecondary {
+        from {
+          transform: translateX(26%) scale(0.76) rotate(0deg);
+        }
+        to {
+          transform: translateX(26%) scale(0.76) rotate(360deg);
         }
       }
 
@@ -2083,6 +2097,32 @@
         display: none;
       }
 
+      .finish-party-fab {
+        position: fixed;
+        right: 0.65rem;
+        bottom: 8rem;
+        z-index: 80;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 2px solid #fb923c;
+        background: #9a3412;
+        color: #fff7ed;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+        padding: 0;
+      }
+
+      .finish-party-fab[hidden] {
+        display: none;
+      }
+
       .add-album-overlay {
         position: fixed;
         inset: 0;
@@ -2436,6 +2476,7 @@
     <section id="active-users-layer" class="active-users-layer" aria-hidden="true"></section>
     <section id="bubble-layer" class="bubble-layer" aria-hidden="true"></section>
 
+    <button id="finish-party-button" class="finish-party-fab" hidden type="button" aria-label="Finalizar listening party">END</button>
     <button id="add-album-button" class="add-album-fab" hidden type="button" aria-label="Agregar album">+</button>
 
     <section id="add-album-overlay" class="add-album-overlay" hidden>

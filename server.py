@@ -718,37 +718,77 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
                 clear_now_playing()
 
+            self._send_json({"ok": True})
+            return
+
+        if parsed.path == "/api/listening-party/finish":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            actor_name = str(payload.get("actorName", "")).strip()
+
+            if not actor_name:
+                self._send_json({"error": "actorName is required"}, status_code=400)
+                return
+
+            actor_key = normalize_user_key(actor_name)
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                actor_profile = sanitize_user_profile(users_store.get(actor_key))
+
+                if not actor_profile:
+                    self._send_json({"error": "actor user not found"}, status_code=404)
+                    return
+
+                if actor_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                    self._send_json({"error": "only administrador can finish listening party"}, status_code=403)
+                    return
+
                 session_to_save = _current_session
+                if not session_to_save or not session_to_save.get("albumsPlayed"):
+                    self._send_json({"error": "No hay listening party activa para finalizar."}, status_code=400)
+                    return
+
+                attendees = []
+                for uk, ce in credentials_store.items():
+                    if not read_session_token(ce):
+                        continue
+                    profile = sanitize_user_profile(users_store.get(uk))
+                    if not profile or profile.get("accountName") == ADMIN_ACCOUNT_NAME:
+                        continue
+                    attendees.append(profile.get("name", uk))
+
+                reviews_store = read_reviews_store()
+                party_reviews = collect_reviews_for_albums(
+                    reviews_store, session_to_save["albumsPlayed"]
+                )
+                record = {
+                    "id": session_to_save["id"],
+                    "date": session_to_save["startedAt"][:10],
+                    "savedAt": datetime.now(timezone.utc).isoformat(),
+                    "attendees": attendees,
+                    "albumsPlayed": session_to_save["albumsPlayed"],
+                    "reviews": party_reviews
+                }
+                records = read_party_records_store()
+                records["parties"].append(record)
+                write_party_records_store(records)
+
+                clear_now_playing()
                 _current_session = None
 
-                if session_to_save and session_to_save.get("albumsPlayed"):
-                    attendees = []
-                    for uk, ce in credentials_store.items():
-                        if not read_session_token(ce):
-                            continue
-                        profile = sanitize_user_profile(users_store.get(uk))
-                        if not profile or profile.get("accountName") == ADMIN_ACCOUNT_NAME:
-                            continue
-                        attendees.append(profile.get("name", uk))
-
-                    if attendees:
-                        reviews_store = read_reviews_store()
-                        party_reviews = collect_reviews_for_albums(
-                            reviews_store, session_to_save["albumsPlayed"]
-                        )
-                        record = {
-                            "id": session_to_save["id"],
-                            "date": session_to_save["startedAt"][:10],
-                            "savedAt": datetime.now(timezone.utc).isoformat(),
-                            "attendees": attendees,
-                            "albumsPlayed": session_to_save["albumsPlayed"],
-                            "reviews": party_reviews
-                        }
-                        records = read_party_records_store()
-                        records["parties"].append(record)
-                        write_party_records_store(records)
-
-            self._send_json({"ok": True})
+            self._send_json({"ok": True, "recordCreated": True, "partyId": record["id"]})
             return
 
         if parsed.path == "/api/now-playing":

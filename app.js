@@ -139,14 +139,11 @@ function detectVinylColors(rawText) {
 
 function detectDiscType(rawText) {
   const text = String(rawText || "").toLowerCase();
-  if (!text) {
-    return "vinyl";
-  }
-
-  if (/\bcd\b|compact\s*disc|cdr|cd-r/.test(text)) {
-    return "cd";
-  }
-
+  if (!text) return "vinyl";
+  const hasVinyl = /\bvinyl\b/.test(text);
+  const hasCd = /\bcd\b|compact\s*disc|cdr|cd-r/.test(text);
+  if (hasVinyl && hasCd) return "both";
+  if (hasCd) return "cd";
   return "vinyl";
 }
 
@@ -439,6 +436,27 @@ async function apiClearNowPlaying(actorName) {
 
   if (!response.ok) {
     throw new Error("No se pudo finalizar reproduciendo ahora.");
+  }
+
+  return response.json();
+}
+
+async function apiFinishListeningParty(actorName) {
+  const response = await fetch("/api/listening-party/finish", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ actorName })
+  });
+
+  if (response.status === 403) {
+    throw new Error("Solo administrador puede finalizar la listening party.");
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.error || "No se pudo finalizar la listening party.");
   }
 
   return response.json();
@@ -953,6 +971,8 @@ function setCurrentUser(user) {
     }
     const addAlbumFabLogout = document.getElementById("add-album-button");
     if (addAlbumFabLogout) addAlbumFabLogout.hidden = true;
+    const finishPartyFabLogout = document.getElementById("finish-party-button");
+    if (finishPartyFabLogout) finishPartyFabLogout.hidden = true;
     renderAlbums();
     return;
   }
@@ -1015,6 +1035,9 @@ function setCurrentUser(user) {
 
   const addAlbumFab = document.getElementById("add-album-button");
   if (addAlbumFab) addAlbumFab.hidden = !isAdminUser();
+
+  const finishPartyFab = document.getElementById("finish-party-button");
+  if (finishPartyFab) finishPartyFab.hidden = !isAdminUser();
 
   const openUsersBoardButton = document.getElementById("open-users-board");
   if (openUsersBoardButton) {
@@ -1420,7 +1443,7 @@ function renderPartyRecords(parties) {
   if (!list) return;
 
   if (!parties.length) {
-    list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">No hay registros todavia. Los registros se guardan automaticamente cuando el admin finaliza la escucha y habia al menos un invitado.</p>";
+    list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">No hay registros todavia. Los registros se guardan cuando el admin usa el boton END para finalizar la listening party.</p>";
     return;
   }
 
@@ -1784,7 +1807,8 @@ function buildAlbumCardHtml(album) {
   const safeVinylColorSecondary = escapeHtml(album.vinylColorSecondary || "");
   const secondaryVinylColor = safeVinylColorSecondary || safeVinylColor;
   const isCdDisc = album.discType === "cd";
-  const hasSecondDisc = !isCdDisc && (Boolean(safeVinylColorSecondary) || Number(album.discCount || 1) > 1);
+  const hasBothFormats = album.discType === "both";
+  const hasSecondDisc = !isCdDisc && (hasBothFormats || Boolean(safeVinylColorSecondary) || Number(album.discCount || 1) > 1);
   const clearVinylClass = album.isClearVinyl ? "clear-vinyl" : "";
   const coverClassName = album.ownedByUser ? "" : "not-owned";
   const detailListMarkup = adminUser
@@ -1825,7 +1849,7 @@ function buildAlbumCardHtml(album) {
             <img class="${coverClassName}" src="${safeCoverUrl}" alt="${safeTitle} album cover" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />
             <span class="vinyl-overlay ${isCdDisc ? "cd-overlay" : ""}" aria-hidden="true">
               <span class="vinyl-disc vinyl-disc-primary ${isCdDisc ? "cd-disc" : ""} ${clearVinylClass}" style="--vinyl-color:${safeVinylColor}"></span>
-              ${hasSecondDisc ? `<span class="vinyl-disc vinyl-disc-secondary ${clearVinylClass}" style="--vinyl-color:${secondaryVinylColor}"></span>` : ""}
+              ${hasSecondDisc ? `<span class="vinyl-disc vinyl-disc-secondary ${hasBothFormats ? "cd-disc cd-disc-secondary" : clearVinylClass}" style="--vinyl-color:${secondaryVinylColor}"></span>` : ""}
             </span>
           </button>
           <div id="album-details-${album.id}" class="album-details">
@@ -3783,6 +3807,7 @@ async function saveAddAlbum() {
 
 function setupAddAlbumModal() {
   const fab = document.getElementById("add-album-button");
+  const finishPartyButton = document.getElementById("finish-party-button");
   const cancelBtn = document.getElementById("add-album-cancel");
   const saveBtn = document.getElementById("add-album-save");
   const titleInput = document.getElementById("add-album-title");
@@ -3794,6 +3819,28 @@ function setupAddAlbumModal() {
   const cameraInput = document.getElementById("add-album-camera-input");
 
   if (fab) fab.addEventListener("click", () => openAddAlbumModal());
+  if (finishPartyButton) {
+    finishPartyButton.addEventListener("click", async () => {
+      if (!isAdminUser() || !sessionState.currentUser?.name) {
+        showReviewStatus("Solo administrador puede finalizar la listening party.");
+        return;
+      }
+
+      const confirmed = window.confirm("Terminar listening party y guardar su record?");
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await apiFinishListeningParty(sessionState.currentUser.name);
+        lastKnownPartyActive = false;
+        hideNowPlaying();
+        showReviewStatus("Listening party finalizada y record guardado.");
+      } catch (error) {
+        showReviewStatus(error instanceof Error ? error.message : "No se pudo finalizar la listening party.");
+      }
+    });
+  }
   if (cancelBtn) cancelBtn.addEventListener("click", () => closeAddAlbumModal());
   if (saveBtn) saveBtn.addEventListener("click", () => saveAddAlbum());
 
