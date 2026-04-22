@@ -174,13 +174,15 @@ function detectClearVinyl(rawText) {
 }
 
 function extractPrimaryGenre(rawText) {
+  const VALID_GENRES = ["Pop", "Rock", "Hip Hop", "Rap", "Jazz", "Electronic", "Soundtrack"];
   const text = String(rawText || "").trim();
-  const parts = text.split(";");
-  if (parts.length > 1) {
-    const genre = parts[1].split(",")[0].trim();
-    return genre || "Unknown";
+  const candidates = text.split(/[;,]/).map(g => g.trim());
+  for (const candidate of candidates) {
+    if (/vinyl/i.test(candidate)) continue;
+    const match = VALID_GENRES.find(g => candidate.toLowerCase().includes(g.toLowerCase()));
+    if (match) return match;
   }
-  return "Unknown";
+  return "Sin género";
 }
 
 function escapeHtml(value) {
@@ -1845,7 +1847,7 @@ function getGroupedAlbums() {
   const groups = new Map();
   for (const album of sorted) {
     const key = appState.groupBy === "genre"
-      ? (album.primaryGenre || "Unknown")
+      ? (album.primaryGenre || "Sin género")
       : (album.artist || "Unknown");
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(album);
