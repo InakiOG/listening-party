@@ -393,7 +393,7 @@ async function apiUpdatePhoto(name, photoDataUrl) {
   return payload.user || null;
 }
 
-async function apiUpdateProfile(name, description, instagramUsername, topAlbums) {
+async function apiUpdateProfile(name, description, instagramUsername, spotifyUrl, topAlbums) {
   const response = await fetch("/api/users/profile", {
     method: "POST",
     headers: {
@@ -403,6 +403,7 @@ async function apiUpdateProfile(name, description, instagramUsername, topAlbums)
       name,
       description,
       instagramUsername,
+      spotifyUrl,
       topAlbums
     })
   });
@@ -556,6 +557,14 @@ function normalizeInstagramHandle(value) {
   return String(value || "").trim().replace(/^@+/, "").slice(0, 40);
 }
 
+function normalizeSpotifyUrl(value) {
+  return String(value || "").trim().slice(0, 200);
+}
+
+function isValidSpotifyUrl(value) {
+  return !value || value.startsWith("https://open.spotify.com/user/");
+}
+
 function normalizeTopAlbums(topAlbums) {
   const source = Array.isArray(topAlbums) ? topAlbums : [];
   const normalized = source
@@ -564,20 +573,23 @@ function normalizeTopAlbums(topAlbums) {
       if (value && typeof value === "object") {
         return {
           title: String(value.title || "").trim().slice(0, 150),
-          artist: String(value.artist || "").trim().slice(0, 120)
+          artist: String(value.artist || "").trim().slice(0, 120),
+          coverUrl: String(value.coverUrl || "").trim()
         };
       }
 
       return {
         title: String(value || "").trim().slice(0, 150),
-        artist: ""
+        artist: "",
+        coverUrl: ""
       };
     });
 
   while (normalized.length < 3) {
     normalized.push({
       title: "",
-      artist: ""
+      artist: "",
+      coverUrl: ""
     });
   }
 
@@ -683,71 +695,100 @@ async function fetchTopAlbumCover(albumTitle, albumArtist) {
   const title = String(albumTitle || "").trim();
   const artist = String(albumArtist || "").trim();
 
-  if (!title && !artist) {
-    return [];
-  }
+  if (!title && !artist) return [];
 
   function norm(s) {
     return s.toLowerCase().replace(/[^a-z0-9]/g, "");
   }
 
-  function artworkUrl(result) {
-    const url = String(result?.artworkUrl100 || result?.artworkUrl60 || "").trim();
-    return url ? url.replace(/100x100bb|60x60bb/, "600x600bb") : "";
+  // Source 1 & 2 & 3: iTunes with different query strategies
+  async function fetchItunes(query) {
+    try {
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=10`);
+      if (!res.ok) return [];
+      const payload = await res.json();
+      return (Array.isArray(payload?.results) ? payload.results : []).flatMap(r => {
+        const raw = String(r?.artworkUrl100 || r?.artworkUrl60 || "").trim();
+        const url = raw.replace(/\d+x\d+bb/, "600x600bb");
+        return url ? [{ url, collectionName: r.collectionName || "", artistName: r.artistName || "" }] : [];
+      });
+    } catch { return []; }
   }
 
-  async function fetchRaw(query) {
-    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=10`);
-    if (!response.ok) return [];
-    const payload = await response.json();
-    return Array.isArray(payload?.results) ? payload.results : [];
+  // Source 4: MusicBrainz search + Cover Art Archive
+  async function fetchCoverArtArchive() {
+    try {
+      const q = [artist && `artist:"${artist}"`, title && `release:"${title}"`].filter(Boolean).join(" AND ");
+      const mbRes = await fetch(
+        `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(q)}&fmt=json&limit=5`,
+        { headers: { "User-Agent": "ListeningParty/1.0 (local)" } }
+      );
+      if (!mbRes.ok) return [];
+      const mbData = await mbRes.json();
+      return (Array.isArray(mbData?.releases) ? mbData.releases : []).slice(0, 5).flatMap(r => {
+        if (!r.id) return [];
+        const artistName = (r["artist-credit"] || []).map(ac => ac.name || ac.artist?.name || "").filter(Boolean).join(", ");
+        return [{ url: `https://coverartarchive.org/release/${r.id}/front-500`, collectionName: r.title || "", artistName }];
+      });
+    } catch { return []; }
   }
 
-  function dedup(rawResults) {
-    const seen = new Set();
-    const options = [];
-    for (const r of rawResults) {
-      const url = artworkUrl(r);
-      if (!url || seen.has(url)) continue;
-      seen.add(url);
-      options.push({ url, collectionName: r.collectionName || "", artistName: r.artistName || "" });
+  // Source 5: Deezer
+  async function fetchDeezer(query) {
+    try {
+      const res = await fetch(`https://api.deezer.com/search/album?q=${encodeURIComponent(query)}&limit=10`);
+      if (!res.ok) return [];
+      const payload = await res.json();
+      return (Array.isArray(payload?.data) ? payload.data : []).flatMap(r => {
+        const url = r.cover_xl || r.cover_big || r.cover_medium || "";
+        return url ? [{ url, collectionName: r.title || "", artistName: r.artist?.name || "" }] : [];
+      });
+    } catch { return []; }
+  }
+
+  const normTitle = norm(title);
+  const normArtist = norm(artist);
+  const combinedQuery = [artist, title].filter(Boolean).join(" ");
+  // Alternate title handles "The Dark Side of the Moon" ↔ "Dark Side of the Moon" cases
+  const altTitle = title.toLowerCase().startsWith("the ") ? title.slice(4) : `The ${title}`;
+  const altQuery = [artist, altTitle].filter(Boolean).join(" ");
+
+  const settled = await Promise.allSettled([
+    fetchItunes(combinedQuery),            // source 1: iTunes artist+title
+    fetchItunes(altQuery),                 // source 2: iTunes with "The " toggled
+    fetchItunes(title),                    // source 3: iTunes title-only
+    fetchCoverArtArchive(),                // source 4: MusicBrainz + Cover Art Archive
+    fetchDeezer(combinedQuery),            // source 5: Deezer
+  ]);
+
+  // Merge and dedup by URL
+  const seen = new Set();
+  const merged = [];
+  for (const result of settled) {
+    if (result.status !== "fulfilled") continue;
+    for (const item of result.value) {
+      if (!item.url || seen.has(item.url)) continue;
+      seen.add(item.url);
+      merged.push(item);
     }
-    return options;
   }
 
-  try {
-    const normTitle = norm(title);
-    const normArtist = norm(artist);
+  if (!merged.length) return [];
 
-    // Try combined query first; fall back to artist-only if it returns nothing useful
-    const combinedQuery = [artist, title].filter(Boolean).join(" ");
-    let raw = await fetchRaw(combinedQuery);
-
-    if (!raw.length && artist) {
-      raw = await fetchRaw(artist);
-    }
-
-    const options = dedup(raw);
-    if (!options.length) return [];
-
-    options.sort((a, b) => {
-      function score(o) {
-        const t = norm(o.collectionName);
-        const ar = norm(o.artistName);
-        const titleMatch = t === normTitle || t.includes(normTitle) || normTitle.includes(t);
-        const artistMatch = ar === normArtist || ar.includes(normArtist) || normArtist.includes(ar);
-        if (titleMatch && artistMatch) return 0;
-        if (titleMatch) return 1;
-        if (artistMatch) return 2;
-        return 3;
-      }
-      return score(a) - score(b);
-    });
-
-    return options;
-  } catch {
-    return [];
+  function score(o) {
+    const t = norm(o.collectionName);
+    const ar = norm(o.artistName);
+    const titleMatch = t === normTitle || t.includes(normTitle) || normTitle.includes(t) ||
+      t === norm(altTitle) || t.includes(norm(altTitle));
+    const artistMatch = !normArtist || ar === normArtist || ar.includes(normArtist) || normArtist.includes(ar);
+    if (titleMatch && artistMatch) return 0;
+    if (titleMatch) return 1;
+    if (artistMatch) return 2;
+    return 3;
   }
+
+  merged.sort((a, b) => score(a) - score(b));
+  return merged.slice(0, 5);
 }
 
 function ensureTopAlbumCover(albumTitle, albumArtist) {
@@ -803,7 +844,7 @@ function renderTopAlbumPicker(index, albumTitle, albumArtist) {
   picker.innerHTML = options.map((opt) => {
     const isSelected = opt.url === selectedUrl;
     const label = [opt.collectionName, opt.artistName].filter(Boolean).join(" – ");
-    return `<button type="button" class="${isSelected ? "selected" : ""}" title="${escapeHtml(label)}" data-url="${escapeHtml(opt.url)}" data-index="${index}" data-title="${escapeHtml(albumTitle)}" data-artist="${escapeHtml(albumArtist)}"><img src="${escapeHtml(opt.url)}" alt="${escapeHtml(label)}" loading="lazy" /></button>`;
+    return `<button type="button" class="${isSelected ? "selected" : ""}" title="${escapeHtml(label)}" data-url="${escapeHtml(opt.url)}" data-index="${index}" data-title="${escapeHtml(albumTitle)}" data-artist="${escapeHtml(albumArtist)}"><img src="${escapeHtml(opt.url)}" alt="${escapeHtml(label)}" loading="lazy" onerror="this.closest('button').style.display='none'" /></button>`;
   }).join("");
 }
 
@@ -842,6 +883,7 @@ function renderActiveUserBubbles(users) {
       photoDataUrl: String(user?.photoDataUrl || ""),
       description: normalizeProfileDescription(user?.description || ""),
       instagramUsername: normalizeInstagramHandle(user?.instagramUsername || ""),
+      spotifyUrl: normalizeSpotifyUrl(user?.spotifyUrl || ""),
       topAlbums: getTopAlbumsFromUser(user).map((entry) => ({
         title: entry.title,
         artist: entry.artist
@@ -875,6 +917,7 @@ function renderActiveUserBubbles(users) {
       const color = escapeHtml(getActiveUserBubbleColor(user));
       const description = escapeHtml(normalizeProfileDescription(user?.description || ""));
       const instagram = escapeHtml(normalizeInstagramHandle(user?.instagramUsername || ""));
+      const spotify = escapeHtml(normalizeSpotifyUrl(user?.spotifyUrl || ""));
       const topAlbums = getTopAlbumsFromUser(user).filter((entry) => entry.title);
       const descriptionMarkup = description
         ? `<p class="active-user-detail-value">${description}</p>`
@@ -882,6 +925,9 @@ function renderActiveUserBubbles(users) {
       const instagramMarkup = instagram
         ? `<p class="active-user-detail-value"><button type="button" class="active-user-instagram-link" data-instagram="${instagram}">@${instagram}</button></p>`
         : `<p class="active-user-detail-value active-user-detail-empty">Sin Instagram.</p>`;
+      const spotifyMarkup = spotify
+        ? `<p class="active-user-detail-value"><button type="button" class="active-user-spotify-link" data-spotify="${spotify}">Abrir Spotify</button></p>`
+        : `<p class="active-user-detail-value active-user-detail-empty">Sin Spotify.</p>`;
       const topAlbumsMarkup = topAlbums.length
         ? topAlbums
             .map((entry) => {
@@ -917,6 +963,8 @@ function renderActiveUserBubbles(users) {
             ${descriptionMarkup}
             <p class="active-user-detail-label">Instagram</p>
             ${instagramMarkup}
+            <p class="active-user-detail-label">Spotify</p>
+            ${spotifyMarkup}
             <p class="active-user-detail-label">Top albums</p>
             <ul class="active-user-top-albums-list">${topAlbumsMarkup}</ul>
           </div>
@@ -1037,6 +1085,13 @@ function setCurrentUser(user) {
     profileInstagram.value = String(sessionState.currentUser.instagramUsername || "").trim();
   }
 
+  const profileSpotifyEl = document.getElementById("profile-spotify");
+  const profileSpotifyErrorEl = document.getElementById("profile-spotify-error");
+  if (profileSpotifyEl) {
+    profileSpotifyEl.value = String(sessionState.currentUser.spotifyUrl || "").trim();
+  }
+  if (profileSpotifyErrorEl) profileSpotifyErrorEl.hidden = true;
+
   const topAlbums = getTopAlbumsFromUser(sessionState.currentUser);
   if (profileTopAlbum1) {
     profileTopAlbum1.value = topAlbums[0]?.title || "";
@@ -1056,6 +1111,17 @@ function setCurrentUser(user) {
   if (profileTopAlbum3Artist) {
     profileTopAlbum3Artist.value = topAlbums[2]?.artist || "";
   }
+
+  // Restore user-picked covers from persisted coverUrl so the right image shows without re-fetching
+  topAlbums.forEach((entry) => {
+    if (entry.coverUrl && entry.title) {
+      const key = getTopAlbumCoverCacheKey(entry.title, entry.artist);
+      if (key) {
+        topAlbumCoverUserPick.set(key, entry.coverUrl);
+        topAlbumCoverCache.set(key, entry.coverUrl);
+      }
+    }
+  });
 
   refreshProfileTopAlbumPreviews();
 
@@ -2442,7 +2508,25 @@ function setupAlbumInteractions() {
     }
 
     const albumId = trigger.dataset.albumId;
-    const nextExpandedAlbumId = appState.expandedAlbumId === albumId ? null : albumId;
+    const isClosing = appState.expandedAlbumId === albumId;
+
+    if (isClosing) {
+      const expandedCard = container.querySelector(".album-card.expanded");
+      if (expandedCard) {
+        expandedCard.classList.add("album-closing");
+        expandedCard.classList.remove("expanded");
+        window.setTimeout(() => {
+          appState.expandedAlbumId = null;
+          renderAlbums();
+        }, 260);
+      } else {
+        appState.expandedAlbumId = null;
+        renderAlbums();
+      }
+      return;
+    }
+
+    const nextExpandedAlbumId = albumId;
     pendingAlbumOpenAnimationId = nextExpandedAlbumId;
     appState.expandedAlbumId = nextExpandedAlbumId;
     renderAlbums();
@@ -2452,11 +2536,9 @@ function setupAlbumInteractions() {
       pendingAlbumOpenAnimationId = null;
     }
 
-    if (appState.expandedAlbumId) {
-      const expandedCard = container.querySelector(".album-card.expanded");
-      if (expandedCard && typeof expandedCard.scrollIntoView === "function") {
-        expandedCard.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-      }
+    const expandedCard = container.querySelector(".album-card.expanded");
+    if (expandedCard && typeof expandedCard.scrollIntoView === "function") {
+      expandedCard.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     }
   });
 }
@@ -2501,7 +2583,6 @@ async function loadAlbums() {
     ).trim();
     const descriptor = [
       item.rawText,
-      item.title,
       item.notes,
       item.format,
       item.formats
@@ -3251,6 +3332,12 @@ function setupActiveUserBubbleInteractions() {
       return;
     }
 
+    const spotifyBtn = event.target.closest(".active-user-spotify-link");
+    if (spotifyBtn) {
+      event.stopPropagation();
+      return;
+    }
+
     const bubble = event.target.closest(".active-user-bubble");
 
     if (!bubble) {
@@ -3359,6 +3446,13 @@ function setupActiveUserBubbleInteractions() {
 
   activeUsersLayer.addEventListener("pointerup", endDrag);
   activeUsersLayer.addEventListener("pointercancel", endDrag);
+
+  activeUsersLayer.addEventListener("click", (event) => {
+    const spotifyBtn = event.target.closest(".active-user-spotify-link");
+    if (spotifyBtn) {
+      window.open(spotifyBtn.dataset.spotify, "_blank", "noopener,noreferrer");
+    }
+  });
 }
 
 function setupBubbleOutsideClickHandler() {
@@ -3712,6 +3806,8 @@ function setupAuthInteractions() {
   const openProfileButton = document.getElementById("open-profile");
   const profileDescription = document.getElementById("profile-description");
   const profileInstagram = document.getElementById("profile-instagram");
+  const profileSpotify = document.getElementById("profile-spotify");
+  const profileSpotifyError = document.getElementById("profile-spotify-error");
   const profileTopAlbum1 = document.getElementById("profile-top-album-1");
   const profileTopAlbum1Artist = document.getElementById("profile-top-album-1-artist");
   const profileTopAlbum2 = document.getElementById("profile-top-album-2");
@@ -3919,25 +4015,40 @@ function setupAuthInteractions() {
 
     const description = normalizeProfileDescription(profileDescription.value || "");
     const instagramUsername = normalizeInstagramHandle(profileInstagram.value || "");
+    const spotifyUrl = normalizeSpotifyUrl(profileSpotify?.value || "");
+
+    if (!isValidSpotifyUrl(spotifyUrl)) {
+      if (profileSpotifyError) {
+        profileSpotifyError.textContent = "El link debe empezar con https://open.spotify.com/user/";
+        profileSpotifyError.hidden = false;
+      }
+      profileSpotify?.focus();
+      return;
+    }
+    if (profileSpotifyError) profileSpotifyError.hidden = true;
+
     const previousTopAlbums = getTopAlbumsFromUser(sessionState.currentUser);
     const topAlbums = normalizeTopAlbums([
       {
         title: profileTopAlbum1.value,
-        artist: profileTopAlbum1Artist.value
+        artist: profileTopAlbum1Artist.value,
+        coverUrl: topAlbumCoverUserPick.get(getTopAlbumCoverCacheKey(profileTopAlbum1.value, profileTopAlbum1Artist.value)) || ""
       },
       {
         title: profileTopAlbum2.value,
-        artist: profileTopAlbum2Artist.value
+        artist: profileTopAlbum2Artist.value,
+        coverUrl: topAlbumCoverUserPick.get(getTopAlbumCoverCacheKey(profileTopAlbum2.value, profileTopAlbum2Artist.value)) || ""
       },
       {
         title: profileTopAlbum3.value,
-        artist: profileTopAlbum3Artist.value
+        artist: profileTopAlbum3Artist.value,
+        coverUrl: topAlbumCoverUserPick.get(getTopAlbumCoverCacheKey(profileTopAlbum3.value, profileTopAlbum3Artist.value)) || ""
       }
     ]);
 
     try {
       profileSaveStatus.textContent = "Guardando...";
-      const updatedUser = await apiUpdateProfile(sessionState.currentUser.name, description, instagramUsername, topAlbums);
+      const updatedUser = await apiUpdateProfile(sessionState.currentUser.name, description, instagramUsername, spotifyUrl, topAlbums);
       previousTopAlbums.forEach((entry) => {
         clearTopAlbumCoverCacheEntry(entry.title, entry.artist);
       });
@@ -3947,8 +4058,8 @@ function setupAuthInteractions() {
       setCurrentUser(updatedUser);
       refreshProfileTopAlbumPreviews();
       await refreshActiveUsersNow();
-      profileSaveStatus.textContent = "Perfil actualizado.";
-      showReviewStatus("Perfil actualizado.");
+      profileSaveStatus.textContent = "Perfil guardado correctamente.";
+      showReviewStatus("Perfil guardado correctamente.");
     } catch (error) {
       profileSaveStatus.textContent = error instanceof Error ? error.message : "No se pudo guardar el perfil.";
     }
@@ -4048,7 +4159,7 @@ function renderAddAlbumModalPicker() {
   picker.innerHTML = options.map((opt) => {
     const isSelected = opt.url === addAlbumModalState.selectedUrl;
     const label = [opt.collectionName, opt.artistName].filter(Boolean).join(" – ");
-    return `<button type="button" class="add-album-picker-btn ${isSelected ? "selected" : ""}" data-url="${escapeHtml(opt.url)}" title="${escapeHtml(label)}"><img src="${escapeHtml(opt.url)}" alt="${escapeHtml(label)}" loading="lazy" /></button>`;
+    return `<button type="button" class="add-album-picker-btn ${isSelected ? "selected" : ""}" data-url="${escapeHtml(opt.url)}" title="${escapeHtml(label)}"><img src="${escapeHtml(opt.url)}" alt="${escapeHtml(label)}" loading="lazy" onerror="this.closest('button').style.display='none'" /></button>`;
   }).join("");
 }
 

@@ -418,18 +418,21 @@ def sanitize_user_profile(profile):
         if isinstance(value, dict):
             top_albums.append({
                 "title": str(value.get("title", "")).strip()[:150],
-                "artist": str(value.get("artist", "")).strip()[:120]
+                "artist": str(value.get("artist", "")).strip()[:120],
+                "coverUrl": str(value.get("coverUrl", "")).strip()
             })
         else:
             top_albums.append({
                 "title": str(value or "").strip()[:150],
-                "artist": ""
+                "artist": "",
+                "coverUrl": ""
             })
 
     while len(top_albums) < 3:
         top_albums.append({
             "title": "",
-            "artist": ""
+            "artist": "",
+            "coverUrl": ""
         })
 
     return {
@@ -437,6 +440,7 @@ def sanitize_user_profile(profile):
         "photoDataUrl": str(profile.get("photoDataUrl", "")).strip(),
         "description": str(profile.get("description", "")).strip()[:150],
         "instagramUsername": str(profile.get("instagramUsername", "")).strip().lstrip("@")[:40],
+        "spotifyUrl": str(profile.get("spotifyUrl", "")).strip()[:200],
         "topAlbums": top_albums,
         "createdAt": str(profile.get("createdAt", "")).strip(),
         "accountName": str(profile.get("accountName", "usuario")).strip() or "usuario"
@@ -631,6 +635,7 @@ def reconcile_auth_stores(users_store, credentials_store):
             "photoDataUrl": sanitized_profile.get("photoDataUrl", ""),
             "description": sanitized_profile.get("description", ""),
             "instagramUsername": sanitized_profile.get("instagramUsername", ""),
+            "spotifyUrl": sanitized_profile.get("spotifyUrl", ""),
             "topAlbums": sanitized_profile.get("topAlbums", ["", "", ""]),
             "createdAt": profile_created_at,
             "accountName": "usuario"
@@ -659,6 +664,7 @@ def reconcile_auth_stores(users_store, credentials_store):
     admin_photo = str(admin_profile.get("photoDataUrl", "")).strip()
     admin_description = str(admin_sanitized_profile.get("description", "")).strip()
     admin_instagram = str(admin_sanitized_profile.get("instagramUsername", "")).strip().lstrip("@")
+    admin_spotify = str(admin_sanitized_profile.get("spotifyUrl", "")).strip()
     admin_top_albums = admin_sanitized_profile.get("topAlbums", ["", "", ""])
     admin_created_at = str(admin_profile.get("createdAt", "")).strip() or datetime.now(timezone.utc).isoformat()
 
@@ -667,6 +673,7 @@ def reconcile_auth_stores(users_store, credentials_store):
         "photoDataUrl": admin_photo,
         "description": admin_description,
         "instagramUsername": admin_instagram,
+        "spotifyUrl": admin_spotify,
         "topAlbums": admin_top_albums,
         "createdAt": admin_created_at,
         "accountName": ADMIN_ACCOUNT_NAME
@@ -1299,6 +1306,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "photoDataUrl": photo_data_url,
                     "description": "",
                     "instagramUsername": "",
+                    "spotifyUrl": "",
                     "topAlbums": ["", "", ""],
                     "createdAt": datetime.now(timezone.utc).isoformat(),
                     "accountName": "usuario"
@@ -1478,6 +1486,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             name = str(payload.get("name", "")).strip()
             description = str(payload.get("description", "")).strip()
             instagram_username = str(payload.get("instagramUsername", "")).strip().lstrip("@")
+            spotify_url = str(payload.get("spotifyUrl", "")).strip()
             top_albums_raw = payload.get("topAlbums", [])
 
             if not isinstance(top_albums_raw, list):
@@ -1488,18 +1497,21 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 if isinstance(value, dict):
                     top_albums.append({
                         "title": str(value.get("title", "")).strip(),
-                        "artist": str(value.get("artist", "")).strip()
+                        "artist": str(value.get("artist", "")).strip(),
+                        "coverUrl": str(value.get("coverUrl", "")).strip()
                     })
                 else:
                     top_albums.append({
                         "title": str(value or "").strip(),
-                        "artist": ""
+                        "artist": "",
+                        "coverUrl": ""
                     })
 
             while len(top_albums) < 3:
                 top_albums.append({
                     "title": "",
-                    "artist": ""
+                    "artist": "",
+                    "coverUrl": ""
                 })
 
             if not name:
@@ -1512,6 +1524,14 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
             if len(instagram_username) > 40:
                 self._send_json({"error": "instagramUsername must be 40 characters or less"}, status_code=400)
+                return
+
+            if spotify_url and not spotify_url.startswith("https://open.spotify.com/user/"):
+                self._send_json({"error": "spotifyUrl must start with https://open.spotify.com/user/"}, status_code=400)
+                return
+
+            if len(spotify_url) > 200:
+                self._send_json({"error": "spotifyUrl must be 200 characters or less"}, status_code=400)
                 return
 
             if any(len(str(entry.get("title", ""))) > 150 for entry in top_albums):
@@ -1538,6 +1558,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
                 profile["description"] = description
                 profile["instagramUsername"] = instagram_username
+                profile["spotifyUrl"] = spotify_url
                 profile["topAlbums"] = top_albums
                 users_store[user_key] = profile
                 write_users_store(users_store)

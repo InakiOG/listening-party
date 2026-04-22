@@ -551,13 +551,20 @@
       }
 
       .profile-section textarea,
-      .profile-section input[type="text"] {
+      .profile-section input[type="text"],
+      .profile-section input[type="url"] {
         border: 1px solid #334155;
         border-radius: 0.42rem;
         background: #020617;
         color: #e2e8f0;
         padding: 0.32rem 0.42rem;
         font-size: 0.74rem;
+      }
+
+      .profile-field-error {
+        font-size: 0.7rem;
+        color: #f87171;
+        margin-top: -0.25rem;
       }
 
       .profile-section textarea {
@@ -862,6 +869,21 @@
       }
 
       .active-user-instagram-link:hover {
+        text-decoration: underline;
+      }
+
+      .active-user-spotify-link {
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        color: #4ade80;
+        font: inherit;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .active-user-spotify-link:hover {
         text-decoration: underline;
       }
 
@@ -1264,6 +1286,15 @@
         animation: albumCardOpen 520ms cubic-bezier(0.18, 0.84, 0.28, 1);
       }
 
+      .album-card.album-closing {
+        grid-column: 1 / -1;
+        overflow: visible;
+      }
+
+      .album-card.album-closing .vinyl-overlay {
+        animation: albumDiscHide 220ms ease-in forwards;
+      }
+
       .cover-button {
         width: 100%;
         padding: 0;
@@ -1506,11 +1537,25 @@
         }
       }
 
+      @keyframes albumDiscHide {
+        0% {
+          opacity: 1;
+          transform: translateY(-50%) translateX(0) scale(1);
+          filter: brightness(1);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(-50%) translateX(-68%);
+          filter: brightness(0.85);
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .album-card.album-opening,
         .album-card.album-opening .vinyl-overlay,
         .album-card.album-opening .cover-button img,
-        .album-card.album-opening .album-details {
+        .album-card.album-opening .album-details,
+        .album-card.album-closing .vinyl-overlay {
           animation: none;
         }
       }
@@ -2776,6 +2821,9 @@
             <textarea id="profile-description" maxlength="150" placeholder="Escribe algo sobre ti"></textarea>
             <label for="profile-instagram">Instagram</label>
             <input id="profile-instagram" type="text" maxlength="40" placeholder="tu_usuario" />
+            <label for="profile-spotify">Spotify</label>
+            <input id="profile-spotify" type="url" maxlength="200" placeholder="https://open.spotify.com/user/..." />
+            <span id="profile-spotify-error" class="profile-field-error" hidden></span>
 
             <div class="profile-top-album-block">
               <p class="profile-top-album-heading">Top album 1</p>
