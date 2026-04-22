@@ -20,5 +20,27 @@
     ],
     "createdAt": "2026-04-22T02:26:10.967242+00:00",
     "accountName": "administrador"
+  },
+  "test": {
+    "name": "test",
+    "photoDataUrl": "",
+    "description": "",
+    "instagramUsername": "",
+    "topAlbums": [
+      {
+        "title": "",
+        "artist": ""
+      },
+      {
+        "title": "",
+        "artist": ""
+      },
+      {
+        "title": "",
+        "artist": ""
+      }
+    ],
+    "createdAt": "2026-04-22T03:18:25.918793+00:00",
+    "accountName": "usuario"
   }
 }

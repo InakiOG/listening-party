@@ -645,6 +645,37 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             self._send_json({"parties": parties})
             return
 
+        if parsed.path == "/api/my-parties":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+
+            with REVIEWS_LOCK:
+                credentials_store = read_credentials_store()
+                user_key = find_user_key_by_session_token(credentials_store, session_token)
+                users_store = read_users_store()
+                user_profile = sanitize_user_profile(users_store.get(user_key)) if user_key else None
+
+            if not user_profile:
+                self._send_json({"error": "session required"}, status_code=401)
+                return
+
+            user_name = user_profile.get("name", "")
+            is_admin = user_profile.get("accountName") == ADMIN_ACCOUNT_NAME
+
+            records = read_party_records_store()
+            parties = records.get("parties", [])
+
+            if not is_admin:
+                parties = [p for p in parties if user_name in p.get("attendees", [])]
+
+            parties = sorted(
+                parties,
+                key=lambda p: str(p.get("savedAt", p.get("date", ""))),
+                reverse=True
+            )
+            self._send_json({"parties": parties})
+            return
+
         super().do_GET()
 
     def do_POST(self):

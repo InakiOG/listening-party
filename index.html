@@ -1443,6 +1443,29 @@
         cursor: pointer;
       }
 
+      .page-credit {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 15;
+        width: 80%;
+        max-width: 280px;
+        color: #64748b;
+        font-size: 0.7rem;
+        text-align: center;
+        font-style: italic;
+        letter-spacing: 0.03em;
+        line-height: 1.6;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+        pointer-events: none;
+      }
+
+      .page-credit.visible {
+        opacity: 1;
+      }
+
       .guest-label {
         margin: 0 0 0.45rem;
         color: #fbbf24;
@@ -1546,6 +1569,145 @@
         margin: 0;
         color: #93c5fd;
         font-size: 0.7rem;
+      }
+
+      .my-parties-view {
+        text-align: left;
+      }
+
+      .my-parties-view[hidden] {
+        display: none;
+      }
+
+      .my-party-album-card {
+        border: 1px solid #1e293b;
+        border-radius: 0.6rem;
+        padding: 0.55rem;
+        margin-bottom: 0.45rem;
+        background: #0b1220;
+      }
+
+      .my-party-album-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .my-party-album-header img {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.35rem;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: #1e293b;
+      }
+
+      .my-party-album-title {
+        margin: 0;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .my-party-album-artist {
+        margin: 0.1rem 0 0;
+        font-size: 0.68rem;
+        color: #94a3b8;
+      }
+
+      .my-party-songs-list {
+        margin: 0.1rem 0 0;
+        padding: 0 0 0 1rem;
+        list-style: disc;
+      }
+
+      .my-party-songs-list li {
+        font-size: 0.68rem;
+        color: #cbd5e1;
+        line-height: 1.5;
+      }
+
+      .my-party-score {
+        margin: 0.1rem 0 0;
+        font-size: 0.74rem;
+        color: #fbbf24;
+        font-weight: 600;
+      }
+
+      .my-party-reviewers {
+        color: #94a3b8;
+        font-weight: 400;
+        font-size: 0.66rem;
+      }
+
+      .party-brief-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 110;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(2, 6, 23, 0.88);
+        padding: 1rem;
+        box-sizing: border-box;
+      }
+
+      .party-brief-overlay[hidden] {
+        display: none;
+      }
+
+      .party-brief-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 1rem;
+        padding: 1.25rem;
+        width: min(90vw, 400px);
+        max-height: 80dvh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        text-align: left;
+      }
+
+      .party-brief-heading {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #7dd3fc;
+        text-align: center;
+        letter-spacing: 0.04em;
+      }
+
+      .party-brief-date {
+        margin: 0;
+        font-size: 0.8rem;
+        color: #94a3b8;
+        text-align: center;
+      }
+
+      .party-brief-close-btn {
+        margin-top: 0.25rem;
+        width: 100%;
+        padding: 0.6rem;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .party-brief-close-btn:hover {
+        background: #1d4ed8;
+      }
+
+      .party-brief-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
       }
 
       .party-review-text {
@@ -2305,8 +2467,8 @@
 
     <section id="profile-hub" class="profile-hub" hidden>
       <div id="profile-menu" class="profile-menu" hidden>
-        <button id="open-party-records" type="button" hidden>Registro</button>
         <button id="open-users-board" type="button" hidden>Usuarios</button>
+        <button id="open-my-parties" type="button">Mis listening partys</button>
         <button id="open-profile" type="button">Perfil</button>
         <button id="logout-profile" type="button">Cerrar sesion</button>
       </div>
@@ -2350,6 +2512,13 @@
           <button id="party-records-back" class="back-button" type="button">Volver</button>
         </div>
         <div id="party-records-list" class="party-records-list"></div>
+      </section>
+      <section id="my-parties-view" class="my-parties-view" hidden>
+        <div class="reviews-header">
+          <h2>Mis listening partys</h2>
+          <button id="my-parties-back" class="back-button" type="button">Volver</button>
+        </div>
+        <div id="my-parties-list" class="party-records-list"></div>
       </section>
       <section id="users-board-view" class="users-board-view" hidden>
         <div class="reviews-header">
@@ -2443,6 +2612,15 @@
         </section>
       </section>
     </main>
-    <script src="./app.js?v=20260421-19"></script>
+    <p class="page-credit">Amo la música, y amo compartirla con la gente que tengo cerca de mi corazón. 4/19/2026</p>
+    <section id="party-brief-popup" class="party-brief-overlay" hidden>
+      <div class="party-brief-card">
+        <p class="party-brief-heading">Listening party terminada</p>
+        <p id="party-brief-date" class="party-brief-date"></p>
+        <div id="party-brief-content" class="party-brief-content"></div>
+        <button id="party-brief-close" class="party-brief-close-btn" type="button">Cerrar</button>
+      </div>
+    </section>
+    <script src="./app.js?v=20260421-21"></script>
   </body>
 </html>

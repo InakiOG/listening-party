@@ -1014,11 +1014,6 @@ function setCurrentUser(user) {
   const addAlbumFab = document.getElementById("add-album-button");
   if (addAlbumFab) addAlbumFab.hidden = !isAdminUser();
 
-  const openPartyRecordsButton = document.getElementById("open-party-records");
-  if (openPartyRecordsButton) {
-    openPartyRecordsButton.hidden = !isAdminUser();
-  }
-
   const openUsersBoardButton = document.getElementById("open-users-board");
   if (openUsersBoardButton) {
     openUsersBoardButton.hidden = !isAdminUser();
@@ -1271,12 +1266,14 @@ function showMainView() {
   const profileView = document.getElementById("profile-view");
   const partyRecordsView = document.getElementById("party-records-view");
   const usersBoardView = document.getElementById("users-board-view");
+  const myPartiesView = document.getElementById("my-parties-view");
 
   if (mainView) mainView.hidden = false;
   if (reviewsView) reviewsView.hidden = true;
   if (profileView) profileView.hidden = true;
   if (partyRecordsView) partyRecordsView.hidden = true;
   if (usersBoardView) usersBoardView.hidden = true;
+  if (myPartiesView) myPartiesView.hidden = true;
 }
 
 function openProfileView() {
@@ -1285,12 +1282,14 @@ function openProfileView() {
   const profileView = document.getElementById("profile-view");
   const partyRecordsView = document.getElementById("party-records-view");
   const usersBoardView = document.getElementById("users-board-view");
+  const myPartiesView = document.getElementById("my-parties-view");
 
   if (mainView) mainView.hidden = true;
   if (reviewsView) reviewsView.hidden = true;
   if (profileView) profileView.hidden = false;
   if (partyRecordsView) partyRecordsView.hidden = true;
   if (usersBoardView) usersBoardView.hidden = true;
+  if (myPartiesView) myPartiesView.hidden = true;
   renderProfileAlbums();
 }
 
@@ -1337,6 +1336,81 @@ async function apiGetPartyRecords() {
   if (!response.ok) throw new Error("No se pudieron cargar los registros.");
   const payload = await response.json();
   return Array.isArray(payload.parties) ? payload.parties : [];
+}
+
+async function apiGetMyParties() {
+  const response = await fetch(`/api/my-parties?t=${Date.now()}`, { cache: "no-store" });
+  if (response.status === 401) throw new Error("Inicia sesion para ver tus listening partys.");
+  if (!response.ok) throw new Error("No se pudieron cargar las listening partys.");
+  const payload = await response.json();
+  return Array.isArray(payload.parties) ? payload.parties : [];
+}
+
+function buildPartyAlbumsMarkup(party) {
+  const allReviews = Array.isArray(party.reviews) ? party.reviews : [];
+
+  return (Array.isArray(party.albumsPlayed) ? party.albumsPlayed : []).map((album) => {
+    const safeCover = escapeHtml(album.coverUrl || "");
+    const safeTitle = escapeHtml(album.title || "");
+    const safeArtist = escapeHtml(album.artist || "");
+
+    const albumReviews = allReviews.filter((r) => r.scope === "album" && r.albumTitle === album.title);
+    const avgScore = albumReviews.length
+      ? (albumReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / albumReviews.length).toFixed(1)
+      : null;
+    const reviewers = albumReviews.map((r) => escapeHtml(r.reviewer || "")).filter(Boolean).join(", ");
+
+    const songReviews = allReviews.filter((r) => r.scope === "song" && r.albumTitle === album.title);
+    const uniqueSongs = [...new Set(songReviews.map((r) => r.songTitle).filter(Boolean))];
+
+    const songsMarkup = uniqueSongs.length
+      ? `<p class="party-section-label">Canciones</p><ul class="my-party-songs-list">${uniqueSongs.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>`
+      : "";
+
+    const scoreMarkup = avgScore
+      ? `<p class="party-section-label">Score</p><p class="my-party-score">${avgScore}/5 <span class="my-party-reviewers">(${reviewers})</span></p>`
+      : "";
+
+    return `
+      <div class="my-party-album-card">
+        <div class="my-party-album-header">
+          <img src="${safeCover}" alt="${safeTitle}" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />
+          <div>
+            <p class="my-party-album-title">${safeTitle}</p>
+            <p class="my-party-album-artist">${safeArtist}</p>
+          </div>
+        </div>
+        ${songsMarkup}
+        ${scoreMarkup}
+      </div>`;
+  }).join("");
+}
+
+function renderMyParties(parties) {
+  const list = document.getElementById("my-parties-list");
+  if (!list) return;
+
+  if (!parties.length) {
+    list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">No has estado en ninguna listening party todavia.</p>";
+    return;
+  }
+
+  list.innerHTML = parties.map((party) => {
+    const date = escapeHtml(formatPartyDate(party.date || ""));
+    const attendees = (Array.isArray(party.attendees) ? party.attendees : [])
+      .map((a) => escapeHtml(String(a || "")))
+      .join(", ");
+    const albumsMarkup = buildPartyAlbumsMarkup(party);
+
+    return `
+      <article class="party-record-card">
+        <p class="party-record-date">${date}</p>
+        <p class="party-section-label">Asistentes</p>
+        <p class="party-attendees">${attendees || "—"}</p>
+        <p class="party-section-label">Albums</p>
+        ${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}
+      </article>`;
+  }).join("");
 }
 
 function renderPartyRecords(parties) {
@@ -1415,11 +1489,13 @@ async function openPartyRecordsView() {
   const reviewsView = document.getElementById("reviews-view");
   const profileView = document.getElementById("profile-view");
   const partyRecordsView = document.getElementById("party-records-view");
+  const myPartiesView = document.getElementById("my-parties-view");
 
   if (mainView) mainView.hidden = true;
   if (reviewsView) reviewsView.hidden = true;
   if (profileView) profileView.hidden = true;
   if (partyRecordsView) partyRecordsView.hidden = false;
+  if (myPartiesView) myPartiesView.hidden = true;
 
   const list = document.getElementById("party-records-list");
   if (list) list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">Cargando...</p>";
@@ -1429,6 +1505,84 @@ async function openPartyRecordsView() {
     renderPartyRecords(parties);
   } catch (error) {
     if (list) list.innerHTML = `<p style="color:#ef4444;font-size:0.8rem;margin:0">${escapeHtml(error instanceof Error ? error.message : "Error")}</p>`;
+  }
+}
+
+async function openMyPartiesView() {
+  if (!sessionState.currentUser?.name) {
+    showAuthOverlay("Inicia sesion para ver tus listening partys.");
+    return;
+  }
+
+  const mainView = document.getElementById("main-view");
+  const reviewsView = document.getElementById("reviews-view");
+  const profileView = document.getElementById("profile-view");
+  const partyRecordsView = document.getElementById("party-records-view");
+  const usersBoardView = document.getElementById("users-board-view");
+  const myPartiesView = document.getElementById("my-parties-view");
+
+  if (mainView) mainView.hidden = true;
+  if (reviewsView) reviewsView.hidden = true;
+  if (profileView) profileView.hidden = true;
+  if (partyRecordsView) partyRecordsView.hidden = true;
+  if (usersBoardView) usersBoardView.hidden = true;
+  if (myPartiesView) myPartiesView.hidden = false;
+
+  const list = document.getElementById("my-parties-list");
+  if (list) list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">Cargando...</p>";
+
+  try {
+    const parties = await apiGetMyParties();
+    renderMyParties(parties);
+  } catch (error) {
+    if (list) list.innerHTML = `<p style="color:#ef4444;font-size:0.8rem;margin:0">${escapeHtml(error instanceof Error ? error.message : "Error")}</p>`;
+  }
+}
+
+let partyBriefShownId = null;
+
+function showPartyBriefPopup(party) {
+  const popup = document.getElementById("party-brief-popup");
+  const dateEl = document.getElementById("party-brief-date");
+  const contentEl = document.getElementById("party-brief-content");
+  if (!popup || !dateEl || !contentEl) return;
+
+  dateEl.textContent = formatPartyDate(party.date || "");
+
+  const attendees = (Array.isArray(party.attendees) ? party.attendees : [])
+    .map((a) => escapeHtml(String(a || "")))
+    .join(", ");
+
+  const albumsMarkup = buildPartyAlbumsMarkup(party);
+
+  contentEl.innerHTML = `
+    <p class="party-section-label">Asistentes</p>
+    <p class="party-attendees">${attendees || "—"}</p>
+    <p class="party-section-label">Albums</p>
+    ${albumsMarkup || "<p style=\"color:#94a3b8;font-size:0.75rem;margin:0\">—</p>"}
+  `;
+
+  popup.hidden = false;
+}
+
+function hidePartyBriefPopup() {
+  const popup = document.getElementById("party-brief-popup");
+  if (popup) popup.hidden = true;
+}
+
+async function handlePartyJustEnded() {
+  if (!sessionState.currentUser) return;
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  try {
+    const parties = await apiGetMyParties();
+    if (!parties.length) return;
+    const latest = parties[0];
+    if (latest.id && latest.id !== partyBriefShownId) {
+      partyBriefShownId = latest.id;
+      showPartyBriefPopup(latest);
+    }
+  } catch {
+    // ignore
   }
 }
 
@@ -1552,11 +1706,13 @@ async function openUsersBoardView() {
   const profileView = document.getElementById("profile-view");
   const partyRecordsView = document.getElementById("party-records-view");
   const usersBoardView = document.getElementById("users-board-view");
+  const myPartiesView = document.getElementById("my-parties-view");
 
   if (mainView) mainView.hidden = true;
   if (reviewsView) reviewsView.hidden = true;
   if (profileView) profileView.hidden = true;
   if (partyRecordsView) partyRecordsView.hidden = true;
+  if (myPartiesView) myPartiesView.hidden = true;
   if (usersBoardView) usersBoardView.hidden = false;
 
   const list = document.getElementById("users-board-list");
@@ -1583,20 +1739,14 @@ async function openMyReviewsView() {
     const mainView = document.getElementById("main-view");
     const reviewsView = document.getElementById("reviews-view");
     const profileView = document.getElementById("profile-view");
+    const myPartiesView = document.getElementById("my-parties-view");
 
     viewBeforeReviews = profileView && !profileView.hidden ? "profile" : "main";
 
-    if (mainView) {
-      mainView.hidden = true;
-    }
-
-    if (profileView) {
-      profileView.hidden = true;
-    }
-
-    if (reviewsView) {
-      reviewsView.hidden = false;
-    }
+    if (mainView) mainView.hidden = true;
+    if (profileView) profileView.hidden = true;
+    if (myPartiesView) myPartiesView.hidden = true;
+    if (reviewsView) reviewsView.hidden = false;
   } catch (error) {
     showReviewStatus(error instanceof Error ? error.message : "No se pudieron cargar tus reseñas.");
   }
@@ -3106,13 +3256,24 @@ async function loadNowPlaying() {
   return response.json();
 }
 
+let lastKnownPartyActive = false;
+
 function startNowPlayingPolling() {
   const refresh = () => {
     loadNowPlaying()
       .then((data) => {
+        const isActive = !!(data && data.albumTitle && data.coverUrl);
+        if (lastKnownPartyActive && !isActive) {
+          void handlePartyJustEnded();
+        }
+        lastKnownPartyActive = isActive;
         renderNowPlaying(data);
       })
       .catch(() => {
+        if (lastKnownPartyActive) {
+          void handlePartyJustEnded();
+        }
+        lastKnownPartyActive = false;
         hideNowPlaying();
       });
   };
@@ -3272,14 +3433,6 @@ function setupAuthInteractions() {
     await openMyReviewsView();
   });
 
-  const openPartyRecordsButton = document.getElementById("open-party-records");
-  if (openPartyRecordsButton) {
-    openPartyRecordsButton.addEventListener("click", async () => {
-      closeProfileMenu();
-      await openPartyRecordsView();
-    });
-  }
-
   const partyRecordsBackButton = document.getElementById("party-records-back");
   if (partyRecordsBackButton) {
     partyRecordsBackButton.addEventListener("click", () => {
@@ -3299,6 +3452,28 @@ function setupAuthInteractions() {
   if (usersBoardBackButton) {
     usersBoardBackButton.addEventListener("click", () => {
       showMainView();
+    });
+  }
+
+  const openMyPartiesButton = document.getElementById("open-my-parties");
+  if (openMyPartiesButton) {
+    openMyPartiesButton.addEventListener("click", async () => {
+      closeProfileMenu();
+      await openMyPartiesView();
+    });
+  }
+
+  const myPartiesBackButton = document.getElementById("my-parties-back");
+  if (myPartiesBackButton) {
+    myPartiesBackButton.addEventListener("click", () => {
+      showMainView();
+    });
+  }
+
+  const partyBriefCloseButton = document.getElementById("party-brief-close");
+  if (partyBriefCloseButton) {
+    partyBriefCloseButton.addEventListener("click", () => {
+      hidePartyBriefPopup();
     });
   }
 
@@ -3696,6 +3871,12 @@ function setupLogoGravity() {
     if (gravityDropActive) return;
     gravityDropActive = true;
 
+    const credit = document.querySelector(".page-credit");
+    if (credit) {
+      credit.classList.add("visible");
+      setTimeout(() => credit.classList.remove("visible"), 3000);
+    }
+
     // Pause physics so bubbles stay put while the CSS transition runs
     if (physicsRafId) {
       cancelAnimationFrame(physicsRafId);
@@ -3807,7 +3988,7 @@ async function bootSession() {
   }
 
   if (message) {
-    message.textContent = "Página creada por mi (Claude y Copilot también) para tener a la música y la gente que quiero más cerca de mi corazón.";
+    message.hidden = true;
   }
 
   setupAlbumInteractions();
