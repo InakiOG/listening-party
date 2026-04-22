@@ -1783,8 +1783,12 @@ function renderPartyRecords(parties) {
 
 function formatPartyDate(dateStr) {
   if (!dateStr) return "Fecha desconocida";
-  const value = new Date(dateStr + "T12:00:00");
+  const hasTime = dateStr.includes("T");
+  const value = hasTime ? new Date(dateStr) : new Date(dateStr + "T12:00:00");
   if (Number.isNaN(value.getTime())) return dateStr;
+  if (hasTime) {
+    return value.toLocaleString([], { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
   return value.toLocaleDateString([], { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 

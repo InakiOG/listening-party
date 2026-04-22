@@ -328,7 +328,7 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
 
     record = {
         "id": record_id,
-        "date": started_at[:10],
+        "date": started_at,
         "startedAt": started_at,
         "savedAt": now_iso,
         "attendees": attendees,
