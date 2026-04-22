@@ -1183,6 +1183,19 @@ function getAlbumGroupKey(album) {
   return null;
 }
 
+function updateGroupByButtonStates() {
+  const groupByArtistButton = document.getElementById("group-by-artist");
+  const groupByGenreButton = document.getElementById("group-by-genre");
+
+  if (groupByArtistButton) {
+    groupByArtistButton.classList.toggle("active", appState.groupBy === "artist");
+  }
+
+  if (groupByGenreButton) {
+    groupByGenreButton.classList.toggle("active", appState.groupBy === "genre");
+  }
+}
+
 function openAlbumInGrid(album, showMain = true) {
   if (!album) {
     return;
@@ -1195,9 +1208,10 @@ function openAlbumInGrid(album, showMain = true) {
     }
   }
 
-  if (appState.groupBy) {
-    appState.expandedGroupKey = getAlbumGroupKey(album);
-  }
+  // Always show the full album grid before opening a specific album.
+  appState.groupBy = null;
+  appState.expandedGroupKey = null;
+  updateGroupByButtonStates();
 
   appState.expandedAlbumId = album.id;
   pendingAlbumOpenAnimationId = album.id;
@@ -2121,21 +2135,12 @@ function setupAlbumSortControls() {
   const groupByArtistButton = document.getElementById("group-by-artist");
   const groupByGenreButton = document.getElementById("group-by-genre");
 
-  function updateGroupButtonStates() {
-    if (groupByArtistButton) {
-      groupByArtistButton.classList.toggle("active", appState.groupBy === "artist");
-    }
-    if (groupByGenreButton) {
-      groupByGenreButton.classList.toggle("active", appState.groupBy === "genre");
-    }
-  }
-
   if (groupByArtistButton) {
     groupByArtistButton.addEventListener("click", () => {
       appState.groupBy = appState.groupBy === "artist" ? null : "artist";
       appState.expandedGroupKey = null;
       appState.expandedAlbumId = null;
-      updateGroupButtonStates();
+      updateGroupByButtonStates();
       renderAlbums();
     });
   }
@@ -2145,10 +2150,12 @@ function setupAlbumSortControls() {
       appState.groupBy = appState.groupBy === "genre" ? null : "genre";
       appState.expandedGroupKey = null;
       appState.expandedAlbumId = null;
-      updateGroupButtonStates();
+      updateGroupByButtonStates();
       renderAlbums();
     });
   }
+
+  updateGroupByButtonStates();
 }
 
 function getAlbumSearchMatches(query) {
