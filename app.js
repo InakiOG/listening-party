@@ -9,6 +9,9 @@ const appState = {
 
 let pendingAlbumOpenAnimationId = null;
 
+const addAlbumModalState = { coverOptions: [], selectedUrl: "", users: [] };
+let addAlbumSearchTimer = null;
+
 const sessionState = {
   currentUser: null
 };
@@ -24,6 +27,8 @@ let activeBubbleDrag = null;
 let lastBubbleSignature = "";
 const activeUserBubbleUiState = new Map();
 let activeUserBubbleDrag = null;
+const bubbleEntities = new Map();
+let physicsRafId = null;
 const userPhotoCache = new Map();
 const activeUserBubbleColorCache = new Map();
 const topAlbumCoverCache = new Map();
@@ -792,6 +797,7 @@ function renderActiveUserBubbles(users) {
     layer.innerHTML = "";
     lastRenderedActiveUsers = [];
     lastActiveUsersSignature = signature;
+    syncBubblesFromDom();
     return;
   }
 
@@ -810,14 +816,6 @@ function renderActiveUserBubbles(users) {
       const description = escapeHtml(normalizeProfileDescription(user?.description || ""));
       const instagram = escapeHtml(normalizeInstagramHandle(user?.instagramUsername || ""));
       const topAlbums = getTopAlbumsFromUser(user).filter((entry) => entry.title);
-      const defaultLeft = 4 + ((index * 17) % 88);
-      const defaultTop = 10 + ((index * 23) % 80);
-      const left = savedState?.left ?? defaultLeft;
-      const top = savedState?.top ?? defaultTop;
-      const delay = (index % 5) * -1.25;
-      const duration = 14 + (index % 6) * 2;
-      const driftX = 14 + (index % 7) * 5;
-      const driftY = -10 - (index % 5) * 4;
       const descriptionMarkup = description
         ? `<p class="active-user-detail-value">${description}</p>`
         : `<p class="active-user-detail-value active-user-detail-empty">Sin descripcion.</p>`;
@@ -849,7 +847,7 @@ function renderActiveUserBubbles(users) {
         : `<li class="active-user-top-album-item active-user-detail-empty">Sin top albums.</li>`;
 
       return `
-        <article class="active-user-bubble ${expanded ? "expanded" : ""}" data-user-key="${encodedUserKey}" title="${safeName}" style="left:${left}%;top:${top}%;--delay:${delay}s;--duration:${duration}s;--drift-x:${driftX}px;--drift-y:${driftY}px;">
+        <article class="active-user-bubble ${expanded ? "expanded" : ""}" data-user-key="${encodedUserKey}" title="${safeName}" style="left:0;top:0;">
           ${hasPhoto
             ? `<img src="${safePhotoUrl}" alt="Foto de ${safeName}" loading="lazy" />`
             : `<span class="active-user-letter" style="background:${color};">${letter}</span>`}
@@ -868,6 +866,7 @@ function renderActiveUserBubbles(users) {
     .join("");
 
   lastActiveUsersSignature = signature;
+  syncBubblesFromDom();
 }
 
 function startActiveUsersPolling() {
@@ -950,6 +949,8 @@ function setCurrentUser(user) {
     if (nowPlayingControls) {
       nowPlayingControls.hidden = true;
     }
+    const addAlbumFabLogout = document.getElementById("add-album-button");
+    if (addAlbumFabLogout) addAlbumFabLogout.hidden = true;
     renderAlbums();
     return;
   }
@@ -1010,9 +1011,17 @@ function setCurrentUser(user) {
     nowPlayingControls.hidden = !isAdminUser();
   }
 
+  const addAlbumFab = document.getElementById("add-album-button");
+  if (addAlbumFab) addAlbumFab.hidden = !isAdminUser();
+
   const openPartyRecordsButton = document.getElementById("open-party-records");
   if (openPartyRecordsButton) {
     openPartyRecordsButton.hidden = !isAdminUser();
+  }
+
+  const openUsersBoardButton = document.getElementById("open-users-board");
+  if (openUsersBoardButton) {
+    openUsersBoardButton.hidden = !isAdminUser();
   }
 
   hideAuthOverlay();
@@ -1261,11 +1270,13 @@ function showMainView() {
   const reviewsView = document.getElementById("reviews-view");
   const profileView = document.getElementById("profile-view");
   const partyRecordsView = document.getElementById("party-records-view");
+  const usersBoardView = document.getElementById("users-board-view");
 
   if (mainView) mainView.hidden = false;
   if (reviewsView) reviewsView.hidden = true;
   if (profileView) profileView.hidden = true;
   if (partyRecordsView) partyRecordsView.hidden = true;
+  if (usersBoardView) usersBoardView.hidden = true;
 }
 
 function openProfileView() {
@@ -1273,11 +1284,14 @@ function openProfileView() {
   const reviewsView = document.getElementById("reviews-view");
   const profileView = document.getElementById("profile-view");
   const partyRecordsView = document.getElementById("party-records-view");
+  const usersBoardView = document.getElementById("users-board-view");
 
   if (mainView) mainView.hidden = true;
   if (reviewsView) reviewsView.hidden = true;
   if (profileView) profileView.hidden = false;
   if (partyRecordsView) partyRecordsView.hidden = true;
+  if (usersBoardView) usersBoardView.hidden = true;
+  renderProfileAlbums();
 }
 
 function renderMyReviews(reviews) {
@@ -1418,6 +1432,144 @@ async function openPartyRecordsView() {
   }
 }
 
+async function apiGetLiveAlbums() {
+  const res = await fetch(`/api/live-albums?t=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data.albums) ? data.albums : [];
+}
+
+async function apiAddLiveAlbum(album) {
+  const res = await fetch("/api/live-albums", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(album)
+  });
+  if (!res.ok) throw new Error("No se pudo guardar el album.");
+  return res.json();
+}
+
+async function apiGetUsersBoard() {
+  const res = await fetch("/api/admin/users");
+  if (res.status === 403) throw new Error("Solo el administrador puede ver esto.");
+  if (!res.ok) throw new Error("No se pudo cargar la lista de usuarios.");
+  const data = await res.json();
+  return Array.isArray(data.users) ? data.users : [];
+}
+
+function renderUsersBoard(users) {
+  const list = document.getElementById("users-board-list");
+  if (!list) return;
+
+  if (!users.length) {
+    list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">No hay usuarios registrados.</p>";
+    return;
+  }
+
+  list.innerHTML = users.map((user) => {
+    const safeName = escapeHtml(String(user.name || ""));
+    const safeAccount = escapeHtml(String(user.accountName || ""));
+    const safePassword = escapeHtml(String(user.password || "—"));
+    const photoUrl = String(user.photoDataUrl || "").trim();
+    const avatarMarkup = photoUrl
+      ? `<img class="user-board-avatar" src="${escapeHtml(photoUrl)}" alt="Foto de ${safeName}" />`
+      : `<div class="user-board-avatar-placeholder">?</div>`;
+
+    const reviews = Array.isArray(user.reviews) ? user.reviews : [];
+    const reviewsMarkup = reviews.length
+      ? reviews.map((r) => {
+          const safeTitle = escapeHtml(String(r.albumTitle || r.songTitle || ""));
+          const safeSong = r.scope === "song" ? escapeHtml(String(r.songTitle || "")) : "";
+          const safeRating = Number(r.rating || 0).toFixed(1);
+          const safeText = escapeHtml(String(r.text || "").trim());
+          const meta = safeSong ? `${safeTitle} — ${safeSong} · ${safeRating}/5` : `${safeTitle} · ${safeRating}/5`;
+          return `
+            <li class="user-board-review-item">
+              <p class="user-board-review-meta">${meta}</p>
+              ${safeText ? `<p class="user-board-review-text">${safeText}</p>` : ""}
+            </li>`;
+        }).join("")
+      : `<li class="user-board-no-reviews">Sin reseñas.</li>`;
+
+    const reviewCount = reviews.length;
+    const reviewsId = `user-reviews-${escapeHtml(safeAccount || safeName).replace(/\s+/g, "-")}`;
+
+    return `
+      <div class="user-board-card">
+        <div class="user-board-header">
+          ${avatarMarkup}
+          <div class="user-board-info">
+            <p class="user-board-name">${safeName}</p>
+            <p class="user-board-account">${safeAccount}</p>
+          </div>
+        </div>
+        <div class="user-board-password-row">
+          <span class="user-board-password-label">Contraseña</span>
+          <button class="user-board-password-reveal" data-password="${safePassword}" aria-label="Mostrar contraseña">
+            <span class="user-board-password-value">••••••</span>
+          </button>
+        </div>
+        <button class="user-board-reviews-toggle" aria-expanded="false" data-reviews-target="${reviewsId}">
+          Reseñas <span class="user-board-reviews-count">${reviewCount}</span>
+        </button>
+        <ul id="${reviewsId}" class="user-board-reviews-list" hidden>${reviewsMarkup}</ul>
+      </div>`;
+  }).join("");
+
+  list.querySelectorAll(".user-board-reviews-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-reviews-target");
+      const ul = document.getElementById(targetId);
+      if (!ul) return;
+      const expanded = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+      ul.hidden = expanded;
+    });
+  });
+
+  list.querySelectorAll(".user-board-password-reveal").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const valueEl = btn.querySelector(".user-board-password-value");
+      const revealed = btn.dataset.revealed === "true";
+      if (revealed) {
+        valueEl.textContent = "••••••";
+        btn.dataset.revealed = "false";
+        btn.setAttribute("aria-label", "Mostrar contraseña");
+      } else {
+        valueEl.textContent = btn.dataset.password;
+        btn.dataset.revealed = "true";
+        btn.setAttribute("aria-label", "Ocultar contraseña");
+      }
+    });
+  });
+}
+
+async function openUsersBoardView() {
+  if (!isAdminUser()) return;
+
+  const mainView = document.getElementById("main-view");
+  const reviewsView = document.getElementById("reviews-view");
+  const profileView = document.getElementById("profile-view");
+  const partyRecordsView = document.getElementById("party-records-view");
+  const usersBoardView = document.getElementById("users-board-view");
+
+  if (mainView) mainView.hidden = true;
+  if (reviewsView) reviewsView.hidden = true;
+  if (profileView) profileView.hidden = true;
+  if (partyRecordsView) partyRecordsView.hidden = true;
+  if (usersBoardView) usersBoardView.hidden = false;
+
+  const list = document.getElementById("users-board-list");
+  if (list) list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">Cargando...</p>";
+
+  try {
+    const users = await apiGetUsersBoard();
+    renderUsersBoard(users);
+  } catch (error) {
+    if (list) list.innerHTML = `<p style="color:#ef4444;font-size:0.8rem;margin:0">${escapeHtml(error instanceof Error ? error.message : "Error")}</p>`;
+  }
+}
+
 async function openMyReviewsView() {
   if (!sessionState.currentUser?.name) {
     showAuthOverlay("Inicia sesion para ver tus reseñas.");
@@ -1474,6 +1626,7 @@ function buildAlbumCardHtml(album) {
   const safeGenre = escapeHtml(album.genre);
   const safeNotes = escapeHtml(album.notes);
   const safeGiftedBy = escapeHtml(album.giftedBy || "");
+  const safeOwner = escapeHtml(album.owner || "");
   const safeCoverUrl = escapeHtml(album.coverUrl);
   const safeVinylColor = escapeHtml(album.vinylColor || "#0b0b0b");
   const safeVinylColorSecondary = escapeHtml(album.vinylColorSecondary || "");
@@ -1504,6 +1657,9 @@ function buildAlbumCardHtml(album) {
   const giftedByMarkup = safeGiftedBy
     ? `<p class="gifted-by"><em>Regalado por: ${safeGiftedBy}</em></p>`
     : "";
+  const ownerMarkup = safeOwner
+    ? `<p class="album-owner">De: ${safeOwner}</p>`
+    : "";
 
   return `
         <article class="album-card ${isExpanded ? "expanded" : ""}" data-album-id="${escapeHtml(String(album.id))}">
@@ -1525,6 +1681,7 @@ function buildAlbumCardHtml(album) {
             <p class="meta">${safeArtist} - ${safeYear}</p>
             <p class="meta">${safeGenre}</p>
             <p class="notes">${safeNotes}</p>
+            ${ownerMarkup}
             ${giftedByMarkup}
             ${linksMarkup}
             <ol class="track-list">${detailListMarkup}</ol>
@@ -1888,6 +2045,94 @@ async function loadAlbums() {
   });
 }
 
+function renderProfileAlbums() {
+  const section = document.getElementById("profile-albums-section");
+  const grid = document.getElementById("profile-albums-grid");
+  if (!section || !grid) return;
+
+  const userName = String(sessionState.currentUser?.name || "").trim().toLowerCase();
+  if (!userName) {
+    section.hidden = true;
+    return;
+  }
+
+  const owned = appState.albums.filter(
+    (a) => String(a.owner || "").trim().toLowerCase() === userName
+  );
+
+  if (!owned.length) {
+    section.hidden = true;
+    return;
+  }
+
+  section.hidden = false;
+  grid.innerHTML = owned.map((album) => {
+    const safeTitle = escapeHtml(album.title);
+    const safeArtist = escapeHtml(album.artist);
+    const safeCover = escapeHtml(album.coverUrl);
+    return `
+      <div class="profile-album-chip">
+        <img src="${safeCover}" alt="${safeTitle}" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />
+        <div class="profile-album-chip-info">
+          <span class="profile-album-chip-title">${safeTitle}</span>
+          <span class="profile-album-chip-artist">${safeArtist}</span>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function buildAlbumFromLive(live) {
+  const spotifyQuery = [live.artist, live.title].filter(Boolean).join(" ");
+  return {
+    id: live.id,
+    title: live.title || "Untitled",
+    artist: live.artist || "",
+    year: new Date(live.addedAt || Date.now()).getFullYear().toString(),
+    dateAdded: live.addedAt || new Date().toISOString(),
+    score: 0,
+    genre: "",
+    primaryGenre: "Unknown",
+    notes: "",
+    releaseUrl: "",
+    spotifyUrl: live.spotifyUrl || (spotifyQuery ? `https://open.spotify.com/search/${encodeURIComponent(spotifyQuery)}` : ""),
+    coverUrl: live.coverUrl || coverFallbackUrl,
+    vinylColor: "#0b0b0b",
+    vinylColorSecondary: "",
+    discType: "vinyl",
+    discCount: 1,
+    isClearVinyl: false,
+    tracks: [],
+    details: [],
+    ownedByUser: true,
+    giftedBy: "",
+    owner: live.owner || ""
+  };
+}
+
+function mergeLiveAlbums(liveAlbums) {
+  let changed = false;
+  for (const live of liveAlbums) {
+    if (!live.id || appState.albums.some((a) => a.id === live.id)) continue;
+    appState.albums.unshift(buildAlbumFromLive(live));
+    changed = true;
+  }
+  return changed;
+}
+
+function startLiveAlbumsPolling() {
+  setInterval(async () => {
+    try {
+      const liveAlbums = await apiGetLiveAlbums();
+      if (mergeLiveAlbums(liveAlbums)) {
+        renderAlbums();
+        renderProfileAlbums();
+      }
+    } catch {
+      // ignore
+    }
+  }, 5000);
+}
+
 function hideNowPlaying() {
   const section = document.getElementById("now-playing");
   const panel = document.getElementById("review-panel");
@@ -2161,16 +2406,6 @@ function renderReviewBubbles(reviews, signature = "") {
   const bubbleLayer = document.getElementById("bubble-layer");
   const reviewsSignature = JSON.stringify(reviews);
   const combinedSignature = `${signature}::${reviewsSignature}`;
-  const basePositions = [
-    { left: 6, top: 72 },
-    { left: 76, top: 70 },
-    { left: 8, top: 30 },
-    { left: 78, top: 32 },
-    { left: 42, top: 86 },
-    { left: 2, top: 52 },
-    { left: 86, top: 52 },
-    { left: 46, top: 14 }
-  ];
 
   if (!bubbleLayer) {
     return;
@@ -2183,6 +2418,7 @@ function renderReviewBubbles(reviews, signature = "") {
   if (!reviews.length) {
     bubbleLayer.innerHTML = "";
     lastBubbleSignature = combinedSignature;
+    syncBubblesFromDom();
     return;
   }
 
@@ -2193,14 +2429,7 @@ function renderReviewBubbles(reviews, signature = "") {
       const id = group.reviewerKey;
       const encodedId = encodeURIComponent(id);
       const savedState = bubbleUiState.get(id);
-      const fallbackPosition = basePositions[index % basePositions.length];
-      const left = savedState?.left ?? fallbackPosition.left;
-      const top = savedState?.top ?? fallbackPosition.top;
       const expanded = savedState?.expanded ?? false;
-      const delay = (index % 5) * -2.1;
-      const duration = 18 + (index % 6) * 3;
-      const driftX = 22 + (index % 5) * 11;
-      const driftY = -16 - (index % 4) * 10;
       const safeName = escapeHtml(group.displayName);
       const safeAverage = Number(group.averageRating || 0).toFixed(1);
       const bubbleClass = group.scope === "album" ? "album-review" : "song-review";
@@ -2238,7 +2467,7 @@ function renderReviewBubbles(reviews, signature = "") {
         .join("");
 
       return `
-        <article class="review-bubble ${bubbleClass} ${expanded ? "expanded" : ""}" data-review-id="${encodedId}" style="left:${left}%; top:${top}%; --delay:${delay}s; --duration:${duration}s; --drift-x:${driftX}px; --drift-y:${driftY}px;">
+        <article class="review-bubble ${bubbleClass} ${expanded ? "expanded" : ""}" data-review-id="${encodedId}" style="left:0;top:0;">
           <div class="review-bubble-summary">
             ${headerMarkup}
           </div>
@@ -2249,6 +2478,140 @@ function renderReviewBubbles(reviews, signature = "") {
     .join("");
 
   lastBubbleSignature = combinedSignature;
+  syncBubblesFromDom();
+}
+
+function spawnBubbleEntity(lw, lh, r) {
+  const margin = r + 4;
+  const x = margin + Math.random() * Math.max(1, lw - 2 * margin);
+  const y = margin + Math.random() * Math.max(1, lh - 2 * margin);
+  const angle = Math.random() * Math.PI * 2;
+  const speed = 45 + Math.random() * 40;
+  return { el: null, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r, isDragging: false, baseSpeed: speed };
+}
+
+function syncBubblesFromDom() {
+  const reviewLayer = document.getElementById("bubble-layer");
+  const userLayer = document.getElementById("active-users-layer");
+  const lw = window.innerWidth;
+  const lh = window.innerHeight;
+  const seenKeys = new Set();
+
+  if (reviewLayer) {
+    for (const el of reviewLayer.querySelectorAll(".review-bubble")) {
+      const raw = el.dataset.reviewId ? decodeURIComponent(el.dataset.reviewId) : null;
+      if (!raw) continue;
+      const key = `r::${raw}`;
+      seenKeys.add(key);
+      if (!bubbleEntities.has(key)) {
+        const e = spawnBubbleEntity(lw, lh, 36);
+        bubbleEntities.set(key, e);
+      }
+      const e = bubbleEntities.get(key);
+      e.el = el;
+      el.style.left = `${e.x - e.r}px`;
+      el.style.top = `${e.y - e.r}px`;
+    }
+  }
+
+  if (userLayer) {
+    for (const el of userLayer.querySelectorAll(".active-user-bubble")) {
+      const raw = el.dataset.userKey ? decodeURIComponent(el.dataset.userKey) : null;
+      if (!raw) continue;
+      const key = `u::${raw}`;
+      seenKeys.add(key);
+      if (!bubbleEntities.has(key)) {
+        const e = spawnBubbleEntity(lw, lh, 21);
+        bubbleEntities.set(key, e);
+      }
+      const e = bubbleEntities.get(key);
+      e.el = el;
+      el.style.left = `${e.x - e.r}px`;
+      el.style.top = `${e.y - e.r}px`;
+    }
+  }
+
+  for (const key of bubbleEntities.keys()) {
+    if (!seenKeys.has(key)) bubbleEntities.delete(key);
+  }
+
+  startPhysicsLoop();
+}
+
+function stepPhysics(dt) {
+  const lw = window.innerWidth;
+  const lh = window.innerHeight;
+  const entities = [...bubbleEntities.values()].filter(e => e.el);
+  const active = entities.filter(e => !e.isDragging && !e.el.classList.contains("expanded"));
+
+  for (const e of active) {
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+
+    if (e.x - e.r < 0) { e.x = e.r; e.vx = Math.abs(e.vx); }
+    else if (e.x + e.r > lw) { e.x = lw - e.r; e.vx = -Math.abs(e.vx); }
+    if (e.y - e.r < 0) { e.y = e.r; e.vy = Math.abs(e.vy); }
+    else if (e.y + e.r > lh) { e.y = lh - e.r; e.vy = -Math.abs(e.vy); }
+
+    // Decay excess speed back toward the bubble's natural wandering speed
+    const spd = Math.hypot(e.vx, e.vy);
+    if (spd > e.baseSpeed && spd > 0.1) {
+      const newSpd = e.baseSpeed + (spd - e.baseSpeed) * Math.exp(-1.8 * dt);
+      const scale = newSpd / spd;
+      e.vx *= scale;
+      e.vy *= scale;
+    }
+
+    e.el.style.left = `${e.x - e.r}px`;
+    e.el.style.top = `${e.y - e.r}px`;
+  }
+
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      const a = active[i];
+      const b = active[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy) || 0.01;
+      const minDist = a.r + b.r;
+      if (dist >= minDist) continue;
+
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const overlap = (minDist - dist) * 0.5;
+      a.x -= nx * overlap;
+      a.y -= ny * overlap;
+      b.x += nx * overlap;
+      b.y += ny * overlap;
+
+      const dvx = a.vx - b.vx;
+      const dvy = a.vy - b.vy;
+      const impulse = dvx * nx + dvy * ny;
+      if (impulse > 0) {
+        a.vx -= impulse * nx;
+        a.vy -= impulse * ny;
+        b.vx += impulse * nx;
+        b.vy += impulse * ny;
+      }
+
+      a.el.style.left = `${a.x - a.r}px`;
+      a.el.style.top = `${a.y - a.r}px`;
+      b.el.style.left = `${b.x - b.r}px`;
+      b.el.style.top = `${b.y - b.r}px`;
+    }
+  }
+}
+
+function startPhysicsLoop() {
+  if (physicsRafId) return;
+  let prevTime = performance.now();
+  function tick(now) {
+    physicsRafId = requestAnimationFrame(tick);
+    const dt = Math.min((now - prevTime) / 1000, 0.05);
+    prevTime = now;
+    stepPhysics(dt);
+  }
+  physicsRafId = requestAnimationFrame(tick);
 }
 
 function setupBubbleInteractions() {
@@ -2277,8 +2640,16 @@ function setupBubbleInteractions() {
       startY: event.clientY,
       originLeftPx: bubbleRect.left - layerRect.left,
       originTopPx: bubbleRect.top - layerRect.top,
-      moved: false
+      moved: false,
+      velX: 0,
+      velY: 0,
+      lastMoveX: event.clientX,
+      lastMoveY: event.clientY,
+      lastMoveTime: performance.now()
     };
+
+    const rEntity = bubbleEntities.get(`r::${bubbleId}`);
+    if (rEntity) rEntity.isDragging = true;
 
     bubble.classList.add("dragging");
     bubble.setPointerCapture(event.pointerId);
@@ -2305,20 +2676,25 @@ function setupBubbleInteractions() {
     const maxTop = layerRect.height - bubbleRect.height;
     const boundedLeft = Math.max(0, Math.min(maxLeft, nextLeft));
     const boundedTop = Math.max(0, Math.min(maxTop, nextTop));
-    const leftPercent = (boundedLeft / layerRect.width) * 100;
-    const topPercent = (boundedTop / layerRect.height) * 100;
 
-    activeBubbleDrag.bubble.style.left = `${leftPercent}%`;
-    activeBubbleDrag.bubble.style.top = `${topPercent}%`;
+    activeBubbleDrag.bubble.style.left = `${boundedLeft}px`;
+    activeBubbleDrag.bubble.style.top = `${boundedTop}px`;
 
-    if (activeBubbleDrag.bubbleId) {
-      const current = bubbleUiState.get(activeBubbleDrag.bubbleId) || {};
-      bubbleUiState.set(activeBubbleDrag.bubbleId, {
-        ...current,
-        left: leftPercent,
-        top: topPercent
-      });
+    const rEntity = bubbleEntities.get(`r::${activeBubbleDrag.bubbleId}`);
+    if (rEntity) {
+      rEntity.x = boundedLeft + rEntity.r;
+      rEntity.y = boundedTop + rEntity.r;
     }
+
+    const nowMs = performance.now();
+    const dtMs = nowMs - activeBubbleDrag.lastMoveTime;
+    if (dtMs > 0 && dtMs < 100) {
+      activeBubbleDrag.velX = (event.clientX - activeBubbleDrag.lastMoveX) / dtMs * 1000;
+      activeBubbleDrag.velY = (event.clientY - activeBubbleDrag.lastMoveY) / dtMs * 1000;
+    }
+    activeBubbleDrag.lastMoveX = event.clientX;
+    activeBubbleDrag.lastMoveY = event.clientY;
+    activeBubbleDrag.lastMoveTime = nowMs;
   });
 
   const endDrag = (event) => {
@@ -2331,13 +2707,21 @@ function setupBubbleInteractions() {
     bubble.classList.remove("dragging");
     bubble.releasePointerCapture(event.pointerId);
 
+    const rEntity = bubbleEntities.get(`r::${bubbleId}`);
+    if (rEntity) {
+      rEntity.isDragging = false;
+      if (moved) {
+        const rawSpeed = Math.hypot(activeBubbleDrag.velX, activeBubbleDrag.velY);
+        const clamp = rawSpeed > 600 ? 600 / rawSpeed : 1;
+        rEntity.vx = activeBubbleDrag.velX * clamp;
+        rEntity.vy = activeBubbleDrag.velY * clamp;
+      }
+    }
+
     if (!moved && bubbleId) {
       const current = bubbleUiState.get(bubbleId) || {};
       const nextExpanded = !current.expanded;
-      bubbleUiState.set(bubbleId, {
-        ...current,
-        expanded: nextExpanded
-      });
+      bubbleUiState.set(bubbleId, { ...current, expanded: nextExpanded });
       bubble.classList.toggle("expanded", nextExpanded);
     }
 
@@ -2381,8 +2765,16 @@ function setupActiveUserBubbleInteractions() {
       startY: event.clientY,
       originLeftPx: bubbleRect.left - layerRect.left,
       originTopPx: bubbleRect.top - layerRect.top,
-      moved: false
+      moved: false,
+      velX: 0,
+      velY: 0,
+      lastMoveX: event.clientX,
+      lastMoveY: event.clientY,
+      lastMoveTime: performance.now()
     };
+
+    const uEntity = bubbleEntities.get(`u::${bubbleId}`);
+    if (uEntity) uEntity.isDragging = true;
 
     bubble.classList.add("dragging");
     bubble.setPointerCapture(event.pointerId);
@@ -2409,20 +2801,25 @@ function setupActiveUserBubbleInteractions() {
     const maxTop = layerRect.height - bubbleRect.height;
     const boundedLeft = Math.max(0, Math.min(maxLeft, nextLeft));
     const boundedTop = Math.max(0, Math.min(maxTop, nextTop));
-    const leftPercent = (boundedLeft / layerRect.width) * 100;
-    const topPercent = (boundedTop / layerRect.height) * 100;
 
-    activeUserBubbleDrag.bubble.style.left = `${leftPercent}%`;
-    activeUserBubbleDrag.bubble.style.top = `${topPercent}%`;
+    activeUserBubbleDrag.bubble.style.left = `${boundedLeft}px`;
+    activeUserBubbleDrag.bubble.style.top = `${boundedTop}px`;
 
-    if (activeUserBubbleDrag.bubbleId) {
-      const current = activeUserBubbleUiState.get(activeUserBubbleDrag.bubbleId) || {};
-      activeUserBubbleUiState.set(activeUserBubbleDrag.bubbleId, {
-        ...current,
-        left: leftPercent,
-        top: topPercent
-      });
+    const uEntity = bubbleEntities.get(`u::${activeUserBubbleDrag.bubbleId}`);
+    if (uEntity) {
+      uEntity.x = boundedLeft + uEntity.r;
+      uEntity.y = boundedTop + uEntity.r;
     }
+
+    const nowMs = performance.now();
+    const dtMs = nowMs - activeUserBubbleDrag.lastMoveTime;
+    if (dtMs > 0 && dtMs < 100) {
+      activeUserBubbleDrag.velX = (event.clientX - activeUserBubbleDrag.lastMoveX) / dtMs * 1000;
+      activeUserBubbleDrag.velY = (event.clientY - activeUserBubbleDrag.lastMoveY) / dtMs * 1000;
+    }
+    activeUserBubbleDrag.lastMoveX = event.clientX;
+    activeUserBubbleDrag.lastMoveY = event.clientY;
+    activeUserBubbleDrag.lastMoveTime = nowMs;
   });
 
   const endDrag = (event) => {
@@ -2435,13 +2832,21 @@ function setupActiveUserBubbleInteractions() {
     bubble.classList.remove("dragging");
     bubble.releasePointerCapture(event.pointerId);
 
+    const uEntity = bubbleEntities.get(`u::${bubbleId}`);
+    if (uEntity) {
+      uEntity.isDragging = false;
+      if (moved) {
+        const rawSpeed = Math.hypot(activeUserBubbleDrag.velX, activeUserBubbleDrag.velY);
+        const clamp = rawSpeed > 600 ? 600 / rawSpeed : 1;
+        uEntity.vx = activeUserBubbleDrag.velX * clamp;
+        uEntity.vy = activeUserBubbleDrag.velY * clamp;
+      }
+    }
+
     if (!moved && bubbleId) {
       const current = activeUserBubbleUiState.get(bubbleId) || {};
       const nextExpanded = !current.expanded;
-      activeUserBubbleUiState.set(bubbleId, {
-        ...current,
-        expanded: nextExpanded
-      });
+      activeUserBubbleUiState.set(bubbleId, { ...current, expanded: nextExpanded });
       bubble.classList.toggle("expanded", nextExpanded);
     }
 
@@ -2882,6 +3287,21 @@ function setupAuthInteractions() {
     });
   }
 
+  const openUsersBoardButton = document.getElementById("open-users-board");
+  if (openUsersBoardButton) {
+    openUsersBoardButton.addEventListener("click", async () => {
+      closeProfileMenu();
+      await openUsersBoardView();
+    });
+  }
+
+  const usersBoardBackButton = document.getElementById("users-board-back");
+  if (usersBoardBackButton) {
+    usersBoardBackButton.addEventListener("click", () => {
+      showMainView();
+    });
+  }
+
   const topAlbumInputs = [
     profileTopAlbum1,
     profileTopAlbum1Artist,
@@ -2976,6 +3396,365 @@ function setupAuthInteractions() {
   });
 }
 
+let gravityDropActive = false;
+
+async function openAddAlbumModal() {
+  const overlay = document.getElementById("add-album-overlay");
+  if (overlay) overlay.hidden = false;
+  const titleInput = document.getElementById("add-album-title");
+  const artistInput = document.getElementById("add-album-artist");
+  const ownerInput = document.getElementById("add-album-owner");
+  const statusEl = document.getElementById("add-album-status");
+  const picker = document.getElementById("add-album-picker");
+  const preview = document.getElementById("add-album-cover-preview");
+  const emptyLabel = document.getElementById("add-album-cover-empty");
+  const suggestions = document.getElementById("add-album-owner-suggestions");
+  if (titleInput) titleInput.value = "";
+  if (artistInput) artistInput.value = "";
+  if (ownerInput) ownerInput.value = "";
+  if (statusEl) statusEl.textContent = "";
+  if (picker) picker.innerHTML = "";
+  if (preview) { preview.hidden = true; preview.src = ""; }
+  if (emptyLabel) emptyLabel.textContent = "Sin portada";
+  if (suggestions) suggestions.hidden = true;
+  const cameraInput = document.getElementById("add-album-camera-input");
+  if (cameraInput) cameraInput.value = "";
+  addAlbumModalState.coverOptions = [];
+  addAlbumModalState.selectedUrl = "";
+  addAlbumModalState.users = [];
+  if (titleInput) titleInput.focus();
+
+  try {
+    addAlbumModalState.users = await apiGetUsersBoard();
+  } catch {
+    // silently ignore — validation will catch it if needed
+  }
+}
+
+function closeAddAlbumModal() {
+  const overlay = document.getElementById("add-album-overlay");
+  if (overlay) overlay.hidden = true;
+  clearTimeout(addAlbumSearchTimer);
+}
+
+function renderAddAlbumModalPicker() {
+  const picker = document.getElementById("add-album-picker");
+  const preview = document.getElementById("add-album-cover-preview");
+  const emptyLabel = document.getElementById("add-album-cover-empty");
+  if (!picker) return;
+
+  const options = addAlbumModalState.coverOptions;
+
+  if (!addAlbumModalState.selectedUrl && options.length) {
+    addAlbumModalState.selectedUrl = options[0].url;
+    if (preview) { preview.src = options[0].url; preview.hidden = false; }
+    if (emptyLabel) emptyLabel.textContent = "";
+  }
+
+  picker.innerHTML = options.map((opt) => {
+    const isSelected = opt.url === addAlbumModalState.selectedUrl;
+    const label = [opt.collectionName, opt.artistName].filter(Boolean).join(" – ");
+    return `<button type="button" class="add-album-picker-btn ${isSelected ? "selected" : ""}" data-url="${escapeHtml(opt.url)}" title="${escapeHtml(label)}"><img src="${escapeHtml(opt.url)}" alt="${escapeHtml(label)}" loading="lazy" /></button>`;
+  }).join("");
+}
+
+function showOwnerSuggestions(query) {
+  const suggestions = document.getElementById("add-album-owner-suggestions");
+  if (!suggestions) return;
+
+  const q = query.trim().toLowerCase();
+  const matches = q
+    ? addAlbumModalState.users.filter((u) =>
+        String(u.name || "").toLowerCase().includes(q)
+      )
+    : addAlbumModalState.users;
+
+  if (!matches.length) {
+    suggestions.hidden = true;
+    return;
+  }
+
+  suggestions.innerHTML = matches.map((u) => {
+    const safeName = escapeHtml(String(u.name || ""));
+    const photoUrl = String(u.photoDataUrl || "").trim();
+    const avatarMarkup = photoUrl
+      ? `<img class="add-album-suggestion-avatar" src="${escapeHtml(photoUrl)}" alt="" />`
+      : `<span class="add-album-suggestion-letter">${escapeHtml(safeName[0] || "?")}</span>`;
+    return `<li class="add-album-suggestion-item" data-name="${safeName}">${avatarMarkup}${safeName}</li>`;
+  }).join("");
+
+  suggestions.hidden = false;
+}
+
+function hideOwnerSuggestions() {
+  const suggestions = document.getElementById("add-album-owner-suggestions");
+  if (suggestions) suggestions.hidden = true;
+}
+
+async function triggerAddAlbumCoverSearch() {
+  const title = document.getElementById("add-album-title")?.value.trim() || "";
+  const artist = document.getElementById("add-album-artist")?.value.trim() || "";
+  const picker = document.getElementById("add-album-picker");
+  const preview = document.getElementById("add-album-cover-preview");
+  const emptyLabel = document.getElementById("add-album-cover-empty");
+
+  if (!title && !artist) {
+    addAlbumModalState.coverOptions = [];
+    addAlbumModalState.selectedUrl = "";
+    if (picker) picker.innerHTML = "";
+    if (preview) { preview.hidden = true; preview.src = ""; }
+    if (emptyLabel) emptyLabel.textContent = "Sin portada";
+    return;
+  }
+
+  if (emptyLabel) emptyLabel.textContent = "Buscando portada...";
+  if (picker) picker.innerHTML = "";
+  if (preview) { preview.hidden = true; preview.src = ""; }
+
+  try {
+    const options = await fetchTopAlbumCover(title, artist);
+    addAlbumModalState.coverOptions = options || [];
+    addAlbumModalState.selectedUrl = "";
+    renderAddAlbumModalPicker();
+    if (!options.length && emptyLabel) emptyLabel.textContent = "Sin portada";
+  } catch {
+    if (emptyLabel) emptyLabel.textContent = "Sin portada";
+  }
+}
+
+async function saveAddAlbum() {
+  const title = document.getElementById("add-album-title")?.value.trim() || "";
+  const artist = document.getElementById("add-album-artist")?.value.trim() || "";
+  const owner = document.getElementById("add-album-owner")?.value.trim() || "";
+  const statusEl = document.getElementById("add-album-status");
+  const coverUrl = addAlbumModalState.selectedUrl || coverFallbackUrl;
+
+  if (!title || !artist) {
+    if (statusEl) statusEl.textContent = "Falta el nombre del album o artista.";
+    return;
+  }
+
+  if (owner) {
+    const ownerExists = addAlbumModalState.users.some(
+      (u) => String(u.name || "").toLowerCase() === owner.toLowerCase()
+    );
+    if (!ownerExists) {
+      if (statusEl) statusEl.textContent = "El usuario no existe. Selecciona uno de la lista.";
+      const ownerInput = document.getElementById("add-album-owner");
+      if (ownerInput) ownerInput.focus();
+      return;
+    }
+  }
+
+  const spotifyQuery = [artist, title].filter(Boolean).join(" ");
+  const album = {
+    id: `custom-${Date.now()}`,
+    title,
+    artist,
+    year: new Date().getFullYear().toString(),
+    dateAdded: new Date().toISOString(),
+    score: 0,
+    genre: "",
+    primaryGenre: "Unknown",
+    notes: "",
+    releaseUrl: "",
+    spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(spotifyQuery)}`,
+    coverUrl,
+    vinylColor: "#0b0b0b",
+    vinylColorSecondary: "",
+    discType: "vinyl",
+    discCount: 1,
+    isClearVinyl: false,
+    tracks: [],
+    details: [],
+    ownedByUser: true,
+    giftedBy: "",
+    owner
+  };
+
+  appState.albums.unshift(album);
+  renderAlbums();
+  renderProfileAlbums();
+  closeAddAlbumModal();
+
+  try {
+    await apiAddLiveAlbum({
+      id: album.id,
+      title: album.title,
+      artist: album.artist,
+      owner: album.owner,
+      coverUrl: album.coverUrl,
+      spotifyUrl: album.spotifyUrl
+    });
+  } catch (err) {
+    console.error("Error saving live album:", err);
+  }
+
+  try {
+    await apiSetNowPlaying({
+      actorName: sessionState.currentUser?.name || "",
+      albumTitle: title,
+      albumArtist: artist,
+      songTitle: "",
+      reviewScope: "album",
+      coverUrl
+    });
+  } catch (err) {
+    console.error("Error setting now playing:", err);
+  }
+}
+
+function setupAddAlbumModal() {
+  const fab = document.getElementById("add-album-button");
+  const cancelBtn = document.getElementById("add-album-cancel");
+  const saveBtn = document.getElementById("add-album-save");
+  const titleInput = document.getElementById("add-album-title");
+  const artistInput = document.getElementById("add-album-artist");
+  const ownerInput = document.getElementById("add-album-owner");
+  const picker = document.getElementById("add-album-picker");
+  const suggestions = document.getElementById("add-album-owner-suggestions");
+  const cameraBtn = document.getElementById("add-album-camera-btn");
+  const cameraInput = document.getElementById("add-album-camera-input");
+
+  if (fab) fab.addEventListener("click", () => openAddAlbumModal());
+  if (cancelBtn) cancelBtn.addEventListener("click", () => closeAddAlbumModal());
+  if (saveBtn) saveBtn.addEventListener("click", () => saveAddAlbum());
+
+  if (cameraBtn && cameraInput) {
+    cameraBtn.addEventListener("click", () => cameraInput.click());
+    cameraInput.addEventListener("change", async () => {
+      const file = cameraInput.files && cameraInput.files[0] ? cameraInput.files[0] : null;
+      if (!file) return;
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        addAlbumModalState.selectedUrl = dataUrl;
+        const preview = document.getElementById("add-album-cover-preview");
+        const emptyLabel = document.getElementById("add-album-cover-empty");
+        if (preview) { preview.src = dataUrl; preview.hidden = false; }
+        if (emptyLabel) emptyLabel.textContent = "";
+        // Clear picker selection since camera photo takes precedence
+        const pickerEl = document.getElementById("add-album-picker");
+        if (pickerEl) pickerEl.querySelectorAll(".add-album-picker-btn").forEach((b) => b.classList.remove("selected"));
+      } catch {
+        const statusEl = document.getElementById("add-album-status");
+        if (statusEl) statusEl.textContent = "No se pudo leer la foto.";
+      }
+      cameraInput.value = "";
+    });
+  }
+
+  [titleInput, artistInput].forEach((input) => {
+    if (!input) return;
+    input.addEventListener("input", () => {
+      clearTimeout(addAlbumSearchTimer);
+      addAlbumSearchTimer = setTimeout(() => triggerAddAlbumCoverSearch(), 600);
+    });
+  });
+
+  if (ownerInput) {
+    ownerInput.addEventListener("input", () => {
+      showOwnerSuggestions(ownerInput.value);
+    });
+    ownerInput.addEventListener("focus", () => {
+      showOwnerSuggestions(ownerInput.value);
+    });
+    ownerInput.addEventListener("blur", () => {
+      // Delay so a click on a suggestion registers first
+      setTimeout(() => hideOwnerSuggestions(), 180);
+    });
+  }
+
+  if (suggestions) {
+    suggestions.addEventListener("mousedown", (e) => {
+      const item = e.target.closest(".add-album-suggestion-item");
+      if (!item) return;
+      e.preventDefault(); // prevent input blur before click fires
+      if (ownerInput) ownerInput.value = item.dataset.name;
+      hideOwnerSuggestions();
+    });
+  }
+
+  if (picker) {
+    picker.addEventListener("click", (e) => {
+      const btn = e.target.closest(".add-album-picker-btn");
+      if (!btn) return;
+      addAlbumModalState.selectedUrl = btn.dataset.url;
+      const preview = document.getElementById("add-album-cover-preview");
+      const emptyLabel = document.getElementById("add-album-cover-empty");
+      if (preview) { preview.src = btn.dataset.url; preview.hidden = false; }
+      if (emptyLabel) emptyLabel.textContent = "";
+      renderAddAlbumModalPicker();
+    });
+  }
+}
+
+function setupLogoGravity() {
+  const logoWrap = document.querySelector(".main-logo-wrap");
+  if (!logoWrap) return;
+
+  logoWrap.addEventListener("click", () => {
+    if (gravityDropActive) return;
+    gravityDropActive = true;
+
+    // Pause physics so bubbles stay put while the CSS transition runs
+    if (physicsRafId) {
+      cancelAnimationFrame(physicsRafId);
+      physicsRafId = null;
+    }
+
+    const albumsEl = document.getElementById("albums");
+    const bubbleLayerEl = document.getElementById("bubble-layer");
+    const userLayerEl = document.getElementById("active-users-layer");
+
+    const targets = [];
+
+    if (albumsEl) {
+      for (const card of albumsEl.querySelectorAll(".album-card, .group-pile-wrap")) {
+        targets.push(card);
+      }
+    }
+    for (const layer of [bubbleLayerEl, userLayerEl]) {
+      if (!layer) continue;
+      for (const bubble of layer.querySelectorAll(".review-bubble, .active-user-bubble")) {
+        targets.push(bubble);
+      }
+    }
+
+    // Compute per-element fall distance so they land at the visible bottom
+    const vhBottom = window.innerHeight;
+    targets.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      const pileOffset = Math.floor(Math.random() * 48); // depth in the pile
+      const deltaY = vhBottom - rect.bottom - pileOffset;
+      const rot = (Math.random() * 28 - 14).toFixed(1);
+      const delay = Math.floor(Math.random() * 180);
+      el.dataset.gravityDeltaY = String(deltaY);
+      el.style.transition = `transform 0.6s cubic-bezier(0.42,0,0.6,1) ${delay}ms`;
+      el.style.transform = `translateY(${deltaY}px) rotate(${rot}deg)`;
+      el.style.pointerEvents = "none";
+    });
+
+    setTimeout(() => {
+      // Rise back to original positions
+      targets.forEach((el) => {
+        el.style.transition = "transform 0.65s cubic-bezier(0.22,0.84,0.28,1)";
+        el.style.transform = "";
+      });
+
+      setTimeout(() => {
+        targets.forEach((el) => {
+          el.style.transition = "";
+          el.style.transform = "";
+          el.style.pointerEvents = "";
+          delete el.dataset.gravityDeltaY;
+        });
+        gravityDropActive = false;
+        startPhysicsLoop();
+      }, 700);
+    }, 3000);
+  });
+}
+
 async function bootSession() {
   try {
     const sessionUser = await apiGetCurrentUser();
@@ -3037,14 +3816,18 @@ async function bootSession() {
   setupBubbleInteractions();
   setupActiveUserBubbleInteractions();
   setupAuthInteractions();
+  setupAddAlbumModal();
+  setupLogoGravity();
   startNowPlayingPolling();
   startActiveUsersPolling();
+  startLiveAlbumsPolling();
   void bootSession();
 
   loadAlbums()
-    .then((albumDatabase) => {
+    .then(async (albumDatabase) => {
       appState.albums = Array.isArray(albumDatabase) ? albumDatabase : (albumDatabase.albums || []);
       sortAlbumsInState();
+      try { mergeLiveAlbums(await apiGetLiveAlbums()); } catch { /* ignore */ }
       renderAlbums();
     })
     .catch(() => {

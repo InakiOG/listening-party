@@ -59,6 +59,8 @@
         display: inline-block;
         margin: 0 auto 0.5rem;
         width: min(72%, 220px);
+        cursor: pointer;
+        user-select: none;
       }
 
       .main-logo {
@@ -770,12 +772,10 @@
         user-select: none;
         touch-action: none;
         cursor: grab;
-        animation: floatUserBubble var(--duration, 18s) ease-in-out var(--delay, 0s) infinite alternate;
       }
 
       .active-user-bubble.dragging {
         cursor: grabbing;
-        animation-play-state: paused;
       }
 
       .active-user-bubble.expanded {
@@ -783,7 +783,6 @@
         height: auto;
         min-height: 42px;
         border-radius: 0.82rem;
-        animation-play-state: paused;
         z-index: 90;
         background: rgba(15, 23, 42, 0.94);
       }
@@ -942,7 +941,6 @@
         user-select: none;
         touch-action: none;
         cursor: grab;
-        animation: floatBubble var(--duration, 22s) ease-in-out var(--delay, 0s) infinite alternate;
       }
 
       .review-bubble.song-review {
@@ -957,7 +955,6 @@
 
       .review-bubble.dragging {
         cursor: grabbing;
-        animation-play-state: paused;
       }
 
       .review-bubble-summary {
@@ -1710,6 +1707,512 @@
         animation: albumFromPile 400ms cubic-bezier(0.22, 0.84, 0.28, 1) var(--pile-delay, 0ms) both;
       }
 
+      .users-board-view {
+        text-align: left;
+      }
+
+      .users-board-view[hidden] {
+        display: none;
+      }
+
+      .users-board-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        margin-top: 0.5rem;
+      }
+
+      .user-board-card {
+        border: 1px solid #334155;
+        border-radius: 0.75rem;
+        background: #0f172a;
+        padding: 0.65rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+      }
+
+      .user-board-header {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+      }
+
+      .user-board-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 2px solid #334155;
+        background: #1e293b;
+        flex-shrink: 0;
+      }
+
+      .user-board-avatar-placeholder {
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        background: #1e293b;
+        border: 2px solid #334155;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+
+      .user-board-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .user-board-name {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .user-board-account {
+        margin: 0.1rem 0 0;
+        font-size: 0.65rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .user-board-password-row {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+      }
+
+      .user-board-password-label {
+        flex-shrink: 0;
+        color: #64748b;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .user-board-password-reveal {
+        border: none;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .user-board-password-value {
+        font-family: monospace;
+        color: #fbbf24;
+        word-break: break-all;
+      }
+
+      .user-board-reviews-label {
+        margin: 0;
+        font-size: 0.62rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .user-board-reviews-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.28rem;
+      }
+
+      .user-board-reviews-list[hidden] {
+        display: none;
+      }
+
+      .user-board-review-item {
+        border: 1px solid #1e293b;
+        border-radius: 0.45rem;
+        padding: 0.28rem 0.45rem;
+        background: #0b1220;
+      }
+
+      .user-board-review-meta {
+        margin: 0;
+        font-size: 0.68rem;
+        color: #7dd3fc;
+      }
+
+      .user-board-review-text {
+        margin: 0.1rem 0 0;
+        font-size: 0.68rem;
+        color: #cbd5e1;
+      }
+
+      .user-board-no-reviews {
+        font-size: 0.72rem;
+        color: #475569;
+        font-style: italic;
+      }
+
+      .user-board-reviews-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        border: 1px solid #334155;
+        border-radius: 0.45rem;
+        background: #0b1220;
+        color: #94a3b8;
+        padding: 0.28rem 0.45rem;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+      }
+
+      .user-board-reviews-toggle[aria-expanded="true"] {
+        border-color: #7dd3fc;
+        color: #7dd3fc;
+      }
+
+      .user-board-reviews-count {
+        background: #1e293b;
+        border-radius: 999px;
+        padding: 0.05rem 0.42rem;
+        font-size: 0.7rem;
+        color: #94a3b8;
+      }
+
+      .user-board-reviews-toggle[aria-expanded="true"] .user-board-reviews-count {
+        background: #0f2a3f;
+        color: #7dd3fc;
+      }
+
+
+      .add-album-fab {
+        position: fixed;
+        right: 0.65rem;
+        bottom: 4.6rem;
+        z-index: 80;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 2px solid #22c55e;
+        background: #166534;
+        color: #f0fdf4;
+        font-size: 1.6rem;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+        padding: 0;
+      }
+
+      .add-album-fab[hidden] {
+        display: none;
+      }
+
+      .add-album-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 120;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(2, 6, 23, 0.9);
+      }
+
+      .add-album-overlay[hidden] {
+        display: none;
+      }
+
+      .add-album-card {
+        width: min(92vw, 360px);
+        border: 1px solid #334155;
+        border-radius: 0.9rem;
+        padding: 0.9rem;
+        background: #0f172a;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        text-align: left;
+        max-height: 90dvh;
+        overflow-y: auto;
+      }
+
+      .add-album-card h2 {
+        margin: 0 0 0.6rem;
+        font-size: 1rem;
+      }
+
+      .add-album-label {
+        display: block;
+        margin: 0.55rem 0 0.2rem;
+        color: #94a3b8;
+        font-size: 0.75rem;
+      }
+
+      .add-album-card input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        padding: 0.48rem;
+        background: #111827;
+        color: #e2e8f0;
+        font-size: 0.82rem;
+      }
+
+      .add-album-cover-preview-wrap {
+        margin-top: 0.55rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .add-album-cover-preview-wrap img {
+        width: 54px;
+        height: 54px;
+        border-radius: 0.45rem;
+        object-fit: cover;
+        border: 1px solid #334155;
+      }
+
+      .add-album-cover-preview-wrap span {
+        color: #64748b;
+        font-size: 0.75rem;
+        flex: 1;
+      }
+
+      .add-album-camera-btn {
+        border: 1px solid #334155;
+        border-radius: 0.45rem;
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 0.3rem 0.45rem;
+        font-size: 1rem;
+        cursor: pointer;
+        flex-shrink: 0;
+        line-height: 1;
+      }
+
+      .add-album-owner-wrap {
+        position: relative;
+      }
+
+      .add-album-suggestions {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 2px);
+        z-index: 200;
+        margin: 0;
+        padding: 0.2rem 0;
+        list-style: none;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+        max-height: 160px;
+        overflow-y: auto;
+      }
+
+      .add-album-suggestions[hidden] {
+        display: none;
+      }
+
+      .add-album-suggestion-item {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.35rem 0.55rem;
+        cursor: pointer;
+        font-size: 0.8rem;
+        color: #e2e8f0;
+      }
+
+      .add-album-suggestion-item:hover,
+      .add-album-suggestion-item.focused {
+        background: #1e293b;
+      }
+
+      .add-album-suggestion-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        object-fit: cover;
+        flex-shrink: 0;
+        border: 1px solid #334155;
+        background: #1e293b;
+      }
+
+      .add-album-suggestion-letter {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+
+      .add-album-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.5rem;
+      }
+
+      .add-album-picker-btn {
+        padding: 0;
+        border: 2px solid transparent;
+        border-radius: 0.4rem;
+        background: none;
+        cursor: pointer;
+        line-height: 0;
+        opacity: 0.7;
+        transition: border-color 0.15s, opacity 0.15s;
+      }
+
+      .add-album-picker-btn img {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.28rem;
+        display: block;
+        object-fit: cover;
+      }
+
+      .add-album-picker-btn.selected {
+        border-color: #6366f1;
+        opacity: 1;
+      }
+
+      .add-album-picker-btn:hover {
+        border-color: #94a3b8;
+        opacity: 1;
+      }
+
+      .add-album-status {
+        margin: 0.45rem 0 0;
+        min-height: 1rem;
+        font-size: 0.72rem;
+        color: #93c5fd;
+      }
+
+      .add-album-actions {
+        margin-top: 0.7rem;
+        display: flex;
+        gap: 0.45rem;
+      }
+
+      .album-owner {
+        margin-top: 0.28rem;
+        font-size: 0.78rem;
+        color: #a5f3fc;
+      }
+
+      .profile-albums-section {
+        margin-top: 0.75rem;
+        border: 1px solid #334155;
+        border-radius: 0.8rem;
+        background: #0f172a;
+        padding: 0.65rem;
+      }
+
+      .profile-albums-section[hidden] {
+        display: none;
+      }
+
+      .profile-albums-heading {
+        margin: 0 0 0.5rem;
+        font-size: 0.78rem;
+        color: #7dd3fc;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+      }
+
+      .profile-albums-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .profile-album-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        background: #0b1220;
+        padding: 0.28rem 0.45rem 0.28rem 0.28rem;
+        max-width: 100%;
+      }
+
+      .profile-album-chip img {
+        width: 36px;
+        height: 36px;
+        border-radius: 0.3rem;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+
+      .profile-album-chip-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .profile-album-chip-title {
+        font-size: 0.74rem;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .profile-album-chip-artist {
+        font-size: 0.64rem;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      @keyframes gravityDropEl {
+        0%   { transform: translateY(0) rotate(var(--drop-rot, 0deg)); opacity: 1; }
+        18%  { transform: translateY(-18px) rotate(calc(var(--drop-rot, 0deg) * 0.4)); opacity: 1; }
+        100% { transform: translateY(110vh) rotate(var(--drop-rot, 0deg)); opacity: 0.15; }
+      }
+
+      @keyframes gravityRiseEl {
+        0%   { transform: translateY(110vh) rotate(var(--drop-rot, 0deg)); opacity: 0.15; }
+        60%  { opacity: 1; }
+        100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      }
+
+      .gravity-drop {
+        animation: gravityDropEl 0.72s cubic-bezier(0.42, 0, 0.6, 1) var(--drop-delay, 0ms) both;
+        pointer-events: none;
+      }
+
+      .gravity-rise {
+        animation: gravityRiseEl 0.7s cubic-bezier(0.22, 0.84, 0.28, 1) var(--drop-delay, 0ms) both;
+        pointer-events: none;
+      }
+
+
     </style>
   </head>
   <body>
@@ -1771,9 +2274,39 @@
     <section id="active-users-layer" class="active-users-layer" aria-hidden="true"></section>
     <section id="bubble-layer" class="bubble-layer" aria-hidden="true"></section>
 
+    <button id="add-album-button" class="add-album-fab" hidden type="button" aria-label="Agregar album">+</button>
+
+    <section id="add-album-overlay" class="add-album-overlay" hidden>
+      <div class="add-album-card">
+        <h2>Agregar album</h2>
+        <label class="add-album-label" for="add-album-title">Album</label>
+        <input id="add-album-title" type="text" placeholder="Nombre del album" />
+        <label class="add-album-label" for="add-album-artist">Artista</label>
+        <input id="add-album-artist" type="text" placeholder="Nombre del artista" />
+        <label class="add-album-label" for="add-album-owner">Usuario dueño del disco</label>
+        <div class="add-album-owner-wrap">
+          <input id="add-album-owner" type="text" placeholder="Nombre del usuario" autocomplete="off" />
+          <ul id="add-album-owner-suggestions" class="add-album-suggestions" hidden></ul>
+        </div>
+        <div class="add-album-cover-preview-wrap">
+          <img id="add-album-cover-preview" alt="Portada seleccionada" hidden />
+          <span id="add-album-cover-empty">Sin portada</span>
+          <button id="add-album-camera-btn" class="add-album-camera-btn" type="button" aria-label="Tomar foto">📷</button>
+          <input id="add-album-camera-input" type="file" accept="image/*" capture="environment" hidden />
+        </div>
+        <div id="add-album-picker" class="add-album-picker"></div>
+        <p id="add-album-status" class="add-album-status"></p>
+        <div class="add-album-actions">
+          <button id="add-album-cancel" class="auth-button" type="button">Cancelar</button>
+          <button id="add-album-save" class="auth-button primary" type="button">Agregar y reproducir</button>
+        </div>
+      </div>
+    </section>
+
     <section id="profile-hub" class="profile-hub" hidden>
       <div id="profile-menu" class="profile-menu" hidden>
         <button id="open-party-records" type="button" hidden>Registro</button>
+        <button id="open-users-board" type="button" hidden>Usuarios</button>
         <button id="open-profile" type="button">Perfil</button>
         <button id="logout-profile" type="button">Cerrar sesion</button>
       </div>
@@ -1817,6 +2350,13 @@
           <button id="party-records-back" class="back-button" type="button">Volver</button>
         </div>
         <div id="party-records-list" class="party-records-list"></div>
+      </section>
+      <section id="users-board-view" class="users-board-view" hidden>
+        <div class="reviews-header">
+          <h2>Usuarios</h2>
+          <button id="users-board-back" class="back-button" type="button">Volver</button>
+        </div>
+        <div id="users-board-list" class="users-board-list"></div>
       </section>
       <section id="profile-view" class="profile-view" hidden>
         <div class="reviews-header">
@@ -1897,8 +2437,12 @@
             <p id="profile-save-status" class="profile-save-status"></p>
           </section>
         </article>
+        <section id="profile-albums-section" class="profile-albums-section" hidden>
+          <p class="profile-albums-heading">Mis discos</p>
+          <div id="profile-albums-grid" class="profile-albums-grid"></div>
+        </section>
       </section>
     </main>
-    <script src="./app.js?v=20260421-9"></script>
+    <script src="./app.js?v=20260421-19"></script>
   </body>
 </html>

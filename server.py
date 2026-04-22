@@ -16,7 +16,9 @@ USERS_DB_PATH = ROOT / "users-db.json"
 CREDENTIALS_DB_PATH = ROOT / "user-credentials.local.json"
 NOW_PLAYING_PATH = ROOT / "now-playing.json"
 PARTY_RECORDS_PATH = ROOT / "party-records.json"
+LIVE_ALBUMS_PATH = ROOT / "live-albums.json"
 REVIEWS_LOCK = threading.Lock()
+LIVE_ALBUMS_LOCK = threading.Lock()
 _current_session = None
 ADMIN_USER_KEY = "iñaki"
 ADMIN_DEFAULT_NAME = "Iñaki"
@@ -49,6 +51,30 @@ def ensure_credentials_db():
 
     with CREDENTIALS_DB_PATH.open("w", encoding="utf-8") as handle:
         json.dump({}, handle, indent=2)
+
+
+def ensure_live_albums_db():
+    if LIVE_ALBUMS_PATH.exists():
+        return
+    with LIVE_ALBUMS_PATH.open("w", encoding="utf-8") as handle:
+        json.dump({"albums": []}, handle, indent=2)
+
+
+def read_live_albums_store():
+    ensure_live_albums_db()
+    try:
+        with LIVE_ALBUMS_PATH.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        data = {"albums": []}
+    if not isinstance(data, dict) or not isinstance(data.get("albums"), list):
+        data = {"albums": []}
+    return data
+
+
+def write_live_albums_store(store):
+    with LIVE_ALBUMS_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(store, handle, indent=2)
 
 
 def ensure_party_records_db():
@@ -554,6 +580,48 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             })
             return
 
+        if parsed.path == "/api/admin/users":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+
+            with REVIEWS_LOCK:
+                credentials_store = read_credentials_store()
+                caller_key = find_user_key_by_session_token(credentials_store, session_token)
+                users_store = read_users_store()
+                caller_profile = sanitize_user_profile(users_store.get(caller_key)) if caller_key else None
+
+            if not caller_profile or caller_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                self._send_json({"error": "admin only"}, status_code=403)
+                return
+
+            with REVIEWS_LOCK:
+                reviews_store = read_reviews_store()
+                all_users = []
+                for user_key, profile_raw in users_store.items():
+                    profile = sanitize_user_profile(profile_raw)
+                    if not profile:
+                        continue
+                    cred = credentials_store.get(user_key) or {}
+                    password = read_plaintext_password(cred)
+                    reviews = build_user_reviews(reviews_store, profile.get("name", ""))
+                    all_users.append({
+                        "name": profile.get("name", ""),
+                        "photoDataUrl": profile.get("photoDataUrl", ""),
+                        "accountName": profile.get("accountName", ""),
+                        "password": password,
+                        "reviews": reviews
+                    })
+
+            all_users.sort(key=lambda u: str(u.get("name", "")).lower())
+            self._send_json({"users": all_users})
+            return
+
+        if parsed.path == "/api/live-albums":
+            with LIVE_ALBUMS_LOCK:
+                store = read_live_albums_store()
+            self._send_json({"albums": store.get("albums", [])})
+            return
+
         if parsed.path == "/api/party-records":
             cookies = parse_cookie_header(self.headers.get("Cookie", ""))
             session_token = cookies.get(SESSION_COOKIE_NAME, "")
@@ -1018,6 +1086,57 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             self._send_json({"user": updated_profile})
             return
 
+        if parsed.path == "/api/live-albums":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+
+            with REVIEWS_LOCK:
+                credentials_store = read_credentials_store()
+                caller_key = find_user_key_by_session_token(credentials_store, session_token)
+                users_store = read_users_store()
+                caller_profile = sanitize_user_profile(users_store.get(caller_key)) if caller_key else None
+
+            if not caller_profile or caller_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                self._send_json({"error": "admin only"}, status_code=403)
+                return
+
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                album = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            if not isinstance(album, dict):
+                self._send_json({"error": "album must be an object"}, status_code=400)
+                return
+
+            safe_album = {
+                "id": str(album.get("id", "")).strip(),
+                "title": str(album.get("title", "")).strip(),
+                "artist": str(album.get("artist", "")).strip(),
+                "owner": str(album.get("owner", "")).strip(),
+                "coverUrl": str(album.get("coverUrl", "")).strip(),
+                "spotifyUrl": str(album.get("spotifyUrl", "")).strip(),
+                "addedAt": datetime.now(timezone.utc).isoformat()
+            }
+
+            if not safe_album["title"] or not safe_album["id"]:
+                self._send_json({"error": "title and id are required"}, status_code=400)
+                return
+
+            with LIVE_ALBUMS_LOCK:
+                store = read_live_albums_store()
+                existing_ids = {a.get("id") for a in store["albums"]}
+                if safe_album["id"] not in existing_ids:
+                    store["albums"].append(safe_album)
+                    write_live_albums_store(store)
+
+            self._send_json({"album": safe_album})
+            return
+
         if parsed.path != "/api/reviews":
             self._send_json({"error": "Not found"}, status_code=404)
             return
@@ -1103,6 +1222,7 @@ def run_server(port=8000, refresh_discogs=False):
     ensure_users_db()
     ensure_credentials_db()
     ensure_party_records_db()
+    ensure_live_albums_db()
 
     users_store = read_users_store()
     credentials_store = read_credentials_store()
