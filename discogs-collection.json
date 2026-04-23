@@ -1,7 +1,7 @@
 {
   "source": "Discogs public collection API",
   "profile": "InakiOG",
-  "updatedAt": "2026-04-22T17:50:48.966094+00:00",
+  "updatedAt": "2026-04-23T04:31:39.164031+00:00",
   "items": [
     {
       "title": "Four-Calendar Café",
@@ -148,38 +148,6 @@
         "Hey",
         "Silver",
         "Gouge Away"
-      ]
-    },
-    {
-      "title": "Doolittle",
-      "artist": "Pixies",
-      "releaseUrl": "https://www.discogs.com/release/2449546",
-      "artistUrl": "https://www.discogs.com/artist/231577",
-      "imageUrl": "https://i.discogs.com/GM3cEF_7hUvQfX4Pzh1RXeuer_oFyKDeO8mk5oZqn_o/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI0NDk1/NDYtMTQ4NTYxNDY3/OS02NTkxLmpwZWc.jpeg",
-      "imageAlt": "Doolittle cover",
-      "year": 2004,
-      "sourcePage": 1,
-      "rawText": "Vinyl (180 gram); Rock, Indie Rock",
-      "discogsId": 2449546,
-      "instanceId": 2137853387,
-      "dateAdded": "2026-04-21T22:23:03-07:00",
-      "rating": 0,
-      "tracks": [
-        "Debaser - 2:52",
-        "Tame - 1:55",
-        "Wave Of Mutilation - 2:04",
-        "I Bleed - 2:34",
-        "Here Comes Your Man - 3:21",
-        "Dead - 2:21",
-        "Monkey Gone To Heaven - 2:57",
-        "Mr. Grieves - 2:05",
-        "Crackity Jones - 1:24",
-        "La La Love You - 2:43",
-        "Number 13 Baby - 3:51",
-        "There Goes My Gun - 1:49",
-        "Hey - 3:31",
-        "Silver - 2:25",
-        "Gouge Away - 2:45"
       ]
     },
     {
@@ -415,40 +383,6 @@
         "Carry That Weight - 1:37",
         "The End - 2:20",
         "Her Majesty - 0:23"
-      ]
-    },
-    {
-      "title": "Abbey Road",
-      "artist": "The Beatles",
-      "releaseUrl": "https://www.discogs.com/release/14186441",
-      "artistUrl": "https://www.discogs.com/artist/82730",
-      "imageUrl": "https://i.discogs.com/goWfjpqUBW8Y0xrqJG_GFz3fCTHPSWeKLZAX1alAAzk/rs:fit/g:sm/q:90/h:600/w:592/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0MTg2/NDQxLTE1Njk0ODcx/NjEtNzMxNC5qcGVn.jpeg",
-      "imageAlt": "Abbey Road cover",
-      "year": 2019,
-      "sourcePage": 1,
-      "rawText": "Vinyl (Remix, 50th Anniversary Edition, Optimal Media Pressing, 180g); Rock, Pop Rock",
-      "discogsId": 14186441,
-      "instanceId": 2137841298,
-      "dateAdded": "2026-04-21T20:40:43-07:00",
-      "rating": 0,
-      "tracks": [
-        "Come Together",
-        "Something",
-        "Maxwell's Silver Hammer",
-        "Oh! Darling",
-        "Octopus's Garden",
-        "I Want You (She's So Heavy)",
-        "Here Comes The Sun",
-        "Because",
-        "You Never Give Me Your Money",
-        "Sun King",
-        "Mean Mr. Mustard",
-        "Polythene Pam",
-        "She Came In Through The Bathroom Window",
-        "Golden Slumbers",
-        "Carry That Weight",
-        "The End",
-        "Her Majesty"
       ]
     },
     {
@@ -1262,28 +1196,6 @@
       ]
     },
     {
-      "title": "Kind Of Blue",
-      "artist": "Miles Davis",
-      "releaseUrl": "https://www.discogs.com/release/14480820",
-      "artistUrl": "https://www.discogs.com/artist/23755",
-      "imageUrl": "https://i.discogs.com/zGtWEZrs9TVEP4Diqds4HYmC8BH-xsZ2MWjeUfgicfY/rs:fit/g:sm/q:90/h:600/w:591/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0NDgw/ODIwLTE1ODczOTI3/MDgtNjA1MC5qcGVn.jpeg",
-      "imageAlt": "Kind Of Blue cover",
-      "year": 2017,
-      "sourcePage": 1,
-      "rawText": "Vinyl (Blue); Jazz, Modal",
-      "discogsId": 14480820,
-      "instanceId": 2137852096,
-      "dateAdded": "2026-04-21T22:12:11-07:00",
-      "rating": 0,
-      "tracks": [
-        "So What - 8:56",
-        "Freddie Freeloader - 9:32",
-        "Blue In Green - 5:27",
-        "Flamenco Sketches - 9:32",
-        "All Blues - 11:34"
-      ]
-    },
-    {
       "title": "MTV Unplugged 1993",
       "artist": "Stone Temple Pilots",
       "releaseUrl": "https://www.discogs.com/release/20319061",
@@ -1306,35 +1218,6 @@
         "Sex Type Thing",
         "Big Empty",
         "Andy Warhol"
-      ]
-    },
-    {
-      "title": "Favourite Worst Nightmare",
-      "artist": "Arctic Monkeys",
-      "releaseUrl": "https://www.discogs.com/release/20924029",
-      "artistUrl": "https://www.discogs.com/artist/391170",
-      "imageUrl": "https://i.discogs.com/tALcPFPFH0iXClrj1P02H4vYGOS1gPEjbwpYrTFJhMo/rs:fit/g:sm/q:90/h:595/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIwOTI0/MDI5LTE3MzgyMDE5/ODUtMTIyNi5qcGVn.jpeg",
-      "imageAlt": "Favourite Worst Nightmare cover",
-      "year": 2013,
-      "sourcePage": 1,
-      "rawText": "Vinyl; Rock, Alternative Rock, Indie Rock",
-      "discogsId": 20924029,
-      "instanceId": 1938299244,
-      "dateAdded": "2025-02-18T21:06:45-08:00",
-      "rating": 0,
-      "tracks": [
-        "Brianstorm",
-        "Teddy Picker",
-        "D Is for Dangerous",
-        "Balaclava",
-        "Fluorescent Adolescent",
-        "Only Ones Who Know",
-        "Do Me a Favour",
-        "This House Is a Circus",
-        "If You Were There, Beware",
-        "The Bad Thing",
-        "Old Yellow Bricks",
-        "505"
       ]
     },
     {
@@ -1513,53 +1396,6 @@
         "Garden - 4:58",
         "Deep - 4:13",
         "Release - 9:03"
-      ]
-    },
-    {
-      "title": "The Very Best Of Electric Light Orchestra - All Over The World",
-      "artist": "Electric Light Orchestra",
-      "releaseUrl": "https://www.discogs.com/release/22200253",
-      "artistUrl": "https://www.discogs.com/artist/112154",
-      "imageUrl": "https://i.discogs.com/AAxlTsm8sYCwwuLx2V9oIYmpn-koXh3fN6K_atCd7TA/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIyMjAw/MjUzLTE2NDUxMzkx/NDAtNDQ3MS5qcGVn.jpeg",
-      "imageAlt": "The Very Best Of Electric Light Orchestra - All Over The World cover",
-      "year": 2016,
-      "sourcePage": 1,
-      "rawText": "Vinyl (x2, MPO Pressing, 180g); Rock, Pop, Prog Rock, Art Rock, Pop Rock",
-      "discogsId": 22200253,
-      "instanceId": 2046926058,
-      "dateAdded": "2025-08-01T18:23:19-07:00",
-      "rating": 0,
-      "tracks": [
-        "Mr. Blue Sky",
-        "Turn to Stone",
-        "Mr. Blue Sky (2012 Version)",
-        "Shine a Little Love",
-        "Don't Bring Me Down",
-        "Evil Woman",
-        "Telephone Line",
-        "Can't Get It out of My Head",
-        "It's Over",
-        "Roll Over Beethoven",
-        "Sweet Talkin' Woman",
-        "Showdown",
-        "Last Train to London",
-        "Can't Get It Out of My Head (7\" Edit)",
-        "Livin' Thing",
-        "Strange Magic",
-        "Showdown (2012 Version)",
-        "The Diary of Horace Wimp",
-        "Confusion",
-        "Do Ya",
-        "All Over the World",
-        "Hold On Tight",
-        "All Over The World (feat. Alex Vargas)",
-        "Xanadu (feat. Electric Light Orchestra)",
-        "Wild West Hero",
-        "Ma-Ma-Ma Belle",
-        "Xanadu (New Version)",
-        "Rockaria!",
-        "Alright",
-        "Rock and Roll Is King"
       ]
     },
     {
@@ -1849,33 +1685,6 @@
         "In the Garage",
         "Holiday",
         "Only in Dreams"
-      ]
-    },
-    {
-      "title": "Weezer",
-      "artist": "Weezer",
-      "releaseUrl": "https://www.discogs.com/release/9258415",
-      "artistUrl": "https://www.discogs.com/artist/105730",
-      "imageUrl": "https://i.discogs.com/l7-MDxFSPLdEDEbjJ64CpvtVUT4iT-H7jMiM_ERbQBU/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkyNTg0/MTUtMTQ5MDk2Mzk4/NC05ODUwLmpwZWc.jpeg",
-      "imageAlt": "Weezer cover",
-      "year": 2016,
-      "sourcePage": 1,
-      "rawText": "Vinyl; Rock, Pop, Alternative Rock, Power Pop",
-      "discogsId": 9258415,
-      "instanceId": 2137766514,
-      "dateAdded": "2026-04-21T14:19:42-07:00",
-      "rating": 0,
-      "tracks": [
-        "Don't Let Go",
-        "Photograph",
-        "Hash Pipe",
-        "Island In The Sun",
-        "Crab",
-        "Knock-Down Drag-Out",
-        "Smile",
-        "Simple Pages",
-        "Glorious Day",
-        "O Girlfriend"
       ]
     },
     {
@@ -2877,7 +2686,7 @@
       "imageUrl": "https://i.discogs.com/O8cbeKl3X9vksRehHFiNJ8Ak0r-n8ntYe0eguyo7FrY/rs:fit/g:sm/q:90/h:580/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyNzcw/NjIwLTE1NDE2MTMy/NzgtMjgyMy5qcGVn.jpeg",
       "imageAlt": "Gorillaz cover",
       "year": 2013,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "CD; Electronic, Hip Hop, Rock, Leftfield, Trip Hop, Lo-Fi, Experimental, UK Garage, Dub, Pop Rap, Grunge",
       "discogsId": 12770620,
       "instanceId": 1884986685,
@@ -2911,7 +2720,7 @@
       "imageUrl": "https://i.discogs.com/ncLvpYMcgfHsF-umTsEjxSo9U4o5cm8QKNsxLQYXvqw/rs:fit/g:sm/q:90/h:501/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwMzI1/OTE5LTE3MTM5MTUx/ODAtNTE5Mi5qcGVn.jpeg",
       "imageAlt": "The Singles Collection 2001-2011 cover",
       "year": null,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "CD; Hip Hop, Rock, Alternative Rock, Lo-Fi, Trip Hop, Experimental",
       "discogsId": 30325919,
       "instanceId": 1884987420,
@@ -2943,7 +2752,7 @@
       "imageUrl": "https://i.discogs.com/BySi07ON0tezzUi2DVSM1l8-Gerh8OfAmz75T0mJYUg/rs:fit/g:sm/q:90/h:550/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyNjM1/Nzc2LTE1Mzk4ODY1/MjMtOTc5NC5qcGVn.jpeg",
       "imageAlt": "Plastic Beach cover",
       "year": 2015,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "CD; Electronic, Hip Hop, Rock, Leftfield, Electro, Trip Hop",
       "discogsId": 12635776,
       "instanceId": 1884988752,
@@ -2976,7 +2785,7 @@
       "imageUrl": "https://i.discogs.com/_AouFMVA1qRdEBr7eJg9llGwyHbH7vH6AFql8aAch-4/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIzMzg5/MDA3LTE2OTg0Njk2/ODYtNjk1My5qcGVn.jpeg",
       "imageAlt": "Skinty Fia cover",
       "year": 2022,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "Vinyl; Rock, Goth Rock, Post-Punk, Alternative Rock",
       "discogsId": 23389007,
       "instanceId": 2137846197,
@@ -3003,7 +2812,7 @@
       "imageUrl": "https://i.discogs.com/N6QlwUaYiEF08cdfJwlx0bJ4H0rd2hhb_tafajrV85M/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0ODgx/MTAyLTE3NzIzOTk0/NTMtMzI3OC5qcGVn.jpeg",
       "imageAlt": "Album De Coleccion Homenaje A Pedro Infante cover",
       "year": 1972,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "Vinyl (x4); Latin, Folk, World, & Country, Mariachi, Ranchera",
       "discogsId": 14881102,
       "instanceId": 1884983106,
@@ -3068,7 +2877,7 @@
       "imageUrl": "https://i.discogs.com/LzpslJ_xBF13zn0hAGS35kSBXoi0dmB9fUExJZmaylg/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg1MzQ0/NDgtMTQ4MjYzMjEw/MC04MTkyLmpwZWc.jpeg",
       "imageAlt": "Little Miss Sunshine (Original Motion Picture Soundtrack) cover",
       "year": 2015,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "Vinyl (Yellow Translucent); Stage & Screen, Soundtrack",
       "discogsId": 8534448,
       "instanceId": 2137851793,
@@ -3099,7 +2908,7 @@
       "imageUrl": "https://i.discogs.com/T3dHh5EMgqD8zKGg2Viern-Oaba7xj89tAj76PXhOTw/rs:fit/g:sm/q:90/h:598/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk0MzE3/MDUtMTQ4MDQ1OTcw/NS05NTA2LmpwZWc.jpeg",
       "imageAlt": "Animals cover",
       "year": 2016,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "Vinyl (Gatefold, 180 Gram, \"17203\"); Rock, Prog Rock, Psychedelic Rock, Classic Rock",
       "discogsId": 9431705,
       "instanceId": 2137853286,
@@ -3121,7 +2930,7 @@
       "imageUrl": "https://i.discogs.com/o5B1ExlTGbrs0UC8BkCdSVt4XIOhxphrKQpDoiiZJAE/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg5NTc3/MjktMTQ3NzIzNzMy/Ni04Nzg3LmpwZWc.jpeg",
       "imageAlt": "The Wall cover",
       "year": 2016,
-      "sourcePage": 2,
+      "sourcePage": 1,
       "rawText": "Vinyl (x2, 180 Gram, Gatefold); Rock, Art Rock, Prog Rock",
       "discogsId": 8957729,
       "instanceId": 2137853338,
@@ -4306,6 +4115,36 @@
       ]
     },
     {
+      "title": "Siamese Dream",
+      "artist": "The Smashing Pumpkins",
+      "releaseUrl": "https://www.discogs.com/release/3255473",
+      "artistUrl": "https://www.discogs.com/artist/28970",
+      "imageUrl": "https://i.discogs.com/EofuWUwBWnBSYy-_Ss9jolzVOE6YBzXL5YcNOqvQ3L0/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNTU0/NzMtMTUxODgyNzk3/MS0xOTg3LmpwZWc.jpeg",
+      "imageAlt": "Siamese Dream cover",
+      "year": 2011,
+      "sourcePage": 2,
+      "rawText": "Vinyl (x2, 180 Gram, Gatefold); Rock, Alternative Rock",
+      "discogsId": 3255473,
+      "instanceId": 2138161095,
+      "dateAdded": "2026-04-22T20:54:50-07:00",
+      "rating": 0,
+      "tracks": [
+        "Cherub Rock",
+        "Quiet",
+        "Today",
+        "Hummer",
+        "Rocket",
+        "Disarm",
+        "Soma",
+        "Geek U.S.A.",
+        "Mayonaise",
+        "Spaceboy",
+        "Silverfuck",
+        "Sweet Sweet",
+        "Luna"
+      ]
+    },
+    {
       "title": "TRON: El Legado (Soundtrack Original)",
       "artist": "Daft Punk",
       "releaseUrl": "https://www.discogs.com/release/21098977",
@@ -4749,5 +4588,5 @@
       ]
     }
   ],
-  "totalItems": 154
+  "totalItems": 149
 }

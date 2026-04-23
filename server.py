@@ -619,10 +619,6 @@ def reconcile_auth_stores(users_store, credentials_store):
         if not isinstance(raw_profile, dict):
             continue
 
-        password = read_plaintext_password(credentials_store.get(user_key))
-        if not password:
-            continue
-
         sanitized_profile = sanitize_user_profile(raw_profile)
         if not sanitized_profile:
             continue
@@ -641,15 +637,17 @@ def reconcile_auth_stores(users_store, credentials_store):
             "accountName": "usuario"
         }
 
-        raw_credentials = credentials_store.get(user_key) if isinstance(credentials_store.get(user_key), dict) else {}
-        normalized_credentials[user_key] = {
-            "name": str(raw_credentials.get("name", profile_name)).strip() or profile_name,
-            "password": password,
-            "createdAt": str(raw_credentials.get("createdAt", profile_created_at)).strip() or profile_created_at,
-            "sessionToken": str(raw_credentials.get("sessionToken", "")).strip(),
-            "sessionCreatedAt": str(raw_credentials.get("sessionCreatedAt", "")).strip(),
-            "sessionLastSeenAt": str(raw_credentials.get("sessionLastSeenAt", "")).strip()
-        }
+        password = read_plaintext_password(credentials_store.get(user_key))
+        if password:
+            raw_credentials = credentials_store.get(user_key) if isinstance(credentials_store.get(user_key), dict) else {}
+            normalized_credentials[user_key] = {
+                "name": str(raw_credentials.get("name", profile_name)).strip() or profile_name,
+                "password": password,
+                "createdAt": str(raw_credentials.get("createdAt", profile_created_at)).strip() or profile_created_at,
+                "sessionToken": str(raw_credentials.get("sessionToken", "")).strip(),
+                "sessionCreatedAt": str(raw_credentials.get("sessionCreatedAt", "")).strip(),
+                "sessionLastSeenAt": str(raw_credentials.get("sessionLastSeenAt", "")).strip()
+            }
 
     admin_profile = normalized_users.get(ADMIN_USER_KEY)
     if not isinstance(admin_profile, dict):

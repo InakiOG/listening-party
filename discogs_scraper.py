@@ -358,7 +358,7 @@ def fetch_tracks_from_itunes(title, artist):
     if not term:
         return []
 
-    query = urlencode({"term": term, "entity": "song", "limit": "50"})
+    query = urlencode({"term": term, "entity": "song", "limit": "200"})
     request = Request(
         f"https://itunes.apple.com/search?{query}",
         headers={"User-Agent": USER_AGENT, "Accept": "application/json"}
@@ -384,7 +384,7 @@ def fetch_tracks_from_itunes(title, artist):
     if not matching:
         matching = results
 
-    matching.sort(key=lambda r: int(r.get("trackNumber") or 0))
+    matching.sort(key=lambda r: (int(r.get("discNumber") or 1), int(r.get("trackNumber") or 0)))
 
     seen = set()
     tracks = []
