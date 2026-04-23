@@ -1113,6 +1113,117 @@
         margin: 0.1rem 0 0;
       }
 
+      .review-bubble-hearts {
+        width: 100%;
+        font-size: 0.72rem;
+        line-height: 1.2;
+        margin-top: 0.2rem;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.05rem;
+      }
+
+      .review-hearts-more {
+        font-size: 0.6rem;
+        color: #94a3b8;
+        margin-left: 0.1rem;
+      }
+
+      .review-likes-section {
+        display: none;
+        align-items: center;
+        gap: 0.28rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .review-bubble.expanded .review-likes-section {
+        display: flex;
+      }
+
+      .like-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.05rem 0.15rem;
+        font-size: 1.05rem;
+        line-height: 1;
+        touch-action: manipulation;
+        transition: transform 0.12s;
+        user-select: none;
+        flex-shrink: 0;
+      }
+
+      .like-btn:active {
+        transform: scale(1.35);
+      }
+
+      .liker-avatar {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        flex-shrink: 0;
+      }
+
+      .liker-initial {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.55);
+        color: #e2e8f0;
+        font-size: 0.58rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        flex-shrink: 0;
+      }
+
+      @keyframes floatHeart {
+        0%   { opacity: 1; transform: translateY(0) scale(1); }
+        40%  { opacity: 0.85; transform: translateY(-55px) scale(1.4); }
+        100% { opacity: 0; transform: translateY(-120px) scale(0.75); }
+      }
+
+      .floating-heart {
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        font-size: 2.2rem;
+        animation: floatHeart 1.9s ease-out forwards;
+      }
+
+      .party-review-likers {
+        display: flex;
+        gap: 0.2rem;
+        flex-wrap: wrap;
+        margin-top: 0.25rem;
+      }
+
+      .party-liker-avatar {
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+      }
+
+      .party-liker-initial {
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.55);
+        color: #e2e8f0;
+        font-size: 0.52rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
       @keyframes floatBubble {
         0% {
           transform: translate(0, 0) rotate(-1deg);

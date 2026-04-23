@@ -1755,10 +1755,20 @@ function renderPartyRecords(parties) {
           ? `${albumTitle} — ${songTitle}`
           : albumTitle;
         const textMarkup = text ? `<p class="party-review-text">${text}</p>` : "";
+        const likes = Array.isArray(r.likes) ? r.likes : [];
+        const likersMarkup = likes.length
+          ? `<div class="party-review-likers">${likes.map((l) => {
+              const safeName = escapeHtml(String(l.name || "?"));
+              return l.photoDataUrl
+                ? `<img class="party-liker-avatar" src="${escapeHtml(l.photoDataUrl)}" alt="${safeName}" title="${safeName}" loading="lazy" />`
+                : `<span class="party-liker-initial" title="${safeName}">${escapeHtml(String(l.name || "?")[0].toUpperCase())}</span>`;
+            }).join("")}</div>`
+          : "";
         return `
           <li class="party-review-item">
             <p class="party-review-meta">${reviewer} · ${target} · ${rating}/5</p>
             ${textMarkup}
+            ${likersMarkup}
           </li>`;
       }).join("");
 
@@ -2930,6 +2940,31 @@ async function enrichReviewsWithPhotos(reviews) {
   return enriched;
 }
 
+async function enrichLikesInReviews(reviews) {
+  const toFetch = new Set();
+  for (const r of reviews) {
+    for (const l of (Array.isArray(r.likes) ? r.likes : [])) {
+      if (!l.photoDataUrl && l.name) toFetch.add(l.name);
+    }
+  }
+
+  if (!toFetch.size) return reviews;
+
+  const photoMap = new Map();
+  await Promise.all([...toFetch].map(async (name) => {
+    const photo = await getUserPhotoByName(name);
+    if (photo) photoMap.set(name.toLowerCase(), photo);
+  }));
+
+  return reviews.map((r) => ({
+    ...r,
+    likes: (Array.isArray(r.likes) ? r.likes : []).map((l) => ({
+      ...l,
+      photoDataUrl: l.photoDataUrl || photoMap.get((l.name || "").toLowerCase()) || ""
+    }))
+  }));
+}
+
 async function fetchCurrentSongReviews() {
   const songKey = getSongKey(currentNowPlaying);
   const albumKey = getAlbumReviewKey(currentNowPlaying);
@@ -2947,17 +2982,108 @@ async function fetchCurrentSongReviews() {
     ]);
 
     const reviewItems = [
-      ...songReviews.map((review) => ({ ...review, scope: "song" })),
-      ...albumReviews.map((review) => ({ ...review, scope: "album" }))
+      ...songReviews.map((review) => ({ ...review, scope: "song", _reviewKey: songKey })),
+      ...albumReviews.map((review) => ({ ...review, scope: "album", _reviewKey: albumKey }))
     ];
 
-    const hydratedReviewItems = await enrichReviewsWithPhotos(reviewItems);
+    const hydratedReviewItems = await enrichLikesInReviews(await enrichReviewsWithPhotos(reviewItems));
+    const reviewGroups = groupReviewsByReviewer(hydratedReviewItems);
+    const groupsWithNewLikes = checkForNewLikes(reviewGroups);
 
     renderReviewBubbles(hydratedReviewItems, `${songKey}|${albumKey}|${reviewScope}`);
+
+    if (groupsWithNewLikes.length > 0) {
+      requestAnimationFrame(() => {
+        for (const group of groupsWithNewLikes) {
+          spawnHeartOnBubble(group.reviewerKey);
+        }
+      });
+    }
   } catch {
     renderReviewBubbles([], `${songKey}|${albumKey}|${reviewScope}`);
     showReviewStatus("No se pudieron cargar las reseñas.");
   }
+}
+
+async function apiLikeReview(songKey, reviewerName, likerName, likerPhotoDataUrl) {
+  const res = await fetch("/api/reviews/like", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ songKey, reviewerName, likerName, likerPhotoDataUrl })
+  });
+  if (!res.ok) throw new Error("Like failed");
+  return res.json();
+}
+
+async function handleLikeReview(reviewKey, reviewerName, likeBtn) {
+  const userName = sessionState.currentUser?.name;
+  if (!userName || !reviewKey || !reviewerName) return;
+
+  const wasLiked = likeBtn.classList.contains("liked");
+  likeBtn.classList.toggle("liked", !wasLiked);
+  likeBtn.textContent = !wasLiked ? "❤️" : "🤍";
+
+  try {
+    await apiLikeReview(reviewKey, reviewerName, userName, String(sessionState.currentUser?.photoDataUrl || "").trim());
+  } catch {
+    likeBtn.classList.toggle("liked", wasLiked);
+    likeBtn.textContent = wasLiked ? "❤️" : "🤍";
+  }
+}
+
+function spawnFloatingHeart() {
+  const heart = document.createElement("div");
+  heart.className = "floating-heart";
+  heart.textContent = "❤️";
+  heart.style.left = `${15 + Math.random() * 70}vw`;
+  heart.style.bottom = `${10 + Math.random() * 35}vh`;
+  document.body.appendChild(heart);
+  heart.addEventListener("animationend", () => heart.remove(), { once: true });
+}
+
+function spawnHeartOnBubble(reviewerKey) {
+  const bubble = document.querySelector(`[data-review-id="${encodeURIComponent(reviewerKey)}"]`);
+  if (!bubble) return;
+  const rect = bubble.getBoundingClientRect();
+  const heart = document.createElement("div");
+  heart.className = "floating-heart";
+  heart.textContent = "❤️";
+  heart.style.left = `${rect.left + rect.width / 2 - 14}px`;
+  heart.style.top = `${rect.top - 4}px`;
+  document.body.appendChild(heart);
+  heart.addEventListener("animationend", () => heart.remove(), { once: true });
+}
+
+const knownLikeMap = new Map();
+
+function checkForNewLikes(reviewGroups) {
+  const currentUserKey = getReviewerKey(sessionState.currentUser?.name || "");
+  const groupsWithNewLikes = [];
+
+  for (const group of reviewGroups) {
+    const known = knownLikeMap.get(group.reviewerKey) || new Set();
+    let hasNew = false;
+
+    for (const liker of group.likes) {
+      const likerKey = getReviewerKey(liker.name || "");
+      if (likerKey && !known.has(likerKey)) {
+        known.add(likerKey);
+        hasNew = true;
+      }
+    }
+
+    knownLikeMap.set(group.reviewerKey, known);
+
+    if (hasNew) {
+      groupsWithNewLikes.push(group);
+      if (currentUserKey && getReviewerKey(group.displayName) === currentUserKey) {
+        spawnFloatingHeart();
+        setTimeout(spawnFloatingHeart, 220);
+      }
+    }
+  }
+
+  return groupsWithNewLikes;
 }
 
 function startReviewPolling() {
@@ -3013,17 +3139,21 @@ function groupReviewsByReviewer(reviews) {
         reviewerKey: groupKey,
         scope,
         displayName: safeName,
+        reviewApiKey: review._reviewKey || "",
         reviews: []
       });
     }
 
-    grouped.get(groupKey).reviews.push({
+    const grp = grouped.get(groupKey);
+    if (!grp.reviewApiKey && review._reviewKey) grp.reviewApiKey = review._reviewKey;
+    grp.reviews.push({
       name: safeName,
       text: review.text || "",
       rating: Number(review.rating || 0),
       createdAt: review.createdAt || "",
       scope,
-      photoDataUrl: String(review.photoDataUrl || "").trim()
+      photoDataUrl: String(review.photoDataUrl || "").trim(),
+      likes: Array.isArray(review.likes) ? review.likes : []
     });
   });
 
@@ -3039,21 +3169,36 @@ function groupReviewsByReviewer(reviews) {
     const total = sortedReviews.reduce((sum, item) => sum + Number(item.rating || 0), 0);
     const average = sortedReviews.length ? total / sortedReviews.length : 0;
 
+    const allLikes = [];
+    const seenLikers = new Set();
+    for (const r of sortedReviews) {
+      for (const l of (Array.isArray(r.likes) ? r.likes : [])) {
+        const key = String(l.name || "").toLowerCase();
+        if (key && !seenLikers.has(key)) {
+          seenLikers.add(key);
+          allLikes.push(l);
+        }
+      }
+    }
+
     return {
       reviewerKey: group.reviewerKey,
+      reviewApiKey: group.reviewApiKey || "",
       scope: group.scope,
       displayName: group.displayName,
       averageRating: average,
       avatarUrl: sortedReviews.find((entry) => entry.photoDataUrl)?.photoDataUrl || "",
-      reviews: sortedReviews
+      reviews: sortedReviews,
+      likes: allLikes
     };
   });
 }
 
 function renderReviewBubbles(reviews, signature = "") {
   const bubbleLayer = document.getElementById("bubble-layer");
+  const currentUserKey = getReviewerKey(sessionState.currentUser?.name || "");
   const reviewsSignature = JSON.stringify(reviews);
-  const combinedSignature = `${signature}::${reviewsSignature}`;
+  const combinedSignature = `${signature}::${reviewsSignature}::${currentUserKey}`;
 
   if (!bubbleLayer) {
     return;
@@ -3073,7 +3218,7 @@ function renderReviewBubbles(reviews, signature = "") {
   const reviewGroups = groupReviewsByReviewer(reviews).slice(-8);
 
   bubbleLayer.innerHTML = reviewGroups
-    .map((group, index) => {
+    .map((group) => {
       const id = group.reviewerKey;
       const encodedId = encodeURIComponent(id);
       const savedState = bubbleUiState.get(id);
@@ -3114,12 +3259,37 @@ function renderReviewBubbles(reviews, signature = "") {
         })
         .join("");
 
+      const isOwnReview = getReviewerKey(group.displayName) === currentUserKey;
+      const alreadyLiked = !isOwnReview && group.likes.some((l) => getReviewerKey(l.name || "") === currentUserKey);
+
+      const heartsStrip = group.likes.length
+        ? `<div class="review-bubble-hearts">${group.likes.slice(0, 7).map(() => "❤️").join("")}${group.likes.length > 7 ? `<span class="review-hearts-more">+${group.likes.length - 7}</span>` : ""}</div>`
+        : "";
+
+      const likerPhotosMarkup = group.likes.map((l) => {
+        const safeLikerName = escapeHtml(String(l.name || "?"));
+        return l.photoDataUrl
+          ? `<img class="liker-avatar" src="${escapeHtml(l.photoDataUrl)}" alt="${safeLikerName}" title="${safeLikerName}" loading="lazy" />`
+          : `<span class="liker-initial" title="${safeLikerName}">${escapeHtml(String(l.name || "?")[0].toUpperCase())}</span>`;
+      }).join("");
+      const heartIcon = alreadyLiked ? "❤️" : "🤍";
+      const likeBtnMarkup = !isOwnReview && currentUserKey
+        ? `<button class="like-btn${alreadyLiked ? " liked" : ""}" aria-label="Me gusta">${heartIcon}</button>`
+        : "";
+      const likesSectionMarkup = `<div class="review-likes-section">${likeBtnMarkup}${likerPhotosMarkup}</div>`;
+
       return `
-        <article class="review-bubble ${bubbleClass} ${expanded ? "expanded" : ""}" data-review-id="${encodedId}" style="left:0;top:0;">
+        <article class="review-bubble ${bubbleClass} ${expanded ? "expanded" : ""}"
+          data-review-id="${encodedId}"
+          data-review-key="${encodeURIComponent(group.reviewApiKey || "")}"
+          data-reviewer-name="${encodeURIComponent(group.displayName)}"
+          style="left:0;top:0;">
           <div class="review-bubble-summary">
             ${headerMarkup}
+            ${heartsStrip}
           </div>
           <ol class="review-bubble-text review-history-list">${historyMarkup}</ol>
+          ${likesSectionMarkup}
         </article>
       `;
     })
@@ -3269,7 +3439,19 @@ function setupBubbleInteractions() {
     return;
   }
 
+  bubbleLayer.addEventListener("pointerup", (event) => {
+    const likeBtn = event.target.closest(".like-btn");
+    if (!likeBtn) return;
+    const bubble = likeBtn.closest(".review-bubble");
+    if (!bubble) return;
+    const reviewKey = bubble.dataset.reviewKey ? decodeURIComponent(bubble.dataset.reviewKey) : "";
+    const reviewerName = bubble.dataset.reviewerName ? decodeURIComponent(bubble.dataset.reviewerName) : "";
+    void handleLikeReview(reviewKey, reviewerName, likeBtn);
+  });
+
   bubbleLayer.addEventListener("pointerdown", (event) => {
+    if (event.target.closest(".like-btn")) return;
+
     const bubble = event.target.closest(".review-bubble");
 
     if (!bubble) {

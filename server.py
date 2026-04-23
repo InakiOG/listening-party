@@ -220,6 +220,12 @@ def collect_reviews_for_albums(reviews_store, albums_played, review_date_filter=
             review_date_key = parse_review_date_key(r.get("createdAt", ""))
             if review_date_key and review_date_key != review_date_filter:
                 continue
+            raw_likes = r.get("likes") or []
+            likes = [
+                {"name": str(l.get("name", "")).strip(), "photoDataUrl": str(l.get("photoDataUrl", "")).strip()}
+                for l in raw_likes
+                if isinstance(l, dict) and str(l.get("name", "")).strip()
+            ]
             reviews.append({
                 "reviewer": str(r.get("name", "")).strip(),
                 "albumTitle": album_title,
@@ -227,7 +233,8 @@ def collect_reviews_for_albums(reviews_store, albums_played, review_date_filter=
                 "rating": float(r.get("rating", 0) or 0),
                 "text": str(r.get("text", "")).strip(),
                 "scope": "album" if is_album_key else "song",
-                "createdAt": str(r.get("createdAt", "")).strip()
+                "createdAt": str(r.get("createdAt", "")).strip(),
+                "likes": likes
             })
 
     return reviews
@@ -997,7 +1004,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             parties = records.get("parties", [])
 
             if not is_admin:
-                parties = [p for p in parties if user_name in p.get("attendees", [])]
+                parties = [
+                    p for p in parties
+                    if user_name in p.get("attendees", []) or user_name in p.get("listeners", [])
+                ]
 
             parties = sorted(
                 parties,
@@ -1615,6 +1625,81 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     write_live_albums_store(store)
 
             self._send_json({"album": safe_album})
+            return
+
+        if parsed.path == "/api/reviews/like":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            song_key = str(payload.get("songKey", "")).strip()
+            reviewer_name = str(payload.get("reviewerName", "")).strip().lower()
+            liker_name = str(payload.get("likerName", "")).strip()
+            liker_photo = str(payload.get("likerPhotoDataUrl", "")).strip()
+
+            if not song_key or not reviewer_name or not liker_name:
+                self._send_json({"error": "songKey, reviewerName, and likerName are required"}, status_code=400)
+                return
+
+            with REVIEWS_LOCK:
+                store = read_reviews_store()
+                review_list = store.get(song_key)
+                if not isinstance(review_list, list):
+                    self._send_json({"error": "Review not found"}, status_code=404)
+                    return
+
+                target_idx = next(
+                    (i for i in reversed(range(len(review_list)))
+                     if isinstance(review_list[i], dict)
+                     and str(review_list[i].get("name", "")).strip().lower() == reviewer_name),
+                    -1
+                )
+                if target_idx < 0:
+                    self._send_json({"error": "Review not found"}, status_code=404)
+                    return
+
+                review = review_list[target_idx]
+                likes = review.get("likes", [])
+                if not isinstance(likes, list):
+                    likes = []
+
+                liker_key = liker_name.lower()
+                existing_idx = next(
+                    (i for i, l in enumerate(likes)
+                     if isinstance(l, dict) and str(l.get("name", "")).strip().lower() == liker_key),
+                    -1
+                )
+                if existing_idx >= 0:
+                    likes.pop(existing_idx)
+                    liked = False
+                else:
+                    likes.append({"name": liker_name, "photoDataUrl": liker_photo})
+                    liked = True
+
+                review["likes"] = likes
+                review_list[target_idx] = review
+                store[song_key] = review_list
+                write_reviews_store(store)
+
+                if _current_session and _current_session.get("albumsPlayed"):
+                    users_store = read_users_store()
+                    credentials_store = read_credentials_store()
+                    users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                    write_users_store(users_store)
+                    write_credentials_store(credentials_store)
+                    upsert_party_record_snapshot(
+                        _current_session,
+                        users_store,
+                        credentials_store,
+                        store,
+                        finalized=False
+                    )
+
+            self._send_json({"liked": liked, "likes": likes})
             return
 
         if parsed.path != "/api/reviews":
