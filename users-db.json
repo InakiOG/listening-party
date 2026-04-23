@@ -1,0 +1,28 @@
+{
+  "i\u00f1aki": {
+    "name": "I\u00f1aki",
+    "photoDataUrl": "",
+    "description": "",
+    "instagramUsername": "",
+    "spotifyUrl": "",
+    "topAlbums": [
+      {
+        "title": "",
+        "artist": "",
+        "coverUrl": ""
+      },
+      {
+        "title": "",
+        "artist": "",
+        "coverUrl": ""
+      },
+      {
+        "title": "",
+        "artist": "",
+        "coverUrl": ""
+      }
+    ],
+    "createdAt": "2026-04-22T20:43:37.909874+00:00",
+    "accountName": "administrador"
+  }
+}

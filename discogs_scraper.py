@@ -205,17 +205,19 @@ def update_collection_cache(max_pages=100):
     pagination = first_page.get("pagination") if isinstance(first_page, dict) else {}
     total_pages = int(pagination.get("pages") or 1)
     total_pages = min(total_pages, max_pages)
+    fetched_all_pages = True
 
     for page_number in range(1, total_pages + 1):
         if page_number == 1:
-            payload = first_page
+            page_data = first_page
         else:
             try:
-                payload = fetch_collection_page(page_number)
+                page_data = fetch_collection_page(page_number)
             except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+                fetched_all_pages = False
                 break
 
-        releases = payload.get("releases") if isinstance(payload, dict) else []
+        releases = page_data.get("releases") if isinstance(page_data, dict) else []
         if not isinstance(releases, list) or not releases:
             break
 
@@ -257,6 +259,23 @@ def update_collection_cache(max_pages=100):
                 mapped_release["tracks"] = []
 
             collected_items.append(mapped_release)
+
+    # If we couldn't fetch all pages, preserve existing items from unfetched pages
+    # so a network hiccup doesn't falsely prune albums still in the collection.
+    if not fetched_all_pages and existing_items_index:
+        for existing_id, existing_item in existing_items_index.items():
+            if existing_id not in {_normalize_release_id(rid) for rid in seen_release_ids}:
+                collected_items.append(existing_item)
+
+    # Log albums that were removed from the Discogs profile.
+    if existing_items_index:
+        fetched_ids = {_normalize_release_id(rid) for rid in seen_release_ids}
+        for existing_id, existing_item in existing_items_index.items():
+            if existing_id not in fetched_ids:
+                title = existing_item.get("title", "Unknown")
+                artist = existing_item.get("artist", "")
+                label = f"{title} — {artist}" if artist else title
+                print(f"  Pruned (no longer in Discogs collection): {label}")
 
     payload = {
         "source": "Discogs public collection API",
