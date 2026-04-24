@@ -1903,6 +1903,59 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             "reviews": updated_reviews
         })
 
+    def do_PATCH(self):
+        parsed = urlparse(self.path)
+
+        if parsed.path == "/api/live-albums":
+            cookies = parse_cookie_header(self.headers.get("Cookie", ""))
+            session_token = cookies.get(SESSION_COOKIE_NAME, "")
+
+            with REVIEWS_LOCK:
+                credentials_store = read_credentials_store()
+                caller_key = find_user_key_by_session_token(credentials_store, session_token)
+                users_store = read_users_store()
+                caller_profile = sanitize_user_profile(users_store.get(caller_key)) if caller_key else None
+
+            if not caller_profile or caller_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                self._send_json({"error": "admin only"}, status_code=403)
+                return
+
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            album_id = str(payload.get("id", "")).strip()
+            tracks = payload.get("tracks", [])
+
+            if not album_id:
+                self._send_json({"error": "id is required"}, status_code=400)
+                return
+
+            if not isinstance(tracks, list):
+                self._send_json({"error": "tracks must be an array"}, status_code=400)
+                return
+
+            safe_tracks = [str(t).strip() for t in tracks if str(t).strip()]
+
+            with LIVE_ALBUMS_LOCK:
+                store = read_live_albums_store()
+                album = next((a for a in store["albums"] if a.get("id") == album_id), None)
+                if not album:
+                    self._send_json({"error": "album not found"}, status_code=404)
+                    return
+                album["tracks"] = safe_tracks
+                write_live_albums_store(store)
+
+            self._send_json({"ok": True})
+            return
+
+        self._send_json({"error": "not found"}, status_code=404)
+
 
 def run_server(port=8000, refresh_discogs=False):
     clear_now_playing()

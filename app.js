@@ -1961,6 +1961,16 @@ async function apiAddLiveAlbum(album) {
   return res.json();
 }
 
+async function apiUpdateLiveAlbumTracks(id, tracks) {
+  const res = await fetch("/api/live-albums", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, tracks })
+  });
+  if (!res.ok) throw new Error("No se pudo actualizar las canciones.");
+  return res.json();
+}
+
 async function apiGetUsersBoard() {
   const res = await fetch("/api/admin/users");
   if (res.status === 403) throw new Error("Solo el administrador puede ver esto.");
@@ -2574,134 +2584,141 @@ function animateGroupExpand(container, pileRect) {
   });
 }
 
+async function handleAlbumContainerClick(event, container) {
+  const listenAlbumButton = event.target.closest(".listen-album-button");
+  if (listenAlbumButton) {
+    if (!isAdminUser()) {
+      return;
+    }
+
+    const album = getAlbumById(listenAlbumButton.dataset.albumId || "");
+    if (!album) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Quieres iniciar currently listening de este album?\n${album.title}`);
+    if (!confirmed) {
+      return;
+    }
+
+    const sourceImg = container.querySelector(".album-card.expanded .cover-button img");
+    animateCoverToNowPlaying(sourceImg);
+
+    try {
+      await startAlbumListening(album);
+    } catch (error) {
+      showReviewStatus(error instanceof Error ? error.message : "No se pudo iniciar la escucha del album.");
+    }
+    return;
+  }
+
+  const trackPlayButton = event.target.closest(".track-play-button");
+  if (trackPlayButton) {
+    if (!isAdminUser()) {
+      return;
+    }
+
+    const album = getAlbumById(trackPlayButton.dataset.albumId || "");
+    const trackIndex = Number(trackPlayButton.dataset.trackIndex || "-1");
+    const songTitle = album?.tracks?.[trackIndex] || "";
+
+    if (!album || !songTitle) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Quieres iniciar currently listening de esta cancion?\n${album.title} - ${songTitle}`);
+    if (!confirmed) {
+      return;
+    }
+
+    const sourceImgTrack = container.querySelector(".album-card.expanded .cover-button img");
+    animateCoverToNowPlaying(sourceImgTrack);
+
+    try {
+      await startSongListening(album, songTitle);
+    } catch (error) {
+      showReviewStatus(error instanceof Error ? error.message : "No se pudo iniciar la escucha de la cancion.");
+    }
+    return;
+  }
+
+  const pileButton = event.target.closest(".group-pile-covers");
+  if (pileButton) {
+    const key = pileButton.dataset.groupKey || "";
+    const pileRect = pileButton.getBoundingClientRect();
+    appState.expandedGroupKey = key;
+    appState.expandedAlbumId = null;
+    renderAlbums();
+    animateGroupExpand(container, pileRect);
+    const expandedGroup = container.querySelector(".group-expanded");
+    if (expandedGroup && typeof expandedGroup.scrollIntoView === "function") {
+      expandedGroup.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    return;
+  }
+
+  const groupHeading = event.target.closest(".group-expanded-heading");
+  if (groupHeading) {
+    appState.expandedGroupKey = null;
+    appState.expandedAlbumId = null;
+    renderAlbums();
+    return;
+  }
+
+  const trigger = event.target.closest(".cover-button");
+
+  if (!trigger) {
+    return;
+  }
+
+  const albumId = trigger.dataset.albumId;
+  const isClosing = appState.expandedAlbumId === albumId;
+
+  if (isClosing) {
+    const expandedCard = container.querySelector(".album-card.expanded");
+    if (expandedCard) {
+      expandedCard.classList.add("album-closing");
+      expandedCard.classList.remove("expanded");
+      window.setTimeout(() => {
+        appState.expandedAlbumId = null;
+        renderAlbums();
+      }, 260);
+    } else {
+      appState.expandedAlbumId = null;
+      renderAlbums();
+    }
+    return;
+  }
+
+  const nextExpandedAlbumId = albumId;
+  pendingAlbumOpenAnimationId = nextExpandedAlbumId;
+  appState.expandedAlbumId = nextExpandedAlbumId;
+  renderAlbums();
+
+  if (pendingAlbumOpenAnimationId) {
+    runAlbumOpenAnimation(pendingAlbumOpenAnimationId);
+    pendingAlbumOpenAnimationId = null;
+  }
+
+  const expandedCard = container.querySelector(".album-card.expanded");
+  if (expandedCard && typeof expandedCard.scrollIntoView === "function") {
+    expandedCard.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  }
+}
+
 function setupAlbumInteractions() {
   const container = document.getElementById("albums");
+  const invitedContainer = document.getElementById("invited-albums");
 
   if (!container) {
     return;
   }
 
-  container.addEventListener("click", async (event) => {
-    const listenAlbumButton = event.target.closest(".listen-album-button");
-    if (listenAlbumButton) {
-      if (!isAdminUser()) {
-        return;
-      }
+  container.addEventListener("click", (event) => handleAlbumContainerClick(event, container));
 
-      const album = getAlbumById(listenAlbumButton.dataset.albumId || "");
-      if (!album) {
-        return;
-      }
-
-      const confirmed = window.confirm(`Quieres iniciar currently listening de este album?\n${album.title}`);
-      if (!confirmed) {
-        return;
-      }
-
-      const sourceImg = container.querySelector(".album-card.expanded .cover-button img");
-      animateCoverToNowPlaying(sourceImg);
-
-      try {
-        await startAlbumListening(album);
-      } catch (error) {
-        showReviewStatus(error instanceof Error ? error.message : "No se pudo iniciar la escucha del album.");
-      }
-      return;
-    }
-
-    const trackPlayButton = event.target.closest(".track-play-button");
-    if (trackPlayButton) {
-      if (!isAdminUser()) {
-        return;
-      }
-
-      const album = getAlbumById(trackPlayButton.dataset.albumId || "");
-      const trackIndex = Number(trackPlayButton.dataset.trackIndex || "-1");
-      const songTitle = album?.tracks?.[trackIndex] || "";
-
-      if (!album || !songTitle) {
-        return;
-      }
-
-      const confirmed = window.confirm(`Quieres iniciar currently listening de esta cancion?\n${album.title} - ${songTitle}`);
-      if (!confirmed) {
-        return;
-      }
-
-      const sourceImgTrack = container.querySelector(".album-card.expanded .cover-button img");
-      animateCoverToNowPlaying(sourceImgTrack);
-
-      try {
-        await startSongListening(album, songTitle);
-      } catch (error) {
-        showReviewStatus(error instanceof Error ? error.message : "No se pudo iniciar la escucha de la cancion.");
-      }
-      return;
-    }
-
-    const pileButton = event.target.closest(".group-pile-covers");
-    if (pileButton) {
-      const key = pileButton.dataset.groupKey || "";
-      const pileRect = pileButton.getBoundingClientRect();
-      appState.expandedGroupKey = key;
-      appState.expandedAlbumId = null;
-      renderAlbums();
-      animateGroupExpand(container, pileRect);
-      const expandedGroup = container.querySelector(".group-expanded");
-      if (expandedGroup && typeof expandedGroup.scrollIntoView === "function") {
-        expandedGroup.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
-      return;
-    }
-
-    const groupHeading = event.target.closest(".group-expanded-heading");
-    if (groupHeading) {
-      appState.expandedGroupKey = null;
-      appState.expandedAlbumId = null;
-      renderAlbums();
-      return;
-    }
-
-    const trigger = event.target.closest(".cover-button");
-
-    if (!trigger) {
-      return;
-    }
-
-    const albumId = trigger.dataset.albumId;
-    const isClosing = appState.expandedAlbumId === albumId;
-
-    if (isClosing) {
-      const expandedCard = container.querySelector(".album-card.expanded");
-      if (expandedCard) {
-        expandedCard.classList.add("album-closing");
-        expandedCard.classList.remove("expanded");
-        window.setTimeout(() => {
-          appState.expandedAlbumId = null;
-          renderAlbums();
-        }, 260);
-      } else {
-        appState.expandedAlbumId = null;
-        renderAlbums();
-      }
-      return;
-    }
-
-    const nextExpandedAlbumId = albumId;
-    pendingAlbumOpenAnimationId = nextExpandedAlbumId;
-    appState.expandedAlbumId = nextExpandedAlbumId;
-    renderAlbums();
-
-    if (pendingAlbumOpenAnimationId) {
-      runAlbumOpenAnimation(pendingAlbumOpenAnimationId);
-      pendingAlbumOpenAnimationId = null;
-    }
-
-    const expandedCard = container.querySelector(".album-card.expanded");
-    if (expandedCard && typeof expandedCard.scrollIntoView === "function") {
-      expandedCard.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-    }
-  });
+  if (invitedContainer) {
+    invitedContainer.addEventListener("click", (event) => handleAlbumContainerClick(event, invitedContainer));
+  }
 }
 
 async function loadAlbums() {
@@ -2836,7 +2853,7 @@ function buildAlbumFromLive(live) {
     discType: "vinyl",
     discCount: 1,
     isClearVinyl: false,
-    tracks: [],
+    tracks: Array.isArray(live.tracks) ? live.tracks : [],
     details: [],
     ownedByUser: true,
     giftedBy: "",
@@ -2850,8 +2867,19 @@ function mergeLiveAlbums(liveAlbums) {
   let changed = false;
   for (const live of liveAlbums) {
     if (!live.id || appState.albums.some((a) => a.id === live.id)) continue;
-    appState.albums.unshift(buildAlbumFromLive(live));
+    const album = buildAlbumFromLive(live);
+    appState.albums.unshift(album);
     changed = true;
+    if (!album.tracks.length) {
+      fetchTracksForAlbum(album.title, album.artist).then((tracks) => {
+        if (!tracks.length) return;
+        const stored = appState.albums.find((a) => a.id === album.id);
+        if (stored) {
+          stored.tracks = tracks;
+          renderAlbums();
+        }
+      }).catch(() => {});
+    }
   }
   return changed;
 }
@@ -4737,13 +4765,18 @@ async function saveAddAlbum() {
     console.error("Error saving live album:", err);
   }
 
-  // Fetch tracks in background and update the album card
-  fetchTracksForAlbum(title, artist).then((tracks) => {
+  // Fetch tracks in background, update the card and persist so polling clients see them
+  fetchTracksForAlbum(title, artist).then(async (tracks) => {
     if (!tracks.length) return;
     const stored = appState.albums.find((a) => a.id === album.id);
     if (stored) {
       stored.tracks = tracks;
       renderAlbums();
+    }
+    try {
+      await apiUpdateLiveAlbumTracks(album.id, tracks);
+    } catch {
+      // non-critical — client already has tracks in memory
     }
   }).catch(() => {});
 }
