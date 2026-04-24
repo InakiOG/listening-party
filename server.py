@@ -1711,6 +1711,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 "title": str(album.get("title", "")).strip(),
                 "artist": str(album.get("artist", "")).strip(),
                 "owner": str(album.get("owner", "")).strip(),
+                "ownerPhotoUrl": str(album.get("ownerPhotoUrl", "")).strip(),
                 "coverUrl": str(album.get("coverUrl", "")).strip(),
                 "spotifyUrl": str(album.get("spotifyUrl", "")).strip(),
                 "addedAt": datetime.now(timezone.utc).isoformat()

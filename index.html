@@ -1278,6 +1278,62 @@
         text-align: left;
       }
 
+      .invited-music-section {
+        margin-top: 1.5rem;
+      }
+
+      .invited-music-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .invited-music-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+        white-space: nowrap;
+      }
+
+      .invited-music-divider {
+        flex: 1;
+        height: 1px;
+        background: #1e293b;
+      }
+
+      .album-owner-badge {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid #0f172a;
+        overflow: hidden;
+        z-index: 3;
+        pointer-events: none;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      }
+
+      .album-owner-badge img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .album-owner-badge--letter {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #3b82f6;
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+      }
+
       .album-sort-controls {
         margin-top: 0.8rem;
         display: flex;
@@ -2928,6 +2984,7 @@
           <span class="album-sort-group-label">Agrupar por</span>
           <button id="group-by-artist" type="button" class="group-by-button" aria-label="Agrupar por artista">Por artista</button>
           <button id="group-by-genre" type="button" class="group-by-button" aria-label="Agrupar por genero">Por genero</button>
+          <button id="group-by-owner" type="button" class="group-by-button" aria-label="Agrupar por dueño">Por dueño</button>
         </div>
         <div class="album-search-wrap">
           <span id="album-count" class="album-count-badge"></span>
@@ -2935,6 +2992,14 @@
           <ul id="album-search-suggestions" class="album-search-suggestions" hidden></ul>
         </div>
         <section id="albums" class="albums" aria-live="polite"></section>
+        <section id="invited-music-section" class="invited-music-section" hidden>
+          <div class="invited-music-header">
+            <div class="invited-music-divider"></div>
+            <span class="invited-music-label">Música invitada</span>
+            <div class="invited-music-divider"></div>
+          </div>
+          <div id="invited-albums" class="albums" aria-live="polite"></div>
+        </section>
       </section>
       <section id="reviews-view" class="reviews-view" hidden>
         <div class="reviews-header">

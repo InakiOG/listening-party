@@ -1271,12 +1271,17 @@ function getAlbumGroupKey(album) {
     return album.artist || "Unknown";
   }
 
+  if (appState.groupBy === "owner") {
+    return album.isLive && album.owner ? album.owner : "Iñaki";
+  }
+
   return null;
 }
 
 function updateGroupByButtonStates() {
   const groupByArtistButton = document.getElementById("group-by-artist");
   const groupByGenreButton = document.getElementById("group-by-genre");
+  const groupByOwnerButton = document.getElementById("group-by-owner");
 
   if (groupByArtistButton) {
     groupByArtistButton.classList.toggle("active", appState.groupBy === "artist");
@@ -1284,6 +1289,10 @@ function updateGroupByButtonStates() {
 
   if (groupByGenreButton) {
     groupByGenreButton.classList.toggle("active", appState.groupBy === "genre");
+  }
+
+  if (groupByOwnerButton) {
+    groupByOwnerButton.classList.toggle("active", appState.groupBy === "owner");
   }
 }
 
@@ -2162,6 +2171,13 @@ function buildAlbumCardHtml(album) {
     ? `<p class="album-owner">De: ${safeOwner}</p>`
     : "";
 
+  const ownerPhotoUrl = String(album.ownerPhotoUrl || "").trim();
+  const ownerBadgeMarkup = album.isLive && safeOwner
+    ? ownerPhotoUrl
+      ? `<span class="album-owner-badge" title="${safeOwner}"><img src="${escapeHtml(ownerPhotoUrl)}" alt="${safeOwner}" /></span>`
+      : `<span class="album-owner-badge album-owner-badge--letter" title="${safeOwner}">${escapeHtml(safeOwner[0]?.toUpperCase() || "?")}</span>`
+    : "";
+
   return `
         <article class="album-card ${isExpanded ? "expanded" : ""}" data-album-id="${escapeHtml(String(album.id))}">
           <button
@@ -2176,6 +2192,7 @@ function buildAlbumCardHtml(album) {
               <span class="vinyl-disc vinyl-disc-primary ${isCdDisc ? "cd-disc" : ""} ${clearVinylClass}" style="--vinyl-color:${safeVinylColor}"></span>
               ${hasSecondDisc ? `<span class="vinyl-disc vinyl-disc-secondary ${hasBothFormats ? "cd-disc cd-disc-secondary" : clearVinylClass}" style="--vinyl-color:${secondaryVinylColor}"></span>` : ""}
             </span>
+            ${ownerBadgeMarkup}
           </button>
           <div id="album-details-${album.id}" class="album-details">
             <h2>${safeTitle}</h2>
@@ -2194,17 +2211,35 @@ function buildAlbumCardHtml(album) {
 
 function getGroupedAlbums() {
   const sorted = getSortedAlbums();
+  // For owner grouping, include all albums (main + live); otherwise only main albums
+  const source = appState.groupBy === "owner"
+    ? sorted
+    : sorted.filter(a => !a.isLive);
   const groups = new Map();
-  for (const album of sorted) {
-    const key = appState.groupBy === "genre"
-      ? (album.primaryGenre || "Sin género")
-      : (album.artist || "Unknown");
+  for (const album of source) {
+    let key;
+    if (appState.groupBy === "genre") {
+      key = album.primaryGenre || "Sin género";
+    } else if (appState.groupBy === "owner") {
+      key = album.isLive && album.owner ? album.owner : "Iñaki";
+    } else {
+      key = album.artist || "Unknown";
+    }
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(album);
   }
-  return Array.from(groups.entries())
-    .sort(([a], [b]) => a.localeCompare(b, undefined, { sensitivity: "base" }))
-    .map(([key, albums]) => ({ key, albums }));
+  // Put "Iñaki" first in owner grouping, then alphabetical
+  const entries = Array.from(groups.entries());
+  if (appState.groupBy === "owner") {
+    entries.sort(([a], [b]) => {
+      if (a === "Iñaki") return -1;
+      if (b === "Iñaki") return 1;
+      return a.localeCompare(b, undefined, { sensitivity: "base" });
+    });
+  } else {
+    entries.sort(([a], [b]) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }
+  return entries.map(([key, albums]) => ({ key, albums }));
 }
 
 function buildGroupedAlbumsHtml() {
@@ -2267,6 +2302,8 @@ function updateAlbumCountBadge() {
 
 function renderAlbums() {
   const container = document.getElementById("albums");
+  const invitedSection = document.getElementById("invited-music-section");
+  const invitedContainer = document.getElementById("invited-albums");
 
   if (!container) {
     return;
@@ -2276,16 +2313,30 @@ function renderAlbums() {
 
   if (!appState.albums.length) {
     container.innerHTML = "";
+    if (invitedSection) invitedSection.hidden = true;
     return;
   }
 
   if (appState.groupBy) {
+    // In group mode all albums (including live) render in the main container
     container.innerHTML = buildGroupedAlbumsHtml();
     animateGroupPilesIn(container);
+    if (invitedSection) invitedSection.hidden = true;
     return;
   }
 
-  container.innerHTML = appState.albums.map(buildAlbumCardHtml).join("");
+  // Default: main Discogs collection up top, invited (live) albums in their own section
+  const mainAlbums = appState.albums.filter(a => !a.isLive);
+  const invitedAlbums = appState.albums.filter(a => a.isLive);
+
+  container.innerHTML = mainAlbums.map(buildAlbumCardHtml).join("");
+
+  if (invitedAlbums.length && invitedSection && invitedContainer) {
+    invitedContainer.innerHTML = invitedAlbums.map(buildAlbumCardHtml).join("");
+    invitedSection.hidden = false;
+  } else if (invitedSection) {
+    invitedSection.hidden = true;
+  }
 }
 
 function updateSortDirectionButtonLabel() {
@@ -2340,6 +2391,7 @@ function setupAlbumSortControls() {
 
   const groupByArtistButton = document.getElementById("group-by-artist");
   const groupByGenreButton = document.getElementById("group-by-genre");
+  const groupByOwnerButton = document.getElementById("group-by-owner");
 
   if (groupByArtistButton) {
     groupByArtistButton.addEventListener("click", () => {
@@ -2354,6 +2406,16 @@ function setupAlbumSortControls() {
   if (groupByGenreButton) {
     groupByGenreButton.addEventListener("click", () => {
       appState.groupBy = appState.groupBy === "genre" ? null : "genre";
+      appState.expandedGroupKey = null;
+      appState.expandedAlbumId = null;
+      updateGroupByButtonStates();
+      renderAlbums();
+    });
+  }
+
+  if (groupByOwnerButton) {
+    groupByOwnerButton.addEventListener("click", () => {
+      appState.groupBy = appState.groupBy === "owner" ? null : "owner";
       appState.expandedGroupKey = null;
       appState.expandedAlbumId = null;
       updateGroupByButtonStates();
@@ -2778,7 +2840,9 @@ function buildAlbumFromLive(live) {
     details: [],
     ownedByUser: true,
     giftedBy: "",
-    owner: live.owner || ""
+    owner: live.owner || "",
+    ownerPhotoUrl: live.ownerPhotoUrl || "",
+    isLive: true
   };
 }
 
@@ -4559,6 +4623,31 @@ async function triggerAddAlbumCoverSearch() {
   }
 }
 
+async function fetchTracksForAlbum(title, artist) {
+  const query = [artist, title].filter(Boolean).join(" ");
+  try {
+    const searchRes = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=5`
+    );
+    if (!searchRes.ok) return [];
+    const searchData = await searchRes.json();
+    const found = (searchData?.results || []).find(r => r.collectionId) || searchData?.results?.[0];
+    if (!found?.collectionId) return [];
+    const tracksRes = await fetch(
+      `https://itunes.apple.com/lookup?id=${found.collectionId}&entity=song`
+    );
+    if (!tracksRes.ok) return [];
+    const tracksData = await tracksRes.json();
+    return (tracksData?.results || [])
+      .filter(r => r.wrapperType === "track")
+      .sort((a, b) => (a.discNumber - b.discNumber) || (a.trackNumber - b.trackNumber))
+      .map(r => String(r.trackName || "").trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 async function saveAddAlbum() {
   const title = document.getElementById("add-album-title")?.value.trim() || "";
   const artist = document.getElementById("add-album-artist")?.value.trim() || "";
@@ -4571,16 +4660,18 @@ async function saveAddAlbum() {
     return;
   }
 
+  let ownerPhotoUrl = "";
   if (owner) {
-    const ownerExists = addAlbumModalState.users.some(
+    const ownerUser = addAlbumModalState.users.find(
       (u) => String(u.name || "").toLowerCase() === owner.toLowerCase()
     );
-    if (!ownerExists) {
+    if (!ownerUser) {
       if (statusEl) statusEl.textContent = "El usuario no existe. Selecciona uno de la lista.";
       const ownerInput = document.getElementById("add-album-owner");
       if (ownerInput) ownerInput.focus();
       return;
     }
+    ownerPhotoUrl = ownerUser.photoDataUrl || "";
   }
 
   const spotifyQuery = [artist, title].filter(Boolean).join(" ");
@@ -4606,7 +4697,9 @@ async function saveAddAlbum() {
     details: [],
     ownedByUser: true,
     giftedBy: "",
-    owner
+    owner,
+    ownerPhotoUrl,
+    isLive: true
   };
 
   appState.albums.unshift(album);
@@ -4620,6 +4713,7 @@ async function saveAddAlbum() {
       title: album.title,
       artist: album.artist,
       owner: album.owner,
+      ownerPhotoUrl: album.ownerPhotoUrl,
       coverUrl: album.coverUrl,
       spotifyUrl: album.spotifyUrl
     });
@@ -4627,18 +4721,15 @@ async function saveAddAlbum() {
     console.error("Error saving live album:", err);
   }
 
-  try {
-    await apiSetNowPlaying({
-      actorName: sessionState.currentUser?.name || "",
-      albumTitle: title,
-      albumArtist: artist,
-      songTitle: "",
-      reviewScope: "album",
-      coverUrl
-    });
-  } catch (err) {
-    console.error("Error setting now playing:", err);
-  }
+  // Fetch tracks in background and update the album card
+  fetchTracksForAlbum(title, artist).then((tracks) => {
+    if (!tracks.length) return;
+    const stored = appState.albums.find((a) => a.id === album.id);
+    if (stored) {
+      stored.tracks = tracks;
+      renderAlbums();
+    }
+  }).catch(() => {});
 }
 
 function setupAddAlbumModal() {
