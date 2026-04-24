@@ -183,7 +183,7 @@ def get_session_date_key(session_payload):
         return started_at[:10]
 
 
-def collect_reviews_for_albums(reviews_store, albums_played, review_date_filter=""):
+def collect_reviews_for_albums(reviews_store, albums_played, review_date_filter="", party_id_filter=""):
     reviews = []
     album_titles_lower = {
         str(a.get("title", "")).strip().lower()
@@ -218,9 +218,14 @@ def collect_reviews_for_albums(reviews_store, albums_played, review_date_filter=
         for r in review_list:
             if not isinstance(r, dict):
                 continue
-            review_date_key = parse_review_date_key(r.get("createdAt", ""))
-            if review_date_key and review_date_key != review_date_filter:
-                continue
+            review_party_id = str(r.get("partyId") or "").strip()
+            if review_party_id:
+                if review_party_id != party_id_filter:
+                    continue
+            else:
+                review_date_key = parse_review_date_key(r.get("createdAt", ""))
+                if review_date_key and review_date_key != review_date_filter:
+                    continue
             raw_likes = r.get("likes") or []
             likes = [
                 {"name": str(l.get("name", "")).strip(), "photoDataUrl": str(l.get("photoDataUrl", "")).strip()}
@@ -318,7 +323,7 @@ def upsert_party_record_snapshot(session_payload, users_store, credentials_store
         return None
 
     session_date_key = get_session_date_key(session_payload)
-    party_reviews = collect_reviews_for_albums(reviews_store, session_payload.get("albumsPlayed", []), session_date_key)
+    party_reviews = collect_reviews_for_albums(reviews_store, session_payload.get("albumsPlayed", []), session_date_key, record_id)
     attendees = collect_reviewing_attendees(party_reviews)
     listeners = collect_session_listeners(session_payload, users_store)
     now_iso = datetime.now(timezone.utc).isoformat()
