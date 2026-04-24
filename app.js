@@ -1163,6 +1163,11 @@ function getAlbumScoreValue(album) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function getAlbumTimesPlayedValue(album) {
+  const parsed = Number(album?.timesPlayed);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function getSortedAlbums() {
   const direction = appState.sortDirection === "asc" ? 1 : -1;
   const sortBy = appState.sortBy;
@@ -1187,6 +1192,11 @@ function getSortedAlbums() {
         }
       } else if (sortBy === "score") {
         const value = getAlbumScoreValue(a) - getAlbumScoreValue(b);
+        if (value !== 0) {
+          return value * direction;
+        }
+      } else if (sortBy === "timesPlayed") {
+        const value = getAlbumTimesPlayedValue(a) - getAlbumTimesPlayedValue(b);
         if (value !== 0) {
           return value * direction;
         }
@@ -1441,6 +1451,8 @@ async function startAlbumListening(album) {
     reviewScope: "album",
     coverUrl: album.coverUrl
   });
+  album.timesPlayed = Number.isFinite(Number(album.timesPlayed)) ? Number(album.timesPlayed) + 1 : 1;
+  renderAlbums();
   if (nowPlaying) renderNowPlaying(nowPlaying);
   showReviewStatus(`Escucha iniciada para album: ${album.title}`);
 }
@@ -1458,6 +1470,8 @@ async function startSongListening(album, songTitle) {
     reviewScope: "song",
     coverUrl: album.coverUrl
   });
+  album.timesPlayed = Number.isFinite(Number(album.timesPlayed)) ? Number(album.timesPlayed) + 1 : 1;
+  renderAlbums();
   if (nowPlaying) renderNowPlaying(nowPlaying);
   showReviewStatus(`Escucha iniciada: ${album.title} - ${songTitle}`);
 }
@@ -2098,6 +2112,7 @@ function buildAlbumCardHtml(album) {
   const safeTitle = escapeHtml(album.title);
   const safeArtist = escapeHtml(album.artist);
   const safeYear = escapeHtml(album.year);
+  const safeTimesPlayed = escapeHtml(String(Number(album.timesPlayed || 0)));
   const safeGenre = escapeHtml(album.genre);
   const safeNotes = escapeHtml(album.notes);
   const safeGiftedBy = escapeHtml(album.giftedBy || "");
@@ -2155,6 +2170,7 @@ function buildAlbumCardHtml(album) {
           <div id="album-details-${album.id}" class="album-details">
             <h2>${safeTitle}</h2>
             <p class="meta">${safeArtist} - ${safeYear}</p>
+            <p class="meta">Reproducido ${safeTimesPlayed} veces</p>
             <p class="meta">${safeGenre}</p>
             <p class="notes">${safeNotes}</p>
             ${ownerMarkup}
@@ -2285,7 +2301,7 @@ function setupAlbumSortControls() {
 
   const applySortBySelection = () => {
     const selected = String(sortBySelect.value || "date");
-    appState.sortBy = ["date", "score", "title", "artist", "genre"].includes(selected) ? selected : "date";
+    appState.sortBy = ["date", "score", "timesPlayed", "title", "artist", "genre"].includes(selected) ? selected : "date";
     sortAlbumsInState();
     renderAlbums();
   };
@@ -2670,6 +2686,7 @@ async function loadAlbums() {
       title: item.title || "Untitled release",
       artist: item.artist || "Unknown artist",
       year: item.year || "Unknown year",
+      timesPlayed: Number.isFinite(Number(item.timesPlayed)) ? Number(item.timesPlayed) : 0,
       dateAdded: item.dateAdded || "",
       score: Number(item.rating || 0),
       genre: item.rawText || "Discogs collection item",

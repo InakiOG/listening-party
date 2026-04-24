@@ -17,6 +17,7 @@ CREDENTIALS_DB_PATH = ROOT / "user-credentials.local.json"
 NOW_PLAYING_PATH = ROOT / "now-playing.json"
 PARTY_RECORDS_PATH = ROOT / "party-records.json"
 LIVE_ALBUMS_PATH = ROOT / "live-albums.json"
+COLLECTION_PATH = ROOT / "discogs-collection.json"
 REVIEWS_LOCK = threading.Lock()
 LIVE_ALBUMS_LOCK = threading.Lock()
 _current_session = None
@@ -760,6 +761,66 @@ def write_now_playing_payload(payload):
         json.dump(payload, handle, indent=2)
 
 
+def _to_non_negative_int(value, default=0):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed >= 0 else default
+
+
+def increment_album_times_played(album_title, album_artist=""):
+    if not COLLECTION_PATH.exists():
+        return False
+
+    try:
+        with COLLECTION_PATH.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return False
+
+    items = payload.get("items", []) if isinstance(payload, dict) else []
+    if not isinstance(items, list):
+        return False
+
+    target_title = str(album_title or "").strip().lower()
+    target_artist = str(album_artist or "").strip().lower()
+    if not target_title:
+        return False
+
+    updated = False
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        item_title = str(item.get("title") or "").strip().lower()
+        item_artist = str(item.get("artist") or "").strip().lower()
+
+        if item_title != target_title:
+            continue
+
+        if target_artist and item_artist != target_artist:
+            continue
+
+        current_count = _to_non_negative_int(item.get("timesPlayed"), default=0)
+        item["timesPlayed"] = current_count + 1
+        updated = True
+        break
+
+    if not updated:
+        return False
+
+    payload["items"] = items
+
+    try:
+        with COLLECTION_PATH.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=False)
+    except OSError:
+        return False
+
+    return True
+
+
 class ListeningPartyHandler(SimpleHTTPRequestHandler):
     def _send_json(self, payload, status_code=200, extra_headers=None):
         response = json.dumps(payload).encode("utf-8")
@@ -1256,6 +1317,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "partyId": _current_session["id"]
                 }
                 write_now_playing_payload(now_playing_payload)
+                increment_album_times_played(album_title, album_artist)
                 already_tracked = any(
                     str(a.get("title", "")).lower() == album_title.lower()
                     for a in _current_session["albumsPlayed"]

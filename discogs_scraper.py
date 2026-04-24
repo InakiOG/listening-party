@@ -185,7 +185,8 @@ def map_release(release, page_number):
         "discogsId": release_id,
         "instanceId": release.get("instance_id"),
         "dateAdded": release.get("date_added"),
-        "rating": release.get("rating", 0)
+        "rating": release.get("rating", 0),
+        "timesPlayed": 0
     }
 
 
@@ -241,6 +242,9 @@ def update_collection_cache(max_pages=100):
                     mapped_release["year"] = existing_item.get("year")
                 if not mapped_release.get("rawText"):
                     mapped_release["rawText"] = str(existing_item.get("rawText") or "").strip()
+                existing_times_played = existing_item.get("timesPlayed")
+                if isinstance(existing_times_played, int) and existing_times_played >= 0:
+                    mapped_release["timesPlayed"] = existing_times_played
                 collected_items.append(mapped_release)
                 continue
 
@@ -257,6 +261,11 @@ def update_collection_cache(max_pages=100):
                     mapped_release["rawText"] = summarize_genres(release_genres, release_styles)
             except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
                 mapped_release["tracks"] = []
+
+            if isinstance(existing_item, dict):
+                existing_times_played = existing_item.get("timesPlayed")
+                if isinstance(existing_times_played, int) and existing_times_played >= 0:
+                    mapped_release["timesPlayed"] = existing_times_played
 
             collected_items.append(mapped_release)
 
