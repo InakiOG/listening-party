@@ -936,7 +936,7 @@ function renderActiveUserBubbles(users) {
               const displayText = safeAlbumArtist
                 ? `${safeAlbumTitle} - ${safeAlbumArtist}`
                 : safeAlbumTitle;
-              const coverUrl = ensureTopAlbumCover(entry.title, entry.artist);
+              const coverUrl = entry.coverUrl || ensureTopAlbumCover(entry.title, entry.artist);
               const safeCoverUrl = escapeHtml(coverUrl);
               const artworkMarkup = safeCoverUrl
                 ? `<img src="${safeCoverUrl}" alt="Portada de ${safeAlbumTitle}" loading="lazy" />`
@@ -2847,7 +2847,9 @@ async function fetchReviewsFromApi(reviewKey) {
     return [];
   }
 
-  const response = await fetch(`/api/reviews?songKey=${encodeURIComponent(reviewKey)}&t=${Date.now()}`, {
+  const partyId = currentNowPlaying?.partyId;
+  const partyParam = partyId ? `&partyId=${encodeURIComponent(partyId)}` : "";
+  const response = await fetch(`/api/reviews?songKey=${encodeURIComponent(reviewKey)}${partyParam}&t=${Date.now()}`, {
     cache: "no-store"
   });
 
@@ -3796,6 +3798,7 @@ async function saveCurrentReview() {
       body: JSON.stringify({
         songKey: key,
         scope,
+        partyId: currentNowPlaying?.partyId || null,
         review: {
           name: userName,
           photoDataUrl: String(sessionState.currentUser?.photoDataUrl || "").trim(),
@@ -3811,10 +3814,9 @@ async function saveCurrentReview() {
     }
 
     await response.json();
-    showReviewStatus("Reseña guardada.");
-    await fetchCurrentSongReviews();
     resetReviewInputs();
     closeReviewPanel();
+    void fetchCurrentSongReviews();
   } catch {
     showReviewStatus("No se pudo guardar la reseña.");
   }
@@ -4050,6 +4052,9 @@ function setupAuthInteractions() {
   const authName = document.getElementById("auth-name");
   const authPassword = document.getElementById("auth-password");
   const authPhoto = document.getElementById("auth-photo");
+  const authModalTitle = document.getElementById("auth-modal-title");
+  const authModalHelp = document.getElementById("auth-modal-help");
+  const authSwitchLabel = document.getElementById("auth-switch-label");
   const loginButton = document.getElementById("auth-login");
   const registerButton = document.getElementById("auth-register");
   const avatarButton = document.getElementById("profile-avatar-button");
@@ -4076,11 +4081,33 @@ function setupAuthInteractions() {
   const reviewsBackButton = document.getElementById("reviews-back");
   const profileBackButton = document.getElementById("profile-back");
 
-  if (!authName || !authPassword || !authPhoto || !loginButton || !registerButton || !avatarButton || !changePhotoButton || !changePhotoInput || !viewReviewsButton || !openProfileButton || !profileDescription || !profileInstagram || !profileTopAlbum1 || !profileTopAlbum1Artist || !profileTopAlbum2 || !profileTopAlbum2Artist || !profileTopAlbum3 || !profileTopAlbum3Artist || !profileTopAlbum1Cover || !profileTopAlbum2Cover || !profileTopAlbum3Cover || !saveProfileButton || !profileSaveStatus || !logoutButton || !reviewsBackButton || !profileBackButton) {
+  if (!authName || !authPassword || !authPhoto || !authModalTitle || !authModalHelp || !authSwitchLabel || !loginButton || !registerButton || !avatarButton || !changePhotoButton || !changePhotoInput || !viewReviewsButton || !openProfileButton || !profileDescription || !profileInstagram || !profileTopAlbum1 || !profileTopAlbum1Artist || !profileTopAlbum2 || !profileTopAlbum2Artist || !profileTopAlbum3 || !profileTopAlbum3Artist || !profileTopAlbum1Cover || !profileTopAlbum2Cover || !profileTopAlbum3Cover || !saveProfileButton || !profileSaveStatus || !logoutButton || !reviewsBackButton || !profileBackButton) {
     return;
   }
 
-  loginButton.addEventListener("click", async () => {
+  let authMode = "login";
+
+  const setAuthMode = (mode) => {
+    authMode = mode === "register" ? "register" : "login";
+
+    if (authMode === "register") {
+      authModalTitle.textContent = "Crear cuenta";
+      authModalHelp.textContent = "Elige nombre y contraseña para registrarte";
+      loginButton.textContent = "Crear usuario";
+      authSwitchLabel.textContent = "Ya tienes cuenta?";
+      registerButton.textContent = "Entrar";
+    } else {
+      authModalTitle.textContent = "Inicia sesion";
+      authModalHelp.textContent = "Escribe tu nombre y contraseña";
+      loginButton.textContent = "Entrar";
+      authSwitchLabel.textContent = "No tienes cuenta?";
+      registerButton.textContent = "Registrarte";
+    }
+
+    setAuthStatus("");
+  };
+
+  const submitLogin = async () => {
     const name = normalizeUserName(authName.value);
     const password = String(authPassword.value || "").trim();
 
@@ -4106,9 +4133,9 @@ function setupAuthInteractions() {
     } catch (error) {
       setAuthStatus(error instanceof Error ? error.message : "No se pudo iniciar sesion.");
     }
-  });
+  };
 
-  registerButton.addEventListener("click", async () => {
+  const submitRegister = async () => {
     const name = normalizeUserName(authName.value);
     const password = String(authPassword.value || "").trim();
 
@@ -4135,9 +4162,24 @@ function setupAuthInteractions() {
       authPhoto.value = "";
       authPassword.value = "";
       setAuthStatus("");
+      openProfileView();
     } catch (error) {
       setAuthStatus(error instanceof Error ? error.message : "No se pudo crear el usuario.");
     }
+  };
+
+  loginButton.addEventListener("click", async () => {
+    if (authMode === "register") {
+      await submitRegister();
+      return;
+    }
+
+    await submitLogin();
+  });
+
+  registerButton.addEventListener("click", async () => {
+    setAuthMode(authMode === "login" ? "register" : "login");
+    authPassword.focus();
   });
 
   authName.addEventListener("keydown", async (event) => {
@@ -4146,7 +4188,11 @@ function setupAuthInteractions() {
     }
 
     event.preventDefault();
-    loginButton.click();
+    if (authMode === "register") {
+      await submitRegister();
+      return;
+    }
+    await submitLogin();
   });
 
   authPassword.addEventListener("keydown", async (event) => {
@@ -4155,8 +4201,14 @@ function setupAuthInteractions() {
     }
 
     event.preventDefault();
-    loginButton.click();
+    if (authMode === "register") {
+      await submitRegister();
+      return;
+    }
+    await submitLogin();
   });
+
+  setAuthMode("login");
 
   avatarButton.addEventListener("click", () => {
     toggleProfileMenu();

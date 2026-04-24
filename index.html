@@ -438,6 +438,29 @@
         font-size: 0.77rem;
       }
 
+      .auth-mode-toggle {
+        margin-top: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+      }
+
+      .auth-mode-toggle span {
+        color: #94a3b8;
+        font-size: 0.74rem;
+      }
+
+      .auth-link {
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: #38bdf8;
+        font-size: 0.76rem;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+
       .auth-field-label {
         display: block;
         margin: 0.65rem 0 0.2rem;
@@ -462,6 +485,7 @@
         margin-top: 0.7rem;
         display: flex;
         gap: 0.45rem;
+        justify-content: stretch;
       }
 
       .auth-button {
@@ -472,6 +496,7 @@
         padding: 0.4rem 0.6rem;
         font-size: 0.78rem;
         cursor: pointer;
+        width: 100%;
       }
 
       .auth-button.primary {
@@ -2768,17 +2793,19 @@
   <body>
     <section id="auth-overlay" class="auth-overlay">
       <div class="auth-card">
-        <h2>Entrar o registrarte</h2>
-        <p class="auth-help">Escribe tu nombre y contraseña</p>
+        <h2 id="auth-modal-title">Inicia sesion</h2>
+        <p id="auth-modal-help" class="auth-help">Escribe tu nombre y contraseña</p>
         <label class="auth-field-label" for="auth-name">Nombre</label>
         <input id="auth-name" type="text" placeholder="Tu nombre" />
         <label class="auth-field-label" for="auth-password">Contraseña</label>
         <input id="auth-password" type="password" placeholder="Tu Contraseña" />
-        <label class="auth-field-label" for="auth-photo">Foto (solo al crear usuario)</label>
-        <input id="auth-photo" type="file" accept="image/*" />
+        <input id="auth-photo" type="file" accept="image/*" hidden />
         <div class="auth-actions">
-          <button id="auth-login" class="auth-button" type="button">Entrar</button>
-          <button id="auth-register" class="auth-button primary" type="button">Crear usuario</button>
+          <button id="auth-login" class="auth-button primary" type="button">Entrar</button>
+        </div>
+        <div class="auth-mode-toggle">
+          <span id="auth-switch-label">No tienes cuenta?</span>
+          <button id="auth-register" class="auth-link" type="button">Registrarte</button>
         </div>
         <p id="auth-status" class="auth-status"></p>
       </div>

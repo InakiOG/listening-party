@@ -907,10 +907,14 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/reviews":
             params = parse_qs(parsed.query)
             song_key = (params.get("songKey", [""])[0] or "").strip()
+            party_id_filter = (params.get("partyId", [""])[0] or "").strip()
 
             with REVIEWS_LOCK:
                 store = read_reviews_store()
                 reviews = store.get(song_key, []) if song_key else []
+
+            if party_id_filter:
+                reviews = [r for r in reviews if isinstance(r, dict) and r.get("partyId") == party_id_filter]
 
             self._send_json({
                 "songKey": song_key,
@@ -1225,19 +1229,6 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     self._send_json({"error": "only administrador can control now playing"}, status_code=403)
                     return
 
-                now_playing_payload = {
-                    "albumNumber": 0,
-                    "songNumber": 0,
-                    "albumTitle": album_title,
-                    "albumArtist": album_artist,
-                    "songTitle": song_title,
-                    "reviewScope": review_scope,
-                    "coverUrl": cover_url,
-                    "updatedAt": datetime.now(timezone.utc).isoformat(),
-                    "updatedBy": actor_profile.get("name", actor_name)
-                }
-                write_now_playing_payload(now_playing_payload)
-
                 if _current_session is None:
                     _current_session = {
                         "id": datetime.now(timezone.utc).isoformat(),
@@ -1251,6 +1242,20 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         datetime.now(timezone.utc)
                     )
                 add_session_sticky_attendee(_current_session, actor_key)
+
+                now_playing_payload = {
+                    "albumNumber": 0,
+                    "songNumber": 0,
+                    "albumTitle": album_title,
+                    "albumArtist": album_artist,
+                    "songTitle": song_title,
+                    "reviewScope": review_scope,
+                    "coverUrl": cover_url,
+                    "updatedAt": datetime.now(timezone.utc).isoformat(),
+                    "updatedBy": actor_profile.get("name", actor_name),
+                    "partyId": _current_session["id"]
+                }
+                write_now_playing_payload(now_playing_payload)
                 already_tracked = any(
                     str(a.get("title", "")).lower() == album_title.lower()
                     for a in _current_session["albumsPlayed"]
@@ -1717,6 +1722,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
         song_key = str(payload.get("songKey", "")).strip()
         review_scope = str(payload.get("scope", "song")).strip().lower()
+        party_id = str(payload.get("partyId", "")).strip()
         review_payload = payload.get("review") if isinstance(payload.get("review"), dict) else {}
 
         name = str(review_payload.get("name", "")).strip()
@@ -1749,7 +1755,8 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             "text": text,
             "rating": normalized_rating,
             "createdAt": created_at,
-            "scope": "album" if review_scope == "album" else "song"
+            "scope": "album" if review_scope == "album" else "song",
+            "partyId": party_id if party_id else None
         }
 
         with REVIEWS_LOCK:
@@ -1758,7 +1765,22 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             if not isinstance(existing, list):
                 existing = []
 
-            existing.append(review_entry)
+            if party_id:
+                normalized_name = normalize_user_key(name)
+                upsert_idx = next(
+                    (i for i, r in enumerate(existing)
+                     if isinstance(r, dict)
+                     and normalize_user_key(r.get("name", "")) == normalized_name
+                     and r.get("partyId") == party_id),
+                    None
+                )
+                if upsert_idx is not None:
+                    existing[upsert_idx] = review_entry
+                else:
+                    existing.append(review_entry)
+            else:
+                existing.append(review_entry)
+
             store[song_key] = existing
             write_reviews_store(store)
             updated_reviews = existing
