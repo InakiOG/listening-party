@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Listening Party</title>
+    <script>
+      // Non-mobile devices (mouse + precise pointer) go to the desktop display
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        location.replace('./desktop.html');
+      }
+    </script>
     <style>
       :root {
         color-scheme: dark;

@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Listening Party — Display</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      *, *::before, *::after { box-sizing: border-box; }
+
+      html, body {
+        margin: 0; padding: 0;
+        width: 100%; height: 100%;
+        overflow: hidden;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ── Ambient background ── */
+      #ambient-bg {
+        position: fixed;
+        inset: -15%;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 1.6s ease;
+        background-size: cover;
+        background-position: center;
+        filter: blur(80px) brightness(0.28) saturate(2.6);
+      }
+
+      /* ── Bubble layers ── */
+      #bubble-layer {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 60;
+      }
+
+      #active-users-layer {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 55;
+      }
+
+      /* ── Active user bubbles ── */
+      .active-user-bubble {
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        border: 2px solid rgba(226, 232, 240, 0.82);
+        overflow: hidden;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.45);
+        pointer-events: auto;
+        user-select: none;
+        touch-action: none;
+        cursor: default;
+      }
+
+      .active-user-bubble img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .active-user-letter {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f8fafc;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      /* ── Review bubbles ── */
+      .review-bubble {
+        position: absolute;
+        max-width: 240px;
+        padding: 0.65rem 0.75rem;
+        border-radius: 0.9rem;
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        background: rgba(15, 23, 42, 0.82);
+        color: #e2e8f0;
+        font-size: 0.78rem;
+        line-height: 1.4;
+        pointer-events: auto;
+        user-select: none;
+        touch-action: none;
+        cursor: default;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      .review-bubble.song-review {
+        border-color: rgba(56, 189, 248, 0.45);
+        background: rgba(15, 23, 42, 0.82);
+      }
+
+      .review-bubble.album-review {
+        border-color: rgba(251, 191, 36, 0.55);
+        background: rgba(44, 27, 4, 0.82);
+      }
+
+      .review-bubble.past-reviews-bubble {
+        border-color: rgba(167, 139, 250, 0.5);
+        background: rgba(30, 15, 50, 0.82);
+      }
+
+      /* ── Bubble summary (avatar + score) ── */
+      .review-bubble-summary {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem 0.45rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.45rem;
+      }
+
+      .review-avatar-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
+        border-radius: 999px;
+        padding: 0.1rem 0.38rem 0.1rem 0.12rem;
+        border: 1px solid rgba(125, 211, 252, 0.7);
+        background: rgba(15, 23, 42, 0.75);
+      }
+
+      .review-bubble.album-review .review-avatar-badge {
+        border-color: rgba(251, 191, 36, 0.8);
+        background: rgba(69, 26, 3, 0.58);
+      }
+
+      .review-avatar-image {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+      }
+
+      .review-avatar-name {
+        color: #f8fafc;
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .review-bubble-name {
+        color: #7dd3fc;
+        font-size: 0.72rem;
+        margin: 0;
+        font-weight: 600;
+      }
+
+      .review-bubble.album-review .review-bubble-name {
+        color: #fbbf24;
+      }
+
+      .review-bubble-scope {
+        margin: 0;
+        font-size: 0.62rem;
+        color: #cbd5e1;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      /* ── Star rating ── */
+      .review-stars {
+        display: flex;
+        align-items: center;
+        gap: 0.06rem;
+        margin: 0.3rem 0 0.2rem;
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .star { color: #334155; }
+      .star.full { color: #facc15; }
+      .star.half {
+        background: linear-gradient(90deg, #facc15 50%, #334155 50%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .review-score-text {
+        margin-left: 0.3rem;
+        font-size: 0.68rem;
+        color: #94a3b8;
+        white-space: nowrap;
+      }
+
+      /* ── Review text ── */
+      .review-history-list {
+        margin: 0.35rem 0 0;
+        padding-left: 1rem;
+        max-height: 110px;
+        overflow: hidden;
+      }
+
+      .review-history-item + .review-history-item { margin-top: 0.35rem; }
+
+      .review-history-meta {
+        margin: 0;
+        font-size: 0.64rem;
+        color: #93c5fd;
+      }
+
+      .review-bubble.album-review .review-history-meta { color: #fcd34d; }
+
+      .review-history-text {
+        margin: 0.08rem 0 0;
+        font-size: 0.74rem;
+        color: #cbd5e1;
+      }
+
+      /* ── Likes ── */
+      .review-likes-section {
+        display: flex;
+        align-items: center;
+        gap: 0.28rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .review-bubble-hearts {
+        font-size: 0.75rem;
+        line-height: 1.2;
+        margin-top: 0.2rem;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.05rem;
+        width: 100%;
+      }
+
+      .review-hearts-more {
+        font-size: 0.6rem;
+        color: #94a3b8;
+        margin-left: 0.1rem;
+      }
+
+      .liker-avatar {
+        width: 20px; height: 20px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        flex-shrink: 0;
+      }
+
+      .liker-initial {
+        width: 20px; height: 20px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.55);
+        color: #e2e8f0;
+        font-size: 0.6rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        flex-shrink: 0;
+      }
+
+      /* Past reviews bubble */
+      .past-reviews-title { color: #c084fc !important; }
+      .past-reviews-count {
+        font-size: 0.64rem;
+        color: #a78bfa;
+        background: rgba(167, 139, 250, 0.18);
+        border-radius: 999px;
+        padding: 0.05rem 0.35rem;
+      }
+      .past-review-author { color: #c084fc; font-weight: 600; }
+
+      /* ── IDLE STATE ── */
+      #idle-screen {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        opacity: 1;
+        transition: opacity 0.5s ease;
+      }
+
+      #idle-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+      }
+
+      .idle-logo-wrap {
+        position: relative;
+        width: clamp(200px, 28vw, 380px);
+      }
+
+      .idle-logo {
+        display: block;
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .idle-logo-text {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: clamp(1.2rem, 2.4vw, 2.2rem);
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #f8fafc;
+        -webkit-text-stroke: 2px #000;
+        text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .idle-title {
+        margin: 0;
+        font-size: clamp(1.4rem, 2.8vw, 2.8rem);
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        text-transform: uppercase;
+      }
+
+      /* ── NOW PLAYING STATE ── */
+      #playing-screen {
+        position: absolute;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2.5rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.6s ease;
+      }
+
+      #playing-screen.visible {
+        opacity: 1;
+        pointer-events: auto;
+        position: relative;
+      }
+
+      .cover-vinyl-wrap {
+        position: relative;
+        width: calc(var(--cover-size) + var(--cover-size) * 0.55);
+        height: var(--cover-size);
+        --cover-size: clamp(220px, 28vw, 380px);
+      }
+
+      .cover-img {
+        position: absolute;
+        left: 0; top: 0;
+        width: var(--cover-size);
+        height: var(--cover-size);
+        border-radius: 0.75rem;
+        object-fit: cover;
+        z-index: 3;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      }
+
+      .cover-img.arriving {
+        animation: coverArrive 420ms cubic-bezier(0.22, 1.1, 0.36, 1) 200ms both;
+      }
+
+      @keyframes coverArrive {
+        0%   { transform: scale(1.4) translateX(-20px); opacity: 0; }
+        60%  { transform: scale(0.96); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      .vinyl-disc {
+        --disc-color: #0b0b0b;
+        position: absolute;
+        top: 50%; right: 0;
+        width: var(--cover-size);
+        height: var(--cover-size);
+        border-radius: 50%;
+        transform: translateY(-50%);
+        background:
+          radial-gradient(circle at center, #0f172a 0 8%, #d4d4d8 8.5% 10.5%, transparent 11%),
+          repeating-radial-gradient(circle at center, rgba(255,255,255,0.08) 0 2px, rgba(0,0,0,0.08) 2px 4px),
+          radial-gradient(circle at 30% 22%, rgba(255,255,255,0.3), transparent 45%),
+          var(--disc-color);
+        box-shadow: 0 0 0 3px rgba(15,23,42,0.7), 0 12px 40px rgba(0,0,0,0.6);
+        z-index: 1;
+        animation: spinDisc 2.2s linear infinite;
+      }
+
+      .vinyl-disc.clear-vinyl {
+        background:
+          radial-gradient(circle at center, transparent 0 8%, rgba(226,232,240,0.9) 8.4% 10.6%, transparent 11%),
+          radial-gradient(circle at center, transparent 0 74%, rgba(226,232,240,0.92) 74.4% 76.2%, transparent 76.6%),
+          radial-gradient(circle at 28% 20%, rgba(255,255,255,0.32), transparent 47%),
+          transparent;
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.95), 0 12px 40px rgba(0,0,0,0.4);
+      }
+
+      .vinyl-disc.cd-disc {
+        background:
+          radial-gradient(circle at center, transparent 0 8%, rgba(220,225,235,0.95) 8.5% 11.5%, transparent 12%),
+          radial-gradient(circle at center, transparent 0 42%, rgba(148,163,184,0.22) 42.5% 43.5%, transparent 44%),
+          conic-gradient(from 10deg, rgba(255,170,170,0.45), rgba(255,240,160,0.45), rgba(170,255,215,0.45), rgba(170,210,255,0.45), rgba(220,170,255,0.45), rgba(255,170,170,0.45)),
+          radial-gradient(circle at 28% 20%, rgba(255,255,255,0.52), transparent 46%),
+          linear-gradient(145deg, #d8e1ea, #a8b4c3 35%, #e6edf6 65%, #95a1b0);
+      }
+
+      .vinyl-disc.secondary {
+        right: calc(var(--cover-size) * -0.08);
+        transform: translateY(-50%) scale(0.92);
+        z-index: 0;
+        opacity: 0;
+        animation: spinDiscSecondary 2.9s linear infinite reverse;
+        transition: opacity 0.4s ease;
+      }
+
+      .vinyl-disc.secondary.visible { opacity: 0.9; }
+
+      @keyframes spinDisc {
+        from { transform: translateY(-50%) rotate(0deg); }
+        to   { transform: translateY(-50%) rotate(360deg); }
+      }
+
+      @keyframes spinDiscSecondary {
+        from { transform: translateY(-50%) scale(0.92) rotate(0deg); }
+        to   { transform: translateY(-50%) scale(0.92) rotate(360deg); }
+      }
+
+      .track-info {
+        text-align: center;
+        max-width: calc(var(--cover-size) + var(--cover-size) * 0.55);
+      }
+
+      .track-label {
+        margin: 0 0 0.4rem;
+        font-size: clamp(0.65rem, 1vw, 0.85rem);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #7dd3fc;
+      }
+
+      .track-title {
+        margin: 0 0 0.3rem;
+        font-size: clamp(1.3rem, 2.6vw, 2.4rem);
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.2;
+      }
+
+      .track-artist {
+        margin: 0 0 0.25rem;
+        font-size: clamp(1rem, 1.8vw, 1.6rem);
+        font-weight: 400;
+        color: #94a3b8;
+      }
+
+      .track-song {
+        margin: 0;
+        font-size: clamp(0.85rem, 1.4vw, 1.2rem);
+        color: #64748b;
+        font-style: italic;
+      }
+
+      .track-song[hidden] { display: none; }
+
+      /* ── Fullscreen button ── */
+      #fs-btn {
+        position: fixed;
+        top: 1rem; right: 1rem;
+        z-index: 100;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        color: #94a3b8;
+        border-radius: 0.5rem;
+        padding: 0.35rem 0.55rem;
+        font-size: 1rem;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+      }
+
+      #fs-btn:hover {
+        background: rgba(30, 41, 59, 0.8);
+        color: #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ambient-bg" aria-hidden="true"></div>
+    <div id="active-users-layer" aria-hidden="true"></div>
+    <div id="bubble-layer" aria-hidden="true"></div>
+
+    <button id="fs-btn" title="Fullscreen" aria-label="Toggle fullscreen">⛶</button>
+
+    <!-- Idle: shown when nothing is playing -->
+    <div id="idle-screen">
+      <div class="idle-logo-wrap">
+        <img src="./graff.png" alt="Listening Party" class="idle-logo" />
+        <span class="idle-logo-text">Listening Party</span>
+      </div>
+      <h1 class="idle-title">Listening Party</h1>
+    </div>
+
+    <!-- Playing: shown when a record is on -->
+    <div id="playing-screen">
+      <div class="cover-vinyl-wrap">
+        <img id="np-cover" class="cover-img" src="" alt="Album cover" />
+        <span id="np-disc" class="vinyl-disc"></span>
+        <span id="np-disc-secondary" class="vinyl-disc secondary"></span>
+      </div>
+      <div class="track-info">
+        <p class="track-label">Reproduciendo ahora</p>
+        <p id="np-album" class="track-title"></p>
+        <p id="np-artist" class="track-artist"></p>
+        <p id="np-song" class="track-song" hidden></p>
+      </div>
+    </div>
+
+    <script>
+      /* ─────────────── helpers ─────────────── */
+      function esc(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      function starsHtml(rating) {
+        const r = Math.max(0, Math.min(5, Number(rating) || 0));
+        let html = '';
+        for (let i = 1; i <= 5; i++) {
+          if (r >= i) html += '<span class="star full">★</span>';
+          else if (r >= i - 0.5) html += '<span class="star half">★</span>';
+          else html += '<span class="star">★</span>';
+        }
+        html += `<span class="review-score-text">${r.toFixed(1)}</span>`;
+        return html;
+      }
+
+      function getReviewerKey(name) {
+        return (name || 'Anonymous').trim().toLowerCase();
+      }
+
+      function groupReviewsByReviewer(reviews) {
+        const grouped = new Map();
+        for (const review of reviews) {
+          const scope = review.scope === 'album' ? 'album' : 'song';
+          const key = `${scope}::${getReviewerKey(review.name)}`;
+          if (!grouped.has(key)) {
+            grouped.set(key, { key, scope, displayName: (review.name || 'Anonymous').trim(), reviews: [], reviewApiKey: review._reviewKey || '' });
+          }
+          const g = grouped.get(key);
+          if (!g.reviewApiKey && review._reviewKey) g.reviewApiKey = review._reviewKey;
+          g.reviews.push({ ...review, scope });
+        }
+        return Array.from(grouped.values()).map(g => {
+          const sorted = g.reviews.slice().sort((a,b) => (Date.parse(a.createdAt)||0) - (Date.parse(b.createdAt)||0));
+          const avg = sorted.length ? sorted.reduce((s,r) => s + Number(r.rating||0), 0) / sorted.length : 0;
+          const allLikes = [];
+          const seen = new Set();
+          for (const r of sorted) {
+            for (const l of (Array.isArray(r.likes) ? r.likes : [])) {
+              const lk = String(l.name||'').toLowerCase();
+              if (lk && !seen.has(lk)) { seen.add(lk); allLikes.push(l); }
+            }
+          }
+          const photo = sorted.find(r => r.photoDataUrl)?.photoDataUrl || '';
+          return { ...g, reviews: sorted, averageRating: avg, avatarUrl: photo, likes: allLikes };
+        });
+      }
+
+      function formatDate(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+        return d.toLocaleString([], { month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+      }
+
+      /* ─────────────── physics engine ─────────────── */
+      const bubbleEntities = new Map();
+      let physicsRaf = null;
+
+      function spawnEntity(r) {
+        const lw = window.innerWidth, lh = window.innerHeight;
+        const m = r + 4;
+        const x = m + Math.random() * Math.max(1, lw - 2*m);
+        const y = m + Math.random() * Math.max(1, lh - 2*m);
+        const angle = Math.random() * Math.PI * 2;
+        const spd = 40 + Math.random() * 35;
+        return { el: null, x, y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd, r, baseSpeed: spd };
+      }
+
+      function syncEntities() {
+        const lw = window.innerWidth, lh = window.innerHeight;
+        const seen = new Set();
+
+        for (const el of document.querySelectorAll('#bubble-layer .review-bubble')) {
+          const raw = el.dataset.reviewId ? decodeURIComponent(el.dataset.reviewId) : null;
+          if (!raw) continue;
+          const k = `r::${raw}`;
+          seen.add(k);
+          if (!bubbleEntities.has(k)) bubbleEntities.set(k, spawnEntity(40));
+          const e = bubbleEntities.get(k);
+          e.el = el;
+          el.style.left = `${e.x - e.r}px`;
+          el.style.top  = `${e.y - e.r}px`;
+        }
+
+        for (const el of document.querySelectorAll('#active-users-layer .active-user-bubble')) {
+          const raw = el.dataset.userKey ? decodeURIComponent(el.dataset.userKey) : null;
+          if (!raw) continue;
+          const k = `u::${raw}`;
+          seen.add(k);
+          if (!bubbleEntities.has(k)) bubbleEntities.set(k, spawnEntity(24));
+          const e = bubbleEntities.get(k);
+          e.el = el;
+          el.style.left = `${e.x - e.r}px`;
+          el.style.top  = `${e.y - e.r}px`;
+        }
+
+        for (const k of bubbleEntities.keys()) {
+          if (!seen.has(k)) bubbleEntities.delete(k);
+        }
+
+        startPhysics();
+      }
+
+      // Returns a padded bounding rect of the center playing area, or null when idle.
+      function getCenterObstacle() {
+        if (!playScreen.classList.contains('visible')) return null;
+        const r = playScreen.getBoundingClientRect();
+        if (r.width === 0) return null;
+        const pad = 12;
+        return { left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad };
+      }
+
+      function bounceOffRect(e, rect) {
+        // Closest point on the rectangle to the circle center
+        const cx = Math.max(rect.left, Math.min(e.x, rect.right));
+        const cy = Math.max(rect.top,  Math.min(e.y, rect.bottom));
+        const dx = e.x - cx, dy = e.y - cy;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        if (dist >= e.r) return;
+
+        // Push the bubble out
+        const overlap = e.r - dist;
+        const nx = dx / dist, ny = dy / dist;
+        e.x += nx * overlap;
+        e.y += ny * overlap;
+
+        // Reflect velocity along the collision normal (only if moving into the rect)
+        const dot = e.vx * nx + e.vy * ny;
+        if (dot < 0) {
+          e.vx -= 2 * dot * nx;
+          e.vy -= 2 * dot * ny;
+        }
+      }
+
+      function stepPhysics(dt) {
+        const lw = window.innerWidth, lh = window.innerHeight;
+        const active = [...bubbleEntities.values()].filter(e => e.el);
+        const obstacle = getCenterObstacle();
+
+        for (const e of active) {
+          e.x += e.vx * dt;
+          e.y += e.vy * dt;
+          if (e.x - e.r < 0)  { e.x = e.r;      e.vx =  Math.abs(e.vx); }
+          if (e.x + e.r > lw) { e.x = lw - e.r; e.vx = -Math.abs(e.vx); }
+          if (e.y - e.r < 0)  { e.y = e.r;      e.vy =  Math.abs(e.vy); }
+          if (e.y + e.r > lh) { e.y = lh - e.r; e.vy = -Math.abs(e.vy); }
+
+          if (obstacle) bounceOffRect(e, obstacle);
+
+          const spd = Math.hypot(e.vx, e.vy);
+          if (spd > e.baseSpeed && spd > 0.1) {
+            const s = (e.baseSpeed + (spd - e.baseSpeed) * Math.exp(-1.8 * dt)) / spd;
+            e.vx *= s; e.vy *= s;
+          }
+
+          e.el.style.left = `${e.x - e.r}px`;
+          e.el.style.top  = `${e.y - e.r}px`;
+        }
+
+        for (let i = 0; i < active.length; i++) {
+          for (let j = i + 1; j < active.length; j++) {
+            const a = active[i], b = active[j];
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy) || 0.01;
+            const min = a.r + b.r;
+            if (dist >= min) continue;
+            const nx = dx/dist, ny = dy/dist;
+            const ov = (min - dist) * 0.5;
+            a.x -= nx*ov; a.y -= ny*ov;
+            b.x += nx*ov; b.y += ny*ov;
+            const imp = (a.vx-b.vx)*nx + (a.vy-b.vy)*ny;
+            if (imp > 0) {
+              a.vx -= imp*nx; a.vy -= imp*ny;
+              b.vx += imp*nx; b.vy += imp*ny;
+            }
+            a.el.style.left = `${a.x - a.r}px`; a.el.style.top = `${a.y - a.r}px`;
+            b.el.style.left = `${b.x - b.r}px`; b.el.style.top = `${b.y - b.r}px`;
+          }
+        }
+      }
+
+      function startPhysics() {
+        if (physicsRaf) return;
+        let prev = performance.now();
+        function tick(now) {
+          physicsRaf = requestAnimationFrame(tick);
+          stepPhysics(Math.min((now - prev) / 1000, 0.05));
+          prev = now;
+        }
+        physicsRaf = requestAnimationFrame(tick);
+      }
+
+      /* ─────────────── render bubbles ─────────────── */
+      const BUBBLE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#a855f7','#ec4899'];
+      const colorCache = new Map();
+
+      function userColor(name) {
+        const k = (name||'').toLowerCase();
+        if (!colorCache.has(k)) colorCache.set(k, BUBBLE_COLORS[Math.floor(Math.random()*BUBBLE_COLORS.length)]);
+        return colorCache.get(k);
+      }
+
+      let lastUserSig = '', lastReviewSig = '';
+
+      function renderUsers(users) {
+        const layer = document.getElementById('active-users-layer');
+        const sig = JSON.stringify(users.map(u => u.name));
+        if (sig === lastUserSig) return;
+        lastUserSig = sig;
+
+        layer.innerHTML = users.slice(0, 14).map((user, i) => {
+          const key = encodeURIComponent((user.name||`user${i}`).toLowerCase());
+          const name = esc(user.name || 'Usuario');
+          const photo = String(user.photoDataUrl || '').trim();
+          const color = userColor(user.name);
+          const letter = esc(String(user.name||'?')[0].toUpperCase());
+          const inner = photo
+            ? `<img src="${esc(photo)}" alt="${name}" loading="lazy" />`
+            : `<span class="active-user-letter" style="background:${color};">${letter}</span>`;
+          return `<article class="active-user-bubble" data-user-key="${key}" title="${name}" style="left:0;top:0;">${inner}</article>`;
+        }).join('');
+
+        syncEntities();
+      }
+
+      function renderReviews(currentReviews, pastReviews) {
+        const layer = document.getElementById('bubble-layer');
+        const sig = JSON.stringify(currentReviews) + JSON.stringify(pastReviews);
+        if (sig === lastReviewSig) return;
+        lastReviewSig = sig;
+
+        const groups = groupReviewsByReviewer(currentReviews).slice(-8);
+
+        const currentHtml = groups.map(g => {
+          const id = encodeURIComponent(g.key);
+          const name = esc(g.displayName);
+          const scopeLabel = g.scope === 'album' ? 'Album' : 'Cancion';
+          const bubbleClass = g.scope === 'album' ? 'album-review' : 'song-review';
+
+          // Header: avatar badge or plain name
+          const headerHtml = g.avatarUrl
+            ? `<div class="review-avatar-badge">
+                 <img class="review-avatar-image" src="${esc(g.avatarUrl)}" alt="${name}" loading="lazy" />
+                 <span class="review-avatar-name">${name}</span>
+               </div>
+               <span class="review-bubble-scope">${scopeLabel}</span>`
+            : `<span class="review-bubble-name">${name}</span>
+               <span class="review-bubble-scope">${scopeLabel}</span>`;
+
+          // Stars
+          const starsRow = `<div class="review-stars">${starsHtml(g.averageRating)}</div>`;
+
+          // Review texts
+          const historyHtml = g.reviews.map(r => {
+            const text = String(r.text||'').trim();
+            const textRow = text ? `<p class="review-history-text">${esc(text)}</p>` : '';
+            const d = formatDate(r.createdAt);
+            return `<li class="review-history-item">
+              <p class="review-history-meta">${d ? esc(d) + ' · ' : ''}${Number(r.rating||0).toFixed(1)}/5</p>
+              ${textRow}
+            </li>`;
+          }).join('');
+
+          // Hearts strip
+          const heartsStrip = g.likes.length
+            ? `<div class="review-bubble-hearts">${g.likes.slice(0,7).map(()=>'❤️').join('')}${g.likes.length>7?`<span class="review-hearts-more">+${g.likes.length-7}</span>`:''}</div>`
+            : '';
+
+          // Liker photos
+          const likerPhotos = g.likes.map(l => {
+            const ln = esc(String(l.name||'?'));
+            return l.photoDataUrl
+              ? `<img class="liker-avatar" src="${esc(l.photoDataUrl)}" alt="${ln}" title="${ln}" loading="lazy" />`
+              : `<span class="liker-initial" title="${ln}">${esc(String(l.name||'?')[0].toUpperCase())}</span>`;
+          }).join('');
+          const likesSection = g.likes.length
+            ? `<div class="review-likes-section">${likerPhotos}</div>`
+            : '';
+
+          return `<article class="review-bubble ${bubbleClass}" data-review-id="${id}" style="left:0;top:0;">
+            <div class="review-bubble-summary">${headerHtml}</div>
+            ${starsRow}
+            <ol class="review-history-list">${historyHtml}</ol>
+            ${heartsStrip}
+            ${likesSection}
+          </article>`;
+        }).join('');
+
+        let pastHtml = '';
+        if (pastReviews.length) {
+          const sorted = [...pastReviews].sort((a,b) => (Date.parse(a.createdAt)||0)-(Date.parse(b.createdAt)||0));
+          const pastItems = sorted.map(r => {
+            const author = esc(String(r.name||'Anonymous').trim());
+            const text = String(r.text||'').trim();
+            const scope = r.scope === 'album' ? 'Album' : 'Canción';
+            return `<li class="review-history-item">
+              <p class="review-history-meta"><span class="past-review-author">${author}</span> · ${scope} · ${Number(r.rating||0).toFixed(1)}/5</p>
+              ${text ? `<p class="review-history-text">${esc(text)}</p>` : ''}
+            </li>`;
+          }).join('');
+          pastHtml = `<article class="review-bubble past-reviews-bubble" data-review-id="${encodeURIComponent('past-reviews')}" style="left:0;top:0;">
+            <div class="review-bubble-summary">
+              <span class="review-bubble-name past-reviews-title">Anteriores</span>
+              <span class="past-reviews-count">${pastReviews.length}</span>
+            </div>
+            <ol class="review-history-list">${pastItems}</ol>
+          </article>`;
+        }
+
+        layer.innerHTML = pastHtml + currentHtml;
+        syncEntities();
+      }
+
+      /* ─────────────── data fetching ─────────────── */
+      let currentNowPlaying = null;
+      let lastNpSig = '';
+
+      function getSongKey(np) {
+        if (!np?.albumTitle || !np?.songTitle) return '';
+        return `${np.albumTitle}::${np.songTitle}`;
+      }
+
+      function getAlbumKey(np) {
+        if (!np?.albumTitle) return '';
+        const parts = [np.albumArtist, np.albumTitle].map(v => String(v||'').trim()).filter(Boolean);
+        return `album::${parts.join('::')}`;
+      }
+
+      async function fetchReviews(key) {
+        try {
+          const r = await fetch(`/api/reviews?songKey=${encodeURIComponent(key)}&t=${Date.now()}`, { cache: 'no-store' });
+          if (!r.ok) throw new Error();
+          const p = await r.json();
+          return Array.isArray(p.reviews) ? p.reviews : [];
+        } catch {
+          return [];
+        }
+      }
+
+      async function pollReviews() {
+        const np = currentNowPlaying;
+        if (!np?.albumTitle) { renderReviews([], []); return; }
+
+        const scope = np.reviewScope === 'album' ? 'album' : 'song';
+        const songKey = getSongKey(np);
+        const albumKey = getAlbumKey(np);
+
+        const [songRevs, albumRevs] = await Promise.all([
+          scope === 'song' && songKey ? fetchReviews(songKey) : Promise.resolve([]),
+          fetchReviews(albumKey)
+        ]);
+
+        const all = [
+          ...songRevs.map(r => ({ ...r, scope: 'song', _reviewKey: songKey })),
+          ...albumRevs.map(r => ({ ...r, scope: 'album', _reviewKey: albumKey }))
+        ];
+
+        const partyId = np.partyId || null;
+        const current = partyId ? all.filter(r => r.partyId === partyId) : all;
+        const past    = partyId ? all.filter(r => r.partyId !== partyId) : [];
+
+        renderReviews(current, past);
+      }
+
+      async function pollUsers() {
+        try {
+          const r = await fetch(`/api/users/active?t=${Date.now()}`, { cache: 'no-store' });
+          if (!r.ok) throw new Error();
+          const payload = await r.json();
+          const users = Array.isArray(payload) ? payload : (Array.isArray(payload.users) ? payload.users : []);
+          renderUsers(users);
+        } catch {
+          renderUsers([]);
+        }
+      }
+
+      /* ─────────────── now-playing ─────────────── */
+      const ambientBg  = document.getElementById('ambient-bg');
+      const idleScreen = document.getElementById('idle-screen');
+      const playScreen = document.getElementById('playing-screen');
+      const npCover    = document.getElementById('np-cover');
+      const npDisc     = document.getElementById('np-disc');
+      const npDiscSec  = document.getElementById('np-disc-secondary');
+      const npAlbum    = document.getElementById('np-album');
+      const npArtist   = document.getElementById('np-artist');
+      const npSong     = document.getElementById('np-song');
+
+      function detectDiscType(text) {
+        const t = String(text||'').toLowerCase();
+        if (t.includes('cd') || t.includes('compact disc')) return 'cd';
+        if (t.includes('clear')) return 'clear';
+        return 'vinyl';
+      }
+
+      function detectDiscCount(text) {
+        const m = String(text||'').match(/(\d)\s*(lp|disc|record|vinyl)/i);
+        return m ? parseInt(m[1], 10) : 1;
+      }
+
+      function setDiscType(disc, type) {
+        disc.classList.remove('cd-disc', 'clear-vinyl');
+        if (type === 'cd') disc.classList.add('cd-disc');
+        else if (type === 'clear') disc.classList.add('clear-vinyl');
+      }
+
+      function showPlaying(data) {
+        const sig = `${data.albumTitle}|${data.songTitle}|${data.coverUrl}`;
+        const changed = sig !== lastNpSig;
+        lastNpSig = sig;
+
+        ambientBg.style.backgroundImage = `url(${data.coverUrl})`;
+        ambientBg.style.opacity = '1';
+
+        if (changed) {
+          npCover.classList.remove('arriving');
+          void npCover.offsetWidth;
+          npCover.src = data.coverUrl;
+          npCover.classList.add('arriving');
+        }
+
+        const discType = detectDiscType(data.albumTitle + ' ' + (data.albumArtist||''));
+        setDiscType(npDisc, discType);
+        setDiscType(npDiscSec, discType);
+        npDiscSec.classList.toggle('visible', detectDiscCount(data.albumTitle) >= 2);
+
+        npAlbum.textContent = data.albumTitle || '';
+        npArtist.textContent = data.albumArtist || '';
+        const hasSong = data.reviewScope === 'song' && data.songTitle;
+        npSong.hidden = !hasSong;
+        if (hasSong) npSong.textContent = data.songTitle;
+
+        idleScreen.classList.add('hidden');
+        playScreen.classList.add('visible');
+      }
+
+      function showIdle() {
+        lastNpSig = '';
+        currentNowPlaying = null;
+        ambientBg.style.opacity = '0';
+        idleScreen.classList.remove('hidden');
+        playScreen.classList.remove('visible');
+        renderReviews([], []);
+      }
+
+      async function pollNowPlaying() {
+        try {
+          const r = await fetch('./now-playing.json?t=' + Date.now());
+          if (!r.ok) { showIdle(); return; }
+          const data = await r.json();
+          if (data && data.albumTitle && data.coverUrl) {
+            currentNowPlaying = data;
+            showPlaying(data);
+          } else {
+            showIdle();
+          }
+        } catch {
+          showIdle();
+        }
+      }
+
+      /* ─────────────── fullscreen ─────────────── */
+      const fsBtn = document.getElementById('fs-btn');
+      fsBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      });
+      document.addEventListener('fullscreenchange', () => {
+        fsBtn.textContent = document.fullscreenElement ? '✕' : '⛶';
+        fsBtn.title = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+      });
+
+      /* ─────────────── start polling ─────────────── */
+      pollNowPlaying();
+      pollUsers();
+      setInterval(pollNowPlaying, 2000);
+      setInterval(pollUsers, 2000);
+      setInterval(pollReviews, 3000);
+    </script>
+  </body>
+</html>
