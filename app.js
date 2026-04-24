@@ -1007,6 +1007,7 @@ function setCurrentUser(user) {
   const profileHub = document.getElementById("profile-hub");
   const profileAvatar = document.getElementById("profile-avatar");
   const profileMenuUser = document.getElementById("profile-menu-user");
+  const profilePartyCount = document.getElementById("profile-party-count");
   const profileDescription = document.getElementById("profile-description");
   const profileInstagram = document.getElementById("profile-instagram");
   const profileTopAlbum1 = document.getElementById("profile-top-album-1");
@@ -1029,6 +1030,9 @@ function setCurrentUser(user) {
     }
     if (profileDescription) {
       profileDescription.value = "";
+    }
+    if (profilePartyCount) {
+      profilePartyCount.textContent = "";
     }
     if (profileInstagram) {
       profileInstagram.value = "";
@@ -1075,6 +1079,12 @@ function setCurrentUser(user) {
 
   if (profileMenuUser) {
     profileMenuUser.textContent = `Perfil: ${sessionState.currentUser.name}`;
+  }
+
+  if (profilePartyCount) {
+    const count = Number(sessionState.currentUser.listeningPartiesAttended || 0);
+    const normalizedCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+    profilePartyCount.textContent = `Listening partys asistidas: ${normalizedCount}`;
   }
 
   if (profileDescription) {

@@ -450,9 +450,32 @@ def sanitize_user_profile(profile):
         "instagramUsername": str(profile.get("instagramUsername", "")).strip().lstrip("@")[:40],
         "spotifyUrl": str(profile.get("spotifyUrl", "")).strip()[:200],
         "topAlbums": top_albums,
+        "listeningPartiesAttended": _to_non_negative_int(profile.get("listeningPartiesAttended"), default=0),
         "createdAt": str(profile.get("createdAt", "")).strip(),
         "accountName": str(profile.get("accountName", "usuario")).strip() or "usuario"
     }
+
+
+def increment_users_listening_parties_attended(users_store, user_keys):
+    if not isinstance(users_store, dict) or not isinstance(user_keys, list):
+        return False
+
+    updated = False
+    for raw_key in user_keys:
+        user_key = normalize_user_key(raw_key)
+        if not user_key:
+            continue
+
+        profile = users_store.get(user_key)
+        if not isinstance(profile, dict):
+            continue
+
+        current = _to_non_negative_int(profile.get("listeningPartiesAttended"), default=0)
+        profile["listeningPartiesAttended"] = current + 1
+        users_store[user_key] = profile
+        updated = True
+
+    return updated
 
 
 def read_plaintext_password(credentials_entry):
@@ -641,6 +664,10 @@ def reconcile_auth_stores(users_store, credentials_store):
             "instagramUsername": sanitized_profile.get("instagramUsername", ""),
             "spotifyUrl": sanitized_profile.get("spotifyUrl", ""),
             "topAlbums": sanitized_profile.get("topAlbums", ["", "", ""]),
+            "listeningPartiesAttended": _to_non_negative_int(
+                sanitized_profile.get("listeningPartiesAttended"),
+                default=0
+            ),
             "createdAt": profile_created_at,
             "accountName": "usuario"
         }
@@ -681,6 +708,10 @@ def reconcile_auth_stores(users_store, credentials_store):
         "instagramUsername": admin_instagram,
         "spotifyUrl": admin_spotify,
         "topAlbums": admin_top_albums,
+        "listeningPartiesAttended": _to_non_negative_int(
+            admin_profile.get("listeningPartiesAttended"),
+            default=0
+        ),
         "createdAt": admin_created_at,
         "accountName": ADMIN_ACCOUNT_NAME
     }
@@ -1302,6 +1333,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         credentials_store,
                         datetime.now(timezone.utc)
                     )
+                    add_session_sticky_attendee(_current_session, actor_key)
+                    started_attendees = get_session_sticky_attendee_keys(_current_session)
+                    if increment_users_listening_parties_attended(users_store, started_attendees):
+                        write_users_store(users_store)
                 add_session_sticky_attendee(_current_session, actor_key)
 
                 now_playing_payload = {
@@ -1383,6 +1418,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "instagramUsername": "",
                     "spotifyUrl": "",
                     "topAlbums": ["", "", ""],
+                    "listeningPartiesAttended": 0,
                     "createdAt": datetime.now(timezone.utc).isoformat(),
                     "accountName": "usuario"
                 }
