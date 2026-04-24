@@ -398,7 +398,7 @@
       .vinyl-disc {
         --disc-color: #0b0b0b;
         position: absolute;
-        top: 50%; right: 0;
+        top: 50%; right: calc(var(--cover-size) * 0.20);
         width: var(--cover-size);
         height: var(--cover-size);
         border-radius: 50%;
@@ -432,7 +432,7 @@
       }
 
       .vinyl-disc.secondary {
-        right: calc(var(--cover-size) * -0.08);
+        right: calc(var(--cover-size) * 0.02);
         transform: translateY(-50%) scale(0.92);
         z-index: 0;
         opacity: 0;
@@ -923,6 +923,118 @@
         }
       }
 
+      /* ─────────────── vinyl detection (mirrors app.js exactly) ─────────────── */
+      const VINYL_COLOR_RULES = [
+        { key: 'glow in the dark', color: '#16a34a', pattern: /\bglow[\s-]*in[\s-]*the[\s-]*dark\b/ },
+        { key: 'grape',   color: '#7e22ce', pattern: /\bgrape\b/ },
+        { key: 'coral',   color: '#fb7185', pattern: /\bcoral\b/ },
+        { key: 'green',   color: '#16a34a', pattern: /\bgreen\b/ },
+        { key: 'red',     color: '#dc2626', pattern: /\bred\b/ },
+        { key: 'blue',    color: '#2563eb', pattern: /\bblue\b/ },
+        { key: 'yellow',  color: '#eab308', pattern: /\byellow\b/ },
+        { key: 'orange',  color: '#f97316', pattern: /\borange\b/ },
+        { key: 'pink',    color: '#ec4899', pattern: /\bpink\b/ },
+        { key: 'purple',  color: '#8b5cf6', pattern: /\bpurple\b/ },
+        { key: 'white',   color: '#f8fafc', pattern: /\bwhite\b/ },
+        { key: 'gold',    color: '#ca8a04', pattern: /\bgold\b/ },
+        { key: 'silver',  color: '#94a3b8', pattern: /\bsilver\b/ }
+      ];
+
+      function withAlpha(hex, a) {
+        const c = String(hex||'').replace('#','');
+        if (c.length !== 6) return `rgba(20,20,20,${a})`;
+        return `rgba(${parseInt(c.slice(0,2),16)},${parseInt(c.slice(2,4),16)},${parseInt(c.slice(4,6),16)},${a})`;
+      }
+
+      function resolveVinylColor(rule, translucent) {
+        if (!rule?.color) return '#0b0b0b';
+        if (translucent && rule.key === 'grape') return withAlpha(rule.color, 0.7);
+        return translucent ? withAlpha(rule.color, 0.82) : rule.color;
+      }
+
+      function detectAmpersandVinylGradient(text, translucent) {
+        const descriptor = String(text||'').split(';')[0] || '';
+        if (!descriptor.includes('&')) return '';
+        const rules = VINYL_COLOR_RULES.filter(r => r.key !== 'glow in the dark');
+        for (const a of rules) {
+          for (const b of rules) {
+            if (a.key === b.key) continue;
+            const pat = new RegExp(`${a.pattern.source}\\s*&\\s*${b.pattern.source}`);
+            if (!pat.test(descriptor)) continue;
+            return `linear-gradient(135deg, ${resolveVinylColor(a, translucent)} 0%, ${resolveVinylColor(b, translucent)} 100%)`;
+          }
+        }
+        return '';
+      }
+
+      function detectVinylColors(rawText) {
+        const text = String(rawText||'').toLowerCase();
+        if (!text) return ['#0b0b0b', ''];
+        const translucent = /(translucent|transparent|clear)/.test(text);
+        const clearOnly   = /\bclear\b/.test(text);
+        const ampGrad = detectAmpersandVinylGradient(text, translucent);
+        if (ampGrad) return [ampGrad, ''];
+        const matched = VINYL_COLOR_RULES.filter(r => r.pattern.test(text));
+        if (matched.length >= 2) return [resolveVinylColor(matched[0], translucent), resolveVinylColor(matched[1], translucent)];
+        if (matched.length === 1) return clearOnly ? ['#f8fafc', ''] : [resolveVinylColor(matched[0], translucent), ''];
+        if (translucent) return clearOnly ? ['#f8fafc', ''] : ['rgba(255,255,255,0.88)', ''];
+        return ['#0b0b0b', ''];
+      }
+
+      function detectDiscType(rawText) {
+        const t = String(rawText||'').toLowerCase();
+        if (!t) return 'vinyl';
+        const hasVinyl = /\bvinyl\b/.test(t);
+        const hasCd    = /\bcd\b|compact\s*disc|cdr|cd-r/.test(t);
+        if (hasVinyl && hasCd) return 'both';
+        if (hasCd) return 'cd';
+        return 'vinyl';
+      }
+
+      function detectDiscCount(rawText) {
+        const t = String(rawText||'').toLowerCase();
+        const m1 = t.match(/\bx\s*(\d+)\b/);
+        if (m1 && Number(m1[1]) > 0) return Number(m1[1]);
+        const m2 = t.match(/\b(\d+)\s*x\b/);
+        if (m2 && Number(m2[1]) > 0) return Number(m2[1]);
+        return 1;
+      }
+
+      function detectClearVinyl(rawText) {
+        return /\bclear\b/.test(String(rawText||'').toLowerCase());
+      }
+
+      /* ─────────────── album collection lookup ─────────────── */
+      let albumCollection = new Map(); // "title::artist" -> album meta
+
+      async function loadAlbumCollection() {
+        try {
+          const r = await fetch(`./discogs-collection.json?t=${Date.now()}`, { cache: 'no-store' });
+          if (!r.ok) return;
+          const payload = await r.json();
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          albumCollection = new Map();
+          for (const item of items) {
+            const descriptor = [item.rawText, item.notes, item.format, item.formats].filter(Boolean).join(' ');
+            const [vinylColor, vinylColorSecondary] = detectVinylColors(descriptor);
+            const meta = {
+              vinylColor,
+              vinylColorSecondary,
+              discType:    detectDiscType(descriptor),
+              discCount:   detectDiscCount(descriptor),
+              isClearVinyl: detectClearVinyl(descriptor)
+            };
+            const key = `${String(item.title||'').trim().toLowerCase()}::${String(item.artist||'').trim().toLowerCase()}`;
+            albumCollection.set(key, meta);
+          }
+        } catch { /* non-fatal */ }
+      }
+
+      function findAlbumMeta(title, artist) {
+        const key = `${String(title||'').trim().toLowerCase()}::${String(artist||'').trim().toLowerCase()}`;
+        return albumCollection.get(key) || null;
+      }
+
       /* ─────────────── now-playing ─────────────── */
       const ambientBg  = document.getElementById('ambient-bg');
       const idleScreen = document.getElementById('idle-screen');
@@ -934,22 +1046,30 @@
       const npArtist   = document.getElementById('np-artist');
       const npSong     = document.getElementById('np-song');
 
-      function detectDiscType(text) {
-        const t = String(text||'').toLowerCase();
-        if (t.includes('cd') || t.includes('compact disc')) return 'cd';
-        if (t.includes('clear')) return 'clear';
-        return 'vinyl';
-      }
+      function applyDiscVisual(data) {
+        const meta = findAlbumMeta(data.albumTitle, data.albumArtist);
+        const discType      = meta?.discType === 'cd' ? 'cd' : 'vinyl';
+        const primaryColor  = String(meta?.vinylColor || '#0b0b0b').trim() || '#0b0b0b';
+        const secondaryColor = String(meta?.vinylColorSecondary || '').trim();
+        const discCount     = Number(meta?.discCount || 1);
+        const showSecond    = discCount > 1 || Boolean(secondaryColor);
+        const isClear       = discType === 'vinyl' && Boolean(meta?.isClearVinyl);
 
-      function detectDiscCount(text) {
-        const m = String(text||'').match(/(\d)\s*(lp|disc|record|vinyl)/i);
-        return m ? parseInt(m[1], 10) : 1;
-      }
+        // Spin speed: album scope = slower, song scope = faster (matches phone app)
+        const scope = data.reviewScope === 'album' ? 'album' : 'song';
+        const primarySpeed   = scope === 'album' ? '3.8s' : '1.9s';
+        const secondarySpeed = scope === 'album' ? '5.3s' : '2.7s';
+        npDisc.style.animationDuration    = primarySpeed;
+        npDiscSec.style.animationDuration = secondarySpeed;
 
-      function setDiscType(disc, type) {
-        disc.classList.remove('cd-disc', 'clear-vinyl');
-        if (type === 'cd') disc.classList.add('cd-disc');
-        else if (type === 'clear') disc.classList.add('clear-vinyl');
+        npDisc.style.setProperty('--disc-color', primaryColor);
+        npDiscSec.style.setProperty('--disc-color', secondaryColor || primaryColor);
+
+        npDisc.classList.toggle('cd-disc',     discType === 'cd');
+        npDiscSec.classList.toggle('cd-disc',  discType === 'cd');
+        npDisc.classList.toggle('clear-vinyl',    isClear);
+        npDiscSec.classList.toggle('clear-vinyl', isClear);
+        npDiscSec.classList.toggle('visible', showSecond);
       }
 
       function showPlaying(data) {
@@ -967,10 +1087,7 @@
           npCover.classList.add('arriving');
         }
 
-        const discType = detectDiscType(data.albumTitle + ' ' + (data.albumArtist||''));
-        setDiscType(npDisc, discType);
-        setDiscType(npDiscSec, discType);
-        npDiscSec.classList.toggle('visible', detectDiscCount(data.albumTitle) >= 2);
+        applyDiscVisual(data);
 
         npAlbum.textContent = data.albumTitle || '';
         npArtist.textContent = data.albumArtist || '';
@@ -1018,12 +1135,15 @@
         fsBtn.title = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
       });
 
-      /* ─────────────── start polling ─────────────── */
-      pollNowPlaying();
+      /* ─────────────── start ─────────────── */
+      document.documentElement.requestFullscreen().catch(() => {});
+      loadAlbumCollection().then(() => pollNowPlaying());
       pollUsers();
       setInterval(pollNowPlaying, 2000);
       setInterval(pollUsers, 2000);
       setInterval(pollReviews, 3000);
+      // Refresh album collection every 5 min in case new records are added
+      setInterval(loadAlbumCollection, 5 * 60 * 1000);
     </script>
   </body>
 </html>
