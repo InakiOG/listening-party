@@ -411,6 +411,55 @@
           ]
         }
       ]
+    },
+    {
+      "id": "2026-04-24T06:41:00.869268+00:00",
+      "date": "2026-04-24T06:41:00.869268+00:00",
+      "startedAt": "2026-04-24T06:41:00.869268+00:00",
+      "savedAt": "2026-04-24T06:55:12.597475+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki",
+        "test1"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Siamese Dream",
+          "artist": "The Smashing Pumpkins",
+          "coverUrl": "https://i.discogs.com/EofuWUwBWnBSYy-_Ss9jolzVOE6YBzXL5YcNOqvQ3L0/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNTU0/NzMtMTUxODgyNzk3/MS0xOTg3LmpwZWc.jpeg"
+        },
+        {
+          "title": "Weezer",
+          "artist": "Weezer",
+          "coverUrl": "https://i.discogs.com/YU-clSn8xVOsO1-mISsfzwtceXRB5HvpXpJg8K6GEcs/rs:fit/g:sm/q:90/h:600/w:597/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM1NjY3/ODA4LTE3NjMxODg4/MTctMjU0Ny5qcGVn.jpeg"
+        },
+        {
+          "title": "A Charlie Brown Christmas",
+          "artist": "Vince Guaraldi Trio",
+          "coverUrl": "https://i.discogs.com/YLcpghjIWw92Mcsaox2zCMmOzPBf7nytLVf7zxeeO4g/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI0MzI3/MTY0LTE2NjI0MTA0/NDktODg2Ni5qcGVn.jpeg"
+        },
+        {
+          "title": "The Rise & Fall Of A Midwest Princess",
+          "artist": "Chappell Roan",
+          "coverUrl": "https://i.discogs.com/kcA9FQZYqbdjTXyaXtYr6XA7x_yVvFUW_f-whw41o3k/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMxODMz/NjUwLTE3MjczNjIw/ODMtMjYwNC5qcGVn.jpeg"
+        },
+        {
+          "title": "Trainspotting (Music From The Motion Picture)",
+          "artist": "Various",
+          "coverUrl": "https://i.discogs.com/uE8u6iHM301s_OuSfe44HrQgXt3lHjEp6qgNqhc8iuA/rs:fit/g:sm/q:90/h:595/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk1MTM2/ODUtMTYwNjkzMjkx/My02MDU0LmpwZWc.jpeg"
+        },
+        {
+          "title": "Shed",
+          "artist": "Title Fight",
+          "coverUrl": "https://i.discogs.com/rYP7HFVTtAGWvrxHYfZqaQV7dAMHjSUhWISQbo2JdLk/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4ODU0/OTgtMTcxMzU4NjEy/MC01MjYxLmpwZWc.jpeg"
+        },
+        {
+          "title": "The Last Thing You Forget",
+          "artist": "Title Fight",
+          "coverUrl": "https://i.discogs.com/TIwdVFuC1oWaEmmsoWlFWLVVAE4N7G5sGMCCL62d6ww/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc0MDUy/NDgtMTQ0MDgwMDYw/My0zNDUxLmpwZWc.jpeg"
+        }
+      ],
+      "reviews": []
     }
   ]
 }

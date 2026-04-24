@@ -22,7 +22,7 @@
         "coverUrl": ""
       }
     ],
-    "listeningPartiesAttended": 0,
+    "listeningPartiesAttended": 1,
     "createdAt": "2026-04-22T20:43:37.909874+00:00",
     "accountName": "administrador"
   },
@@ -49,7 +49,7 @@
         "coverUrl": ""
       }
     ],
-    "listeningPartiesAttended": 0,
+    "listeningPartiesAttended": 1,
     "createdAt": "2026-04-23T04:54:10.905316+00:00",
     "accountName": "usuario"
   },

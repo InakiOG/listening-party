@@ -2923,6 +2923,9 @@ function hideNowPlaying() {
   currentNowPlaying = null;
   renderReviewBubbles([], "");
   document.documentElement.style.setProperty("--layout-top-space", "0rem");
+
+  const ambientBg = document.getElementById("np-ambient-bg");
+  if (ambientBg) ambientBg.style.opacity = "0";
 }
 
 function getSongKey(nowPlaying) {
@@ -4112,6 +4115,15 @@ function renderNowPlaying(nowPlaying) {
     section.hidden = false;
     lastNowPlayingSignature = signature;
     document.documentElement.style.setProperty("--layout-top-space", "5.5rem");
+
+    const ambientBg = document.getElementById("np-ambient-bg");
+    if (ambientBg && nowPlaying.coverUrl) {
+      ambientBg.style.opacity = "0";
+      setTimeout(() => {
+        ambientBg.style.backgroundImage = `url('${nowPlaying.coverUrl.replace(/'/g, "\\'")}')`;
+        ambientBg.style.opacity = "1";
+      }, 250);
+    }
 
     const playingAlbum = findAlbumByNowPlaying(nowPlaying);
     if (playingAlbum && appState.expandedAlbumId !== playingAlbum.id) {
