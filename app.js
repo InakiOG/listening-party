@@ -4301,90 +4301,41 @@ function setupAuthInteractions() {
 
   setAuthMode("login");
 
-  avatarButton.addEventListener("click", () => {
-    toggleProfileMenu();
-  });
+  if (changePhotoButton && changePhotoInput) {
+    changePhotoButton.addEventListener("click", () => {
+      changePhotoInput.click();
+    });
 
-  openProfileButton.addEventListener("click", () => {
-    closeProfileMenu();
-    openProfileView();
-  });
+    changePhotoInput.addEventListener("change", async () => {
+      if (!sessionState.currentUser?.name) {
+        return;
+      }
 
-  changePhotoButton.addEventListener("click", () => {
-    changePhotoInput.click();
-  });
+      const file = changePhotoInput.files && changePhotoInput.files[0] ? changePhotoInput.files[0] : null;
 
-  changePhotoInput.addEventListener("change", async () => {
-    if (!sessionState.currentUser?.name) {
-      return;
-    }
+      if (!file) {
+        return;
+      }
 
-    const file = changePhotoInput.files && changePhotoInput.files[0] ? changePhotoInput.files[0] : null;
+      try {
+        const photoDataUrl = await readFileAsDataUrl(file);
+        const updatedUser = await apiUpdatePhoto(sessionState.currentUser.name, photoDataUrl);
+        setCurrentUser(updatedUser);
+        await refreshActiveUsersNow();
+        closeProfileMenu();
+        showReviewStatus("Foto de perfil actualizada.");
+      } catch (error) {
+        showReviewStatus(error instanceof Error ? error.message : "No se pudo actualizar la foto.");
+      }
 
-    if (!file) {
-      return;
-    }
+      changePhotoInput.value = "";
+    });
+  }
 
-    try {
-      const photoDataUrl = await readFileAsDataUrl(file);
-      const updatedUser = await apiUpdatePhoto(sessionState.currentUser.name, photoDataUrl);
-      setCurrentUser(updatedUser);
-      await refreshActiveUsersNow();
+  if (viewReviewsButton) {
+    viewReviewsButton.addEventListener("click", async () => {
       closeProfileMenu();
-      showReviewStatus("Foto de perfil actualizada.");
-    } catch (error) {
-      showReviewStatus(error instanceof Error ? error.message : "No se pudo actualizar la foto.");
-    }
-
-    changePhotoInput.value = "";
-  });
-
-  viewReviewsButton.addEventListener("click", async () => {
-    closeProfileMenu();
-    await openMyReviewsView();
-  });
-
-  const partyRecordsBackButton = document.getElementById("party-records-back");
-  if (partyRecordsBackButton) {
-    partyRecordsBackButton.addEventListener("click", () => {
-      showMainView();
-    });
-  }
-
-  const openUsersBoardButton = document.getElementById("open-users-board");
-  if (openUsersBoardButton) {
-    openUsersBoardButton.addEventListener("click", async () => {
-      closeProfileMenu();
-      await openUsersBoardView();
-    });
-  }
-
-  const usersBoardBackButton = document.getElementById("users-board-back");
-  if (usersBoardBackButton) {
-    usersBoardBackButton.addEventListener("click", () => {
-      showMainView();
-    });
-  }
-
-  const openMyPartiesButton = document.getElementById("open-my-parties");
-  if (openMyPartiesButton) {
-    openMyPartiesButton.addEventListener("click", async () => {
-      closeProfileMenu();
-      await openMyPartiesView();
-    });
-  }
-
-  const myPartiesBackButton = document.getElementById("my-parties-back");
-  if (myPartiesBackButton) {
-    myPartiesBackButton.addEventListener("click", () => {
-      showMainView();
-    });
-  }
-
-  const partyBriefCloseButton = document.getElementById("party-brief-close");
-  if (partyBriefCloseButton) {
-    partyBriefCloseButton.addEventListener("click", () => {
-      hidePartyBriefPopup();
+      await openMyReviewsView();
     });
   }
 
@@ -4479,7 +4430,72 @@ function setupAuthInteractions() {
   });
 
   document.addEventListener("click", handleTopAlbumPickerClick);
+}
 
+function setupProfileHub() {
+  const avatarButton = document.getElementById("profile-avatar-button");
+  const openProfileButton = document.getElementById("open-profile");
+
+  if (avatarButton) {
+    // Use pointerdown so the menu opens immediately on the first tap on mobile
+    avatarButton.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      toggleProfileMenu();
+    });
+  }
+
+  if (openProfileButton) {
+    openProfileButton.addEventListener("click", () => {
+      closeProfileMenu();
+      openProfileView();
+    });
+  }
+
+  const partyRecordsBackButton = document.getElementById("party-records-back");
+  if (partyRecordsBackButton) {
+    partyRecordsBackButton.addEventListener("click", () => {
+      showMainView();
+    });
+  }
+
+  const openUsersBoardButton = document.getElementById("open-users-board");
+  if (openUsersBoardButton) {
+    openUsersBoardButton.addEventListener("click", async () => {
+      closeProfileMenu();
+      await openUsersBoardView();
+    });
+  }
+
+  const usersBoardBackButton = document.getElementById("users-board-back");
+  if (usersBoardBackButton) {
+    usersBoardBackButton.addEventListener("click", () => {
+      showMainView();
+    });
+  }
+
+  const openMyPartiesButton = document.getElementById("open-my-parties");
+  if (openMyPartiesButton) {
+    openMyPartiesButton.addEventListener("click", async () => {
+      closeProfileMenu();
+      await openMyPartiesView();
+    });
+  }
+
+  const myPartiesBackButton = document.getElementById("my-parties-back");
+  if (myPartiesBackButton) {
+    myPartiesBackButton.addEventListener("click", () => {
+      showMainView();
+    });
+  }
+
+  const partyBriefCloseButton = document.getElementById("party-brief-close");
+  if (partyBriefCloseButton) {
+    partyBriefCloseButton.addEventListener("click", () => {
+      hidePartyBriefPopup();
+    });
+  }
+
+  // Close menu when tapping outside the hub
   document.addEventListener("click", (event) => {
     const target = event.target;
     const menu = document.getElementById("profile-menu");
@@ -4909,6 +4925,25 @@ async function bootSession() {
   showAuthOverlay("Inicia sesion o crea un usuario.");
 }
 
+function startSessionWatchdog() {
+  setInterval(async () => {
+    // Only check when we think someone is logged in
+    if (!sessionState.currentUser) return;
+    try {
+      const sessionUser = await apiGetCurrentUser();
+      if (!sessionUser) {
+        setCurrentUser(null);
+        const savedName = getPersistedUserName();
+        const authName = document.getElementById("auth-name");
+        if (authName && savedName) authName.value = savedName;
+        showAuthOverlay("Tu sesion ha expirado. Inicia sesion de nuevo.");
+      }
+    } catch {
+      // Ignore transient network errors
+    }
+  }, 60_000);
+}
+
 (function restrictAccess() {
   const isMobileDevice =
     /Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent) ||
@@ -4952,6 +4987,7 @@ async function bootSession() {
   setupActiveUserBubbleInteractions();
   setupBubbleOutsideClickHandler();
   setupPartyPictureLightboxInteractions();
+  setupProfileHub();
   setupAuthInteractions();
   setupAddAlbumModal();
   setupLogoGravity();
@@ -4959,6 +4995,7 @@ async function bootSession() {
   startReviewPolling();
   startActiveUsersPolling();
   startLiveAlbumsPolling();
+  startSessionWatchdog();
   void bootSession();
 
   loadAlbums()
