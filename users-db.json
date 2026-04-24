@@ -22,34 +22,34 @@
         "coverUrl": ""
       }
     ],
-    "listeningPartiesAttended": 1,
+    "listeningPartiesAttended": 5,
     "createdAt": "2026-04-22T20:43:37.909874+00:00",
     "accountName": "administrador"
   },
   "test1": {
     "name": "test1",
     "photoDataUrl": "",
-    "description": "",
-    "instagramUsername": "",
+    "description": "test",
+    "instagramUsername": "test",
     "spotifyUrl": "",
     "topAlbums": [
       {
-        "title": "",
-        "artist": "",
-        "coverUrl": ""
+        "title": "ponyo",
+        "artist": "joe hisaishi",
+        "coverUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/f7/19/cc/f719cc4e-05d7-708c-af87-a5cfbbb3ff79/TKCA-.jpg/600x600bb.jpg"
       },
       {
-        "title": "",
-        "artist": "",
-        "coverUrl": ""
+        "title": "siamese dream",
+        "artist": "the smashing pumpkins",
+        "coverUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music91/v4/03/52/96/0352966e-1f9c-c0f9-5eee-300f4916bb9d/artwork.jpg/600x600bb.jpg"
       },
       {
-        "title": "",
-        "artist": "",
-        "coverUrl": ""
+        "title": "bocanada",
+        "artist": "gustavo cerati",
+        "coverUrl": "https://coverartarchive.org/release/8a36348d-c96b-46c3-adc6-faf765597a07/front-500"
       }
     ],
-    "listeningPartiesAttended": 1,
+    "listeningPartiesAttended": 5,
     "createdAt": "2026-04-23T04:54:10.905316+00:00",
     "accountName": "usuario"
   },

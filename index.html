@@ -1056,6 +1056,33 @@
         background: rgba(44, 27, 4, 0.6);
       }
 
+      .review-bubble.past-reviews-bubble {
+        border-color: rgba(167, 139, 250, 0.5);
+        background: rgba(30, 15, 50, 0.68);
+      }
+
+      .review-bubble.past-reviews-bubble.expanded {
+        background: rgba(30, 15, 50, 0.88);
+      }
+
+      .past-reviews-title {
+        color: #c084fc !important;
+      }
+
+      .past-reviews-count {
+        font-size: 0.64rem;
+        color: #a78bfa;
+        background: rgba(167, 139, 250, 0.18);
+        border-radius: 999px;
+        padding: 0.05rem 0.35rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .past-review-author {
+        color: #c084fc;
+        font-weight: 600;
+      }
+
       .review-bubble.dragging {
         cursor: grabbing;
       }
@@ -3146,6 +3173,6 @@
       <button id="party-picture-lightbox-close" class="party-picture-lightbox-close" type="button" aria-label="Cerrar foto">×</button>
       <img id="party-picture-lightbox-image" class="party-picture-lightbox-image" src="" alt="" />
     </section>
-    <script src="./app.js?v=20260422-01"></script>
+    <script src="./app.js?v=20260424-01"></script>
   </body>
 </html>

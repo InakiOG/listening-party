@@ -1864,19 +1864,16 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             if not isinstance(existing, list):
                 existing = []
 
-            if party_id:
-                normalized_name = normalize_user_key(name)
-                upsert_idx = next(
-                    (i for i, r in enumerate(existing)
-                     if isinstance(r, dict)
-                     and normalize_user_key(r.get("name", "")) == normalized_name
-                     and r.get("partyId") == party_id),
-                    None
-                )
-                if upsert_idx is not None:
-                    existing[upsert_idx] = review_entry
-                else:
-                    existing.append(review_entry)
+            normalized_name = normalize_user_key(name)
+            upsert_idx = next(
+                (i for i, r in enumerate(existing)
+                 if isinstance(r, dict)
+                 and normalize_user_key(r.get("name", "")) == normalized_name
+                 and r.get("partyId") == party_id),
+                None
+            )
+            if upsert_idx is not None:
+                existing[upsert_idx] = review_entry
             else:
                 existing.append(review_entry)
 

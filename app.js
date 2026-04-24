@@ -483,6 +483,19 @@ async function apiClearNowPlaying(actorName) {
   return response.json();
 }
 
+async function apiFinishListeningParty(actorName) {
+  const res = await fetch("/api/listening-party/finish", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ actorName })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || "No se pudo finalizar la listening party.");
+  }
+  return data;
+}
+
 async function apiAddPartyPicture(pictureDataUrl) {
   const response = await fetch("/api/listening-party/picture", {
     method: "POST",
@@ -2921,7 +2934,7 @@ function hideNowPlaying() {
   }
 
   currentNowPlaying = null;
-  renderReviewBubbles([], "");
+  renderReviewBubbles([], [], "");
   document.documentElement.style.setProperty("--layout-top-space", "0rem");
 
   const ambientBg = document.getElementById("np-ambient-bg");
@@ -2969,9 +2982,7 @@ async function fetchReviewsFromApi(reviewKey) {
     return [];
   }
 
-  const partyId = currentNowPlaying?.partyId;
-  const partyParam = partyId ? `&partyId=${encodeURIComponent(partyId)}` : "";
-  const response = await fetch(`/api/reviews?songKey=${encodeURIComponent(reviewKey)}${partyParam}&t=${Date.now()}`, {
+  const response = await fetch(`/api/reviews?songKey=${encodeURIComponent(reviewKey)}&t=${Date.now()}`, {
     cache: "no-store"
   });
 
@@ -3093,9 +3104,10 @@ async function fetchCurrentSongReviews() {
   const songKey = getSongKey(currentNowPlaying);
   const albumKey = getAlbumReviewKey(currentNowPlaying);
   const reviewScope = currentNowPlaying?.reviewScope === "album" ? "album" : "song";
+  const currentPartyId = currentNowPlaying?.partyId || null;
 
   if (!albumKey) {
-    renderReviewBubbles([], "");
+    renderReviewBubbles([], [], "");
     return;
   }
 
@@ -3110,11 +3122,18 @@ async function fetchCurrentSongReviews() {
       ...albumReviews.map((review) => ({ ...review, scope: "album", _reviewKey: albumKey }))
     ];
 
-    const hydratedReviewItems = await enrichLikesInReviews(await enrichReviewsWithPhotos(reviewItems));
-    const reviewGroups = groupReviewsByReviewer(hydratedReviewItems);
+    const currentReviews = currentPartyId
+      ? reviewItems.filter((r) => r.partyId === currentPartyId)
+      : reviewItems;
+    const pastReviews = currentPartyId
+      ? reviewItems.filter((r) => r.partyId !== currentPartyId)
+      : [];
+
+    const hydratedCurrent = await enrichLikesInReviews(await enrichReviewsWithPhotos(currentReviews));
+    const reviewGroups = groupReviewsByReviewer(hydratedCurrent);
     const groupsWithNewLikes = checkForNewLikes(reviewGroups);
 
-    renderReviewBubbles(hydratedReviewItems, `${songKey}|${albumKey}|${reviewScope}`);
+    renderReviewBubbles(hydratedCurrent, pastReviews, `${songKey}|${albumKey}|${reviewScope}`);
 
     if (groupsWithNewLikes.length > 0) {
       requestAnimationFrame(() => {
@@ -3124,7 +3143,7 @@ async function fetchCurrentSongReviews() {
       });
     }
   } catch {
-    renderReviewBubbles([], `${songKey}|${albumKey}|${reviewScope}`);
+    renderReviewBubbles([], [], `${songKey}|${albumKey}|${reviewScope}`);
     showReviewStatus("No se pudieron cargar las reseñas.");
   }
 }
@@ -3318,10 +3337,10 @@ function groupReviewsByReviewer(reviews) {
   });
 }
 
-function renderReviewBubbles(reviews, signature = "") {
+function renderReviewBubbles(currentReviews, pastReviews, signature = "") {
   const bubbleLayer = document.getElementById("bubble-layer");
   const currentUserKey = getReviewerKey(sessionState.currentUser?.name || "");
-  const reviewsSignature = JSON.stringify(reviews);
+  const reviewsSignature = JSON.stringify(currentReviews) + JSON.stringify(pastReviews);
   const combinedSignature = `${signature}::${reviewsSignature}::${currentUserKey}`;
 
   if (!bubbleLayer) {
@@ -3332,16 +3351,16 @@ function renderReviewBubbles(reviews, signature = "") {
     return;
   }
 
-  if (!reviews.length) {
+  if (!currentReviews.length && !pastReviews.length) {
     bubbleLayer.innerHTML = "";
     lastBubbleSignature = combinedSignature;
     syncBubblesFromDom();
     return;
   }
 
-  const reviewGroups = groupReviewsByReviewer(reviews).slice(-8);
+  const reviewGroups = groupReviewsByReviewer(currentReviews).slice(-8);
 
-  bubbleLayer.innerHTML = reviewGroups
+  const currentBubblesHtml = reviewGroups
     .map((group) => {
       const id = group.reviewerKey;
       const encodedId = encodeURIComponent(id);
@@ -3419,6 +3438,45 @@ function renderReviewBubbles(reviews, signature = "") {
     })
     .join("");
 
+  let pastBubbleHtml = "";
+  if (pastReviews.length > 0) {
+    const savedState = bubbleUiState.get("past-reviews");
+    const expanded = savedState?.expanded ?? false;
+    const sorted = [...pastReviews].sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
+
+    const pastHistoryMarkup = sorted.map((entry) => {
+      const safeName = escapeHtml(String(entry.name || "Anonymous").trim() || "Anonymous");
+      const safeText = String(entry.text || "").trim();
+      const safeRating = Number(entry.rating || 0).toFixed(1);
+      const safeDate = escapeHtml(formatReviewDate(entry.createdAt));
+      const scopeLabel = entry.scope === "album" ? "Album" : "Canción";
+      const textMarkup = safeText ? `<p class="review-history-text">${escapeHtml(safeText)}</p>` : "";
+      return `
+        <li class="review-history-item">
+          <p class="review-history-meta">
+            <span class="past-review-author">${safeName}</span> · ${scopeLabel} · ${safeDate} · ${safeRating}/5
+          </p>
+          ${textMarkup}
+        </li>
+      `;
+    }).join("");
+
+    pastBubbleHtml = `
+      <article class="review-bubble past-reviews-bubble ${expanded ? "expanded" : ""}"
+        data-review-id="${encodeURIComponent("past-reviews")}"
+        data-review-key=""
+        data-reviewer-name=""
+        style="left:0;top:0;">
+        <div class="review-bubble-summary">
+          <p class="review-bubble-name past-reviews-title">Anteriores</p>
+          <span class="past-reviews-count">${pastReviews.length}</span>
+        </div>
+        <ol class="review-bubble-text review-history-list">${pastHistoryMarkup}</ol>
+      </article>
+    `;
+  }
+
+  bubbleLayer.innerHTML = pastBubbleHtml + currentBubblesHtml;
   lastBubbleSignature = combinedSignature;
   syncBubblesFromDom();
 }
@@ -4035,16 +4093,20 @@ function setupNowPlayingInteractions() {
 
   stopNowPlayingButton.addEventListener("click", async () => {
     if (!isAdminUser() || !sessionState.currentUser?.name) {
-      showReviewStatus("Solo administrador puede finalizar la reproduccion actual.");
+      showReviewStatus("Solo administrador puede terminar la listening party.");
       return;
     }
 
+    const confirmed = window.confirm("¿Terminar la listening party? Se guardará el resumen y la próxima canción iniciará una nueva sesión.");
+    if (!confirmed) return;
+
     try {
-      await apiClearNowPlaying(sessionState.currentUser.name);
+      await apiFinishListeningParty(sessionState.currentUser.name);
+      lastKnownPartyActive = false;
       hideNowPlaying();
-      showReviewStatus("Reproduccion actual finalizada.");
+      void handlePartyJustEnded();
     } catch (error) {
-      showReviewStatus(error instanceof Error ? error.message : "No se pudo finalizar la reproduccion actual.");
+      showReviewStatus(error instanceof Error ? error.message : "No se pudo terminar la listening party.");
     }
   });
 

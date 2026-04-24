@@ -1,0 +1,218 @@
+{
+  "parties": [
+    {
+      "id": "2026-04-24T18:19:18.485322+00:00",
+      "date": "2026-04-24T18:19:18.485322+00:00",
+      "startedAt": "2026-04-24T18:19:18.485322+00:00",
+      "savedAt": "2026-04-24T18:30:57.326775+00:00",
+      "attendees": [
+        "test1"
+      ],
+      "listeners": [
+        "I\u00f1aki",
+        "test1"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Siamese Dream",
+          "artist": "The Smashing Pumpkins",
+          "coverUrl": "https://i.discogs.com/EofuWUwBWnBSYy-_Ss9jolzVOE6YBzXL5YcNOqvQ3L0/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNTU0/NzMtMTUxODgyNzk3/MS0xOTg3LmpwZWc.jpeg"
+        }
+      ],
+      "reviews": [
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Cherub Rock",
+          "rating": 3.5,
+          "text": "whats up",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Mayonaise",
+          "rating": 2.0,
+          "text": "rolon",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        }
+      ]
+    },
+    {
+      "id": "2026-04-24T18:39:12.147545+00:00",
+      "date": "2026-04-24T18:39:12.147545+00:00",
+      "startedAt": "2026-04-24T18:39:12.147545+00:00",
+      "savedAt": "2026-04-24T18:39:12.172546+00:00",
+      "attendees": [
+        "test1"
+      ],
+      "listeners": [
+        "I\u00f1aki",
+        "test1"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Siamese Dream",
+          "artist": "The Smashing Pumpkins",
+          "coverUrl": "https://i.discogs.com/EofuWUwBWnBSYy-_Ss9jolzVOE6YBzXL5YcNOqvQ3L0/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNTU0/NzMtMTUxODgyNzk3/MS0xOTg3LmpwZWc.jpeg"
+        }
+      ],
+      "reviews": [
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Cherub Rock",
+          "rating": 3.5,
+          "text": "whats up",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Mayonaise",
+          "rating": 2.0,
+          "text": "rolon",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        }
+      ]
+    },
+    {
+      "id": "2026-04-24T18:50:00.209351+00:00",
+      "date": "2026-04-24T18:50:00.209351+00:00",
+      "startedAt": "2026-04-24T18:50:00.209351+00:00",
+      "savedAt": "2026-04-24T18:50:20.690105+00:00",
+      "attendees": [
+        "test1",
+        "I\u00f1aki"
+      ],
+      "listeners": [
+        "I\u00f1aki",
+        "test1"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Siamese Dream",
+          "artist": "The Smashing Pumpkins",
+          "coverUrl": "https://i.discogs.com/EofuWUwBWnBSYy-_Ss9jolzVOE6YBzXL5YcNOqvQ3L0/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNTU0/NzMtMTUxODgyNzk3/MS0xOTg3LmpwZWc.jpeg"
+        }
+      ],
+      "reviews": [
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Cherub Rock",
+          "rating": 3.5,
+          "text": "whats up",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "I\u00f1aki",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Cherub Rock",
+          "rating": 3.5,
+          "text": "pinche rolon",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Mayonaise",
+          "rating": 2.0,
+          "text": "rolon",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        }
+      ],
+      "endedAt": "2026-04-24T18:50:20.690105+00:00",
+      "finalizedAt": "2026-04-24T18:50:20.690105+00:00"
+    },
+    {
+      "id": "2026-04-24T18:50:35.560976+00:00",
+      "date": "2026-04-24T18:50:35.560976+00:00",
+      "startedAt": "2026-04-24T18:50:35.560976+00:00",
+      "savedAt": "2026-04-24T18:51:02.375970+00:00",
+      "attendees": [
+        "test1",
+        "I\u00f1aki"
+      ],
+      "listeners": [
+        "I\u00f1aki",
+        "test1"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Siamese Dream",
+          "artist": "The Smashing Pumpkins",
+          "coverUrl": "https://i.discogs.com/EofuWUwBWnBSYy-_Ss9jolzVOE6YBzXL5YcNOqvQ3L0/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNTU0/NzMtMTUxODgyNzk3/MS0xOTg3LmpwZWc.jpeg"
+        }
+      ],
+      "reviews": [
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Cherub Rock",
+          "rating": 3.5,
+          "text": "whats up",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "I\u00f1aki",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Cherub Rock",
+          "rating": 3.5,
+          "text": "pinche rolon",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Mayonaise",
+          "rating": 2.0,
+          "text": "rolon",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "I\u00f1aki",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Luna",
+          "rating": 3.5,
+          "text": "buena",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "test1",
+          "albumTitle": "Siamese Dream",
+          "songTitle": "Luna",
+          "rating": 3.5,
+          "text": "good shit",
+          "scope": "song",
+          "createdAt": "24/04/26",
+          "likes": []
+        }
+      ],
+      "endedAt": "2026-04-24T18:51:02.375970+00:00",
+      "finalizedAt": "2026-04-24T18:51:02.375970+00:00"
+    }
+  ]
+}
