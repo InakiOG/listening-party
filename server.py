@@ -3,6 +3,7 @@ import argparse
 import os
 import secrets
 import threading
+import time
 import urllib.request
 from datetime import datetime, timezone
 from functools import partial
@@ -27,14 +28,19 @@ REVIEWS_DB_PATH = ROOT / "reviews-db.json"
 USERS_DB_PATH = ROOT / "users-db.json"
 CREDENTIALS_DB_PATH = ROOT / "user-credentials.local.json"
 NOW_PLAYING_PATH = ROOT / "now-playing.json"
+FUN_FACTS_DB_PATH = ROOT / "fun-facts-db.json"
 PARTY_RECORDS_PATH = ROOT / "party-records.json"
 LIVE_ALBUMS_PATH = ROOT / "live-albums.json"
 COLLECTION_PATH = ROOT / "discogs-collection.json"
 REVIEWS_LOCK = threading.Lock()
 LIVE_ALBUMS_LOCK = threading.Lock()
 _current_session = None
-_fun_facts_cache = {}
 _fun_facts_lock = threading.Lock()
+_fun_facts_db: dict = {}  # populated from disk in run_server()
+_priority_album = None    # (album_title, album_artist) — set on each now-playing update
+_gemini_rate_lock = threading.Lock()
+_gemini_last_call = 0.0   # epoch seconds of last Gemini request
+_GEMINI_MIN_INTERVAL = 5.0  # seconds between calls → max 12/min, safely under 15/min limit
 ADMIN_USER_KEY = "iñaki"
 ADMIN_DEFAULT_NAME = "Iñaki"
 ADMIN_DEFAULT_PASSWORD = "14agosto"
@@ -871,32 +877,53 @@ def increment_album_times_played(album_title, album_artist=""):
     return True
 
 
-def _fetch_gemini_fun_facts(album, artist, song=None):
+def _make_facts_key(album, artist):
+    return f"{album.strip().lower()}::{artist.strip().lower()}"
+
+
+def _read_fun_facts_db():
+    if not FUN_FACTS_DB_PATH.exists():
+        return {}
+    try:
+        with FUN_FACTS_DB_PATH.open(encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _write_fun_facts_db(db):
+    try:
+        with FUN_FACTS_DB_PATH.open("w", encoding="utf-8") as f:
+            json.dump(db, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
+
+
+def _call_gemini(album, artist):
+    global _gemini_last_call
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
         return []
 
-    if song:
-        prompt = (
-            f'Return ONLY a JSON array of 8 fun facts about the song "{song}" '
-            f'from the album "{album}" by "{artist}". '
-            'Each fact must be 1-2 sentences, genuinely interesting, no markdown, raw JSON array of strings only.'
-        )
-    else:
-        prompt = (
-            f'Return ONLY a JSON array of 8 fun facts about the album "{album}" by "{artist}". '
-            'Each fact must be 1-2 sentences, genuinely interesting, no markdown, raw JSON array of strings only.'
-        )
+    with _gemini_rate_lock:
+        wait = _GEMINI_MIN_INTERVAL - (time.time() - _gemini_last_call)
+        if wait > 0:
+            time.sleep(wait)
+        _gemini_last_call = time.time()
 
+    prompt = (
+        f'Return ONLY a JSON array of 8 fun facts about the album "{album}" by "{artist}". '
+        "Each fact must be 1-2 sentences, genuinely interesting. "
+        "No markdown, raw JSON array of strings only."
+    )
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-1.5-flash:generateContent?key={api_key}"
+        f"gemini-2.0-flash-lite:generateContent?key={api_key}"
     )
     body = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"maxOutputTokens": 700, "temperature": 0.75},
     }).encode("utf-8")
-
     req = urllib.request.Request(
         url, data=body,
         headers={"Content-Type": "application/json"},
@@ -906,7 +933,6 @@ def _fetch_gemini_fun_facts(album, artist, song=None):
         with urllib.request.urlopen(req, timeout=12) as resp:
             result = json.loads(resp.read().decode("utf-8"))
         text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
-        # Strip markdown code fences if the model wraps the JSON
         if text.startswith("```"):
             parts = text.split("```")
             text = parts[1] if len(parts) > 1 else text
@@ -916,9 +942,75 @@ def _fetch_gemini_fun_facts(album, artist, song=None):
         facts = json.loads(text)
         if isinstance(facts, list):
             return [str(f) for f in facts if f][:8]
-    except Exception:
-        pass
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        if e.code == 429:
+            try:
+                retry_s = int(json.loads(raw)["error"]["details"][-1]["retryDelay"].rstrip("s"))
+            except Exception:
+                retry_s = 30
+            print(f"[fun-facts] Gemini 429 — waiting {retry_s}s before retry", flush=True)
+            with _gemini_rate_lock:
+                _gemini_last_call = time.time() + retry_s
+        else:
+            print(f"[fun-facts] Gemini HTTP {e.code}: {raw}", flush=True)
+    except Exception as e:
+        print(f"[fun-facts] Gemini error: {e}", flush=True)
     return []
+
+
+def _pick_next_prefetch():
+    """Return the next (album, artist) that still needs fun facts, or None if all done."""
+    global _priority_album
+    try:
+        with COLLECTION_PATH.open(encoding="utf-8") as f:
+            items = json.load(f).get("items", [])
+        albums = [
+            (item["title"].strip(), item["artist"].strip())
+            for item in items
+            if item.get("title") and item.get("artist")
+        ]
+    except Exception:
+        return None
+
+    with _fun_facts_lock:
+        populated_keys = {k for k, v in _fun_facts_db.items() if v}
+
+    if _priority_album:
+        a, b = _priority_album
+        if _make_facts_key(a, b) not in populated_keys:
+            return (a, b)
+
+    seen = set()
+    for album, artist in albums:
+        k = _make_facts_key(album, artist)
+        if k in seen:
+            continue
+        seen.add(k)
+        if k not in populated_keys:
+            return (album, artist)
+
+    return None
+
+
+def _prefetch_worker():
+    """Background daemon: fills fun-facts-db.json for every album in the collection."""
+    time.sleep(6)
+    while True:
+        target = _pick_next_prefetch()
+        if target is None:
+            time.sleep(120)
+            continue
+        album, artist = target
+        key = _make_facts_key(album, artist)
+        with _fun_facts_lock:
+            if _fun_facts_db.get(key):
+                continue
+        facts = _call_gemini(album, artist)  # rate-limited inside _call_gemini
+        if facts:
+            with _fun_facts_lock:
+                _fun_facts_db[key] = facts
+                _write_fun_facts_db(_fun_facts_db)
 
 
 class ListeningPartyHandler(SimpleHTTPRequestHandler):
@@ -1186,23 +1278,23 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             params = parse_qs(parsed.query)
             album  = (params.get("album",  [""])[0] or "").strip()
             artist = (params.get("artist", [""])[0] or "").strip()
-            song   = (params.get("song",   [""])[0] or "").strip()
 
             if not album or not artist:
                 self._send_json({"facts": []})
                 return
 
-            cache_key = f"{album.lower()}|{artist.lower()}|{song.lower()}"
+            key = _make_facts_key(album, artist)
 
             with _fun_facts_lock:
-                if cache_key in _fun_facts_cache:
-                    self._send_json({"facts": _fun_facts_cache[cache_key]})
+                if _fun_facts_db.get(key):
+                    self._send_json({"facts": _fun_facts_db[key]})
                     return
 
-            facts = _fetch_gemini_fun_facts(album, artist, song or None)
-
+            # Cache miss: fetch inline so the desktop doesn't wait for the background thread
+            facts = _call_gemini(album, artist)
             with _fun_facts_lock:
-                _fun_facts_cache[cache_key] = facts
+                _fun_facts_db[key] = facts
+                _write_fun_facts_db(_fun_facts_db)
 
             self._send_json({"facts": facts})
             return
@@ -1446,6 +1538,8 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "partyId": _current_session["id"]
                 }
                 write_now_playing_payload(now_playing_payload)
+                global _priority_album
+                _priority_album = (album_title, album_artist)
                 increment_album_times_played(album_title, album_artist)
                 already_tracked = any(
                     str(a.get("title", "")).lower() == album_title.lower()
@@ -2061,6 +2155,10 @@ def run_server(port=8000, refresh_discogs=False):
         print("Using local discogs-collection.json cache (no startup refresh).")
 
     threading.Thread(target=backfill_missing_tracks, daemon=True).start()
+
+    global _fun_facts_db
+    _fun_facts_db = _read_fun_facts_db()
+    threading.Thread(target=_prefetch_worker, daemon=True).start()
 
     ensure_reviews_db()
     ensure_users_db()

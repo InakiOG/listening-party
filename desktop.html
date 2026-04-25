@@ -533,6 +533,10 @@
         user-select: none;
         text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
       }
+
+      .fun-fact.visible {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
@@ -1096,14 +1100,13 @@
         });
       }
 
-      async function fetchAndRenderFunFacts(albumTitle, albumArtist, songTitle) {
-        const sig = `${albumTitle}|${albumArtist}|${songTitle || ''}`;
+      async function fetchAndRenderFunFacts(albumTitle, albumArtist) {
+        const sig = `${albumTitle}|${albumArtist}`;
         if (sig === lastFactsSig) return;
         lastFactsSig = sig;
         clearFunFacts();
         try {
           const params = new URLSearchParams({ album: albumTitle, artist: albumArtist });
-          if (songTitle) params.set('song', songTitle);
           const r = await fetch(`/api/fun-facts?${params}`, { cache: 'no-store' });
           if (!r.ok) return;
           const data = await r.json();
@@ -1161,11 +1164,7 @@
           void npCover.offsetWidth;
           npCover.src = data.coverUrl;
           npCover.classList.add('arriving');
-          fetchAndRenderFunFacts(
-            data.albumTitle,
-            data.albumArtist,
-            data.reviewScope === 'song' ? (data.songTitle || null) : null
-          );
+          fetchAndRenderFunFacts(data.albumTitle, data.albumArtist);
         }
 
         applyDiscVisual(data);

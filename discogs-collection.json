@@ -1,7 +1,7 @@
 {
   "source": "Discogs public collection API",
   "profile": "InakiOG",
-  "updatedAt": "2026-04-23T04:48:18.475859+00:00",
+  "updatedAt": "2026-04-25T07:52:20.442142+00:00",
   "items": [
     {
       "title": "Four-Calendar Café",
@@ -17,6 +17,7 @@
       "instanceId": 2137842879,
       "dateAdded": "2026-04-21T20:52:32-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Know Who You Are At Every Age - 3:38",
         "Evangeline - 4:29",
@@ -28,8 +29,7 @@
         "Essence - 3:01",
         "Summerhead - 3:37",
         "Pur - 5:02"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Bossanova",
@@ -45,6 +45,7 @@
       "instanceId": 2137853455,
       "dateAdded": "2026-04-21T22:23:33-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Cecilia Ann",
         "Rock Music",
@@ -60,8 +61,7 @@
         "Hang Wire",
         "Stormy Weather",
         "Havalina"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Heaven Or Las Vegas",
@@ -77,6 +77,7 @@
       "instanceId": 2137842016,
       "dateAdded": "2026-04-21T20:46:13-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Cherry-Coloured Funk - 3:12",
         "Pitch The Baby - 3:17",
@@ -88,8 +89,7 @@
         "Wolf In The Breast - 3:32",
         "Road, River And Rail - 3:20",
         "Frou-Frou Foxes In Midsummer Fires - 5:48"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Surfer Rosa",
@@ -105,6 +105,7 @@
       "instanceId": 2137853424,
       "dateAdded": "2026-04-21T22:23:17-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Bone Machine",
         "Break My Body",
@@ -119,8 +120,7 @@
         "Vamos",
         "I'm Amazed",
         "Brick Is Red"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Doolittle",
@@ -136,6 +136,7 @@
       "instanceId": 1884984291,
       "dateAdded": "2025-01-03T00:13:19-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Debaser",
         "Tame",
@@ -152,8 +153,7 @@
         "Hey",
         "Silver",
         "Gouge Away"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Reggatta De Blanc",
@@ -169,6 +169,7 @@
       "instanceId": 2137853492,
       "dateAdded": "2026-04-21T22:23:49-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Message In A Bottle - 4:49",
         "Regatta De Blanc - 3:05",
@@ -181,8 +182,7 @@
         "Contact - 2:39",
         "Does Everyone Stare - 3:49",
         "No Time This Time - 3:18"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Fun And Games",
@@ -198,6 +198,7 @@
       "instanceId": 1884958896,
       "dateAdded": "2025-01-02T23:06:28-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Give It All You Got - 6:12",
         "You're The Best There Is - 7:30",
@@ -205,8 +206,7 @@
         "I Never Missed Someone Before - 9:32",
         "Give It All You Got, But Slowly - 4:20",
         "Fun And Games - 7:14"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Discovery",
@@ -222,6 +222,7 @@
       "instanceId": 1884960759,
       "dateAdded": "2025-01-02T23:11:44-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "One More Time",
         "Aerodynamic",
@@ -237,8 +238,7 @@
         "Short Circuit",
         "Face To Face",
         "Too Long"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Toxicity",
@@ -254,6 +254,7 @@
       "instanceId": 2137854820,
       "dateAdded": "2026-04-21T22:36:41-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Prison Song - 3:21",
         "Needles - 3:13",
@@ -269,8 +270,7 @@
         "Toxicity - 3:38",
         "Psycho - 3:45",
         "Aerials - 6:11"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Hypnotize",
@@ -286,6 +286,7 @@
       "instanceId": 1884981393,
       "dateAdded": "2025-01-03T00:06:25-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Attack",
         "Dreaming",
@@ -299,8 +300,7 @@
         "She's Like Heroin",
         "Lonely Day",
         "Soldier Side"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Selected Ambient Works 85-92",
@@ -316,6 +316,7 @@
       "instanceId": 1884955386,
       "dateAdded": "2025-01-02T22:56:33-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Xtal - 4:51",
         "Tha - 9:01",
@@ -330,8 +331,7 @@
         "Hedphelym - 6:02",
         "Delphium - 5:36",
         "Actium - 7:35"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Let It Be",
@@ -347,6 +347,7 @@
       "instanceId": 2137841347,
       "dateAdded": "2026-04-21T20:41:08-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Two Of Us",
         "Dig A Pony",
@@ -360,8 +361,7 @@
         "The Long And Winding Road",
         "For You Blue",
         "Get Back"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Abbey Road",
@@ -377,6 +377,7 @@
       "instanceId": 1884956223,
       "dateAdded": "2025-01-02T22:59:02-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Come Together - 4:21",
         "Something - 3:03",
@@ -395,8 +396,7 @@
         "Carry That Weight - 1:37",
         "The End - 2:20",
         "Her Majesty - 0:23"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Stankonia",
@@ -412,6 +412,7 @@
       "instanceId": 2137852627,
       "dateAdded": "2026-04-21T22:17:06-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Intro - 1:10",
         "Gasoline Dreams - 3:35",
@@ -437,8 +438,7 @@
         "Slum Beautiful - 4:08",
         "Pre-Nump (Interlude) - 0:27",
         "Stankonia (Stanklove) - 6:51"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Eye In The Sky",
@@ -454,6 +454,7 @@
       "instanceId": 1884954333,
       "dateAdded": "2025-01-02T22:53:24-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Sirius - Instrumental - 1:48",
         "Eye In The Sky - 4:33",
@@ -465,8 +466,7 @@
         "Mammagamma - Instrumental - 3:34",
         "Step By Step - 3:52",
         "Old And Wise - 4:52"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Face Value",
@@ -482,6 +482,7 @@
       "instanceId": 2137853220,
       "dateAdded": "2026-04-21T22:21:36-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "In The Air Tonight - 5:32",
         "This Must Be Love - 3:55",
@@ -495,8 +496,7 @@
         "I'm Not Moving - 2:33",
         "If Leaving Me Is Easy - 4:54",
         "Tomorrow Never Knows - 4:46"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Untitled",
@@ -512,6 +512,7 @@
       "instanceId": 2137851575,
       "dateAdded": "2026-04-21T22:07:55-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Black Dog - 4:55",
         "Rock And Roll - 3:40",
@@ -521,8 +522,7 @@
         "Four Sticks - 4:45",
         "Going To California - 3:32",
         "When The Levee Breaks - 7:08"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Led Zeppelin",
@@ -538,6 +538,7 @@
       "instanceId": 2137848593,
       "dateAdded": "2026-04-21T21:41:20-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Good Times Bad Times - 2:46",
         "Babe I'm Gonna Leave You - 6:42",
@@ -548,8 +549,7 @@
         "Communication Breakdown - 2:30",
         "I Can't Quit You Baby - 4:42",
         "How Many More Times - 8:27"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Led Zeppelin III",
@@ -565,6 +565,7 @@
       "instanceId": 2137848538,
       "dateAdded": "2026-04-21T21:40:43-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Immigrant Song - 2:26",
         "Friends - 3:53",
@@ -576,8 +577,7 @@
         "That's The Way - 5:37",
         "Bron-Y-Aur Stomp - 4:17",
         "Hats Off To (Roy) Harper - 3:42"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Core",
@@ -593,6 +593,7 @@
       "instanceId": 2137854196,
       "dateAdded": "2026-04-21T22:30:49-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Dead & Bloated - 5:10",
         "Sex Type Thing - 3:38",
@@ -606,8 +607,7 @@
         "Wet My Bed - 1:36",
         "Crackerman - 3:14",
         "Where The River Goes - 8:25"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Peek!",
@@ -623,6 +623,7 @@
       "instanceId": 2137856117,
       "dateAdded": "2026-04-21T22:48:28-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "La Piedad",
         "Intervalos De 40 Días",
@@ -632,8 +633,7 @@
         "Canícula Del Cerro",
         "Buenova",
         "El Charco"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Ride The Lightning",
@@ -649,6 +649,7 @@
       "instanceId": 2137851936,
       "dateAdded": "2026-04-21T22:11:01-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Fight Fire With Fire - 4:44",
         "Ride The Lightning - 6:36",
@@ -658,8 +659,7 @@
         "Escape - 4:23",
         "Creeping Death - 6:36",
         "The Call Of Ktulu - 8:52"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Rebel Yell",
@@ -675,6 +675,7 @@
       "instanceId": 2137841404,
       "dateAdded": "2026-04-21T20:41:38-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Rebel Yell - 4:45",
         "Daytime Drama - 4:02",
@@ -685,8 +686,7 @@
         "Crank Call - 3:56",
         "(Do Not) Stand In The Shadows - 3:10",
         "The Dead Next Door - 3:45"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "1",
@@ -702,6 +702,7 @@
       "instanceId": 2137841231,
       "dateAdded": "2026-04-21T20:40:12-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Love Me Do",
         "From Me To You",
@@ -730,8 +731,7 @@
         "Come Together",
         "Let It Be",
         "The Long And Winding Road"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "So Tonight That I Might See",
@@ -747,6 +747,7 @@
       "instanceId": 1884978045,
       "dateAdded": "2025-01-02T23:57:35-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Fade Into You",
         "Bells Ring",
@@ -758,8 +759,7 @@
         "Wasted",
         "Into Dust",
         "So Tonight That I Might See"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Salad Days",
@@ -775,6 +775,7 @@
       "instanceId": 2137851837,
       "dateAdded": "2026-04-21T22:10:12-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Salad Days",
         "Blue Boy",
@@ -787,8 +788,7 @@
         "Chamber of Reflection",
         "Go Easy",
         "Jonny’s Odyssey"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "This Old Dog",
@@ -804,6 +804,7 @@
       "instanceId": 2137851883,
       "dateAdded": "2026-04-21T22:10:38-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "My Old Man",
         "This Old Dog",
@@ -818,8 +819,7 @@
         "On the Level",
         "Moonlight on the River",
         "Watching Him Fade Away"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "(III)",
@@ -835,6 +835,7 @@
       "instanceId": 1884959865,
       "dateAdded": "2025-01-02T23:09:07-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Plague",
         "Kerosene",
@@ -848,8 +849,7 @@
         "Telepath",
         "Mercenary",
         "Child I Will Hurt You"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Love Will Tear Us Apart",
@@ -865,12 +865,12 @@
       "instanceId": 2137847996,
       "dateAdded": "2026-04-21T21:35:04-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Love Will Tear Us Apart",
         "These Days",
         "Love Will Tear Us Apart"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Igor",
@@ -886,6 +886,7 @@
       "instanceId": 1884982275,
       "dateAdded": "2025-01-03T00:08:32-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "IGOR’S THEME",
         "EARFQUAKE",
@@ -899,8 +900,7 @@
         "GONE, GONE / THANK YOU",
         "I DON’T LOVE YOU ANYMORE",
         "ARE WE STILL FRIENDS?"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Soul Of Italy - L'Anima D'Italia",
@@ -916,6 +916,7 @@
       "instanceId": 1884972237,
       "dateAdded": "2025-01-02T23:41:14-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Ciribiribin",
         "'O sole mio",
@@ -929,8 +930,7 @@
         "Torna a surriento",
         "Funiculi funicula",
         "Tarantella siciliana (Fischiettando)"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Illmatic",
@@ -946,6 +946,7 @@
       "instanceId": 2137852297,
       "dateAdded": "2026-04-21T22:14:06-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "The Genesis",
         "N.Y. State of Mind",
@@ -957,8 +958,7 @@
         "One Time 4 Your Mind",
         "Represent",
         "It Ain’t Hard to Tell"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Oracular Spectacular",
@@ -974,6 +974,7 @@
       "instanceId": 2137851998,
       "dateAdded": "2026-04-21T22:11:29-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Time to Pretend",
         "Weekend Wars",
@@ -989,8 +990,7 @@
         "Electric Feel (demo version)",
         "Electric Feel (Justice remix)",
         "Kids (Soulwax remix)"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Random Access Memories",
@@ -1006,6 +1006,7 @@
       "instanceId": 1884961686,
       "dateAdded": "2025-01-02T23:14:14-08:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Give Life Back to Music",
         "The Game of Love",
@@ -1029,8 +1030,7 @@
         "LYTD (vocoder tests)",
         "The Writing of Fragments of Time",
         "Touch (2021 epilogue)"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Jar Of Flies",
@@ -1046,6 +1046,7 @@
       "instanceId": 2137840119,
       "dateAdded": "2026-04-21T20:32:12-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Rotten Apple",
         "Nutshell",
@@ -1054,8 +1055,7 @@
         "Whale & Wasp",
         "Don't Follow",
         "Swing On This"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Wish You Were Here",
@@ -1071,6 +1071,7 @@
       "instanceId": 2137853248,
       "dateAdded": "2026-04-21T22:21:57-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Original Album",
         "Shine On You Crazy Diamond (1-5)",
@@ -1089,8 +1090,7 @@
         "Wish You Were Here (Take 1) - 5:01",
         "Wish You Were Here (Pedal Steel Instrumental Mix) - 6:01",
         "Shine On You Crazy Diamond (Pts. 1-9, New Stereo Mix) - 25:26"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Call Me If You Get Lost",
@@ -1106,6 +1106,7 @@
       "instanceId": 1884981687,
       "dateAdded": "2025-01-03T00:07:07-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Sir Baudelaire - 1:28",
         "Corso - 2:26",
@@ -1123,8 +1124,7 @@
         "Juggernaut - 2:56",
         "Wilshire - 8:35",
         "Safari - 2:57"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Labcabincalifornia",
@@ -1140,6 +1140,7 @@
       "instanceId": 2137853168,
       "dateAdded": "2026-04-21T22:21:14-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "CYDE A",
         "Bullshit - 4:12",
@@ -1162,8 +1163,7 @@
         "Little D - 1:31",
         "Devil Music - 4:12",
         "The E.N.D. - 4:41"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Nevermind",
@@ -1179,6 +1179,7 @@
       "instanceId": 2137852316,
       "dateAdded": "2026-04-21T22:14:20-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Smells Like Teen Spirit - 5:00",
         "In Bloom - 4:13",
@@ -1192,8 +1193,7 @@
         "Stay Away - 3:30",
         "On A Plain - 3:12",
         "Something In The Way - 3:43"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Pinkerton",
@@ -1209,6 +1209,7 @@
       "instanceId": 2137856086,
       "dateAdded": "2026-04-21T22:48:14-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Tired Of Sex - 3:01",
         "Getchoo - 2:52",
@@ -1220,8 +1221,7 @@
         "Pink Triangle - 3:57",
         "Falling For You - 3:48",
         "Butterfly - 3:10"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Kind Of Blue",
@@ -1237,14 +1237,14 @@
       "instanceId": 1948466937,
       "dateAdded": "2025-02-27T19:26:44-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "So What - 8:56",
         "Freddie Freeloader - 9:32",
         "Blue in Green - 5:27",
         "Flamenco Sketches - 9:32",
         "All Blues - 11:34"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "MTV Unplugged 1993",
@@ -1260,6 +1260,7 @@
       "instanceId": 2137854341,
       "dateAdded": "2026-04-21T22:32:02-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Crackerman",
         "Creep",
@@ -1269,8 +1270,7 @@
         "Sex Type Thing",
         "Big Empty",
         "Andy Warhol"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Favourite Worst Nightmare",
@@ -1286,6 +1286,7 @@
       "instanceId": 2137840402,
       "dateAdded": "2026-04-21T20:34:19-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Brianstorm - 2:50",
         "Teddy Picker - 2:43",
@@ -1299,8 +1300,7 @@
         "The Bad Thing - 2:23",
         "Old Yellow Bricks - 3:11",
         "505 - 4:13"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Humbug",
@@ -1316,6 +1316,7 @@
       "instanceId": 2137840461,
       "dateAdded": "2026-04-21T20:34:43-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "My Propeller - 3:28",
         "Crying Lightning - 3:24",
@@ -1327,8 +1328,7 @@
         "Dance Little Liar - 4:43",
         "Pretty Visitors - 3:40",
         "THe Jeweller's Hands - 5:42"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Farewell To The First Golden Era",
@@ -1344,6 +1344,7 @@
       "instanceId": 1884976902,
       "dateAdded": "2025-01-02T23:54:35-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Dedicated To The One I Love - 2:56",
         "Go Where You Wanna Go - 2:32",
@@ -1357,8 +1358,7 @@
         "I Call Your Name - 2:32",
         "I Saw Her Again Last Night - 2:50",
         "California Dreamin' - 2:32"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Hotel California",
@@ -1374,6 +1374,7 @@
       "instanceId": 1884966996,
       "dateAdded": "2025-01-02T23:27:33-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Hotel California - 6:30",
         "New Kid In Town = El Nuevo Chico Del Pueblo - 5:04",
@@ -1384,8 +1385,7 @@
         "Pretty Maids All In A Row = Hermosas Doncellas, Todas En Fila - 4:00",
         "Try And Love Again = Trata de Amar Otra Vez - 5:10",
         "The Last Resort = El Último Lugar - 7:25"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Disintegration",
@@ -1401,6 +1401,7 @@
       "instanceId": 2137843185,
       "dateAdded": "2026-04-21T20:54:36-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Plainsong - 5:15",
         "Pictures Of You - 7:28",
@@ -1414,8 +1415,7 @@
         "Disintegration - 8:23",
         "Homesick - 7:09",
         "Untitled - 6:30"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Ten",
@@ -1431,6 +1431,7 @@
       "instanceId": 2137852882,
       "dateAdded": "2026-04-21T22:18:26-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Once - 3:51",
         "Even Flow - 4:53",
@@ -1443,8 +1444,7 @@
         "Garden - 4:58",
         "Deep - 4:13",
         "Release - 9:03"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Thriller",
@@ -1460,6 +1460,7 @@
       "instanceId": 2137852045,
       "dateAdded": "2026-04-21T22:11:48-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Wanna Be Startin' Somethin'",
         "Baby Be Mine",
@@ -1470,8 +1471,7 @@
         "Human Nature",
         "P.Y.T. (Pretty Young Thing)",
         "The Lady In My Life"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Unknown Pleasures",
@@ -1487,6 +1487,7 @@
       "instanceId": 2137847572,
       "dateAdded": "2026-04-21T21:31:04-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Outside",
         "Disorder - 3:36",
@@ -1500,8 +1501,7 @@
         "Wilderness - 2:35",
         "Interzone - 2:10",
         "I Remember Nothing - 6:00"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "A Charlie Brown Christmas",
@@ -1517,6 +1517,7 @@
       "instanceId": 2137855674,
       "dateAdded": "2026-04-21T22:44:19-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "O Tannenbaum - 5:03",
         "What Child Is This - 2:20",
@@ -1530,8 +1531,7 @@
         "Für Elise - 1:02",
         "The Christmas Song - 3:15",
         "Greensleeves - 5:25"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Melody's Echo Chamber",
@@ -1547,6 +1547,7 @@
       "instanceId": 1884978489,
       "dateAdded": "2025-01-02T23:58:42-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "I Follow You - 3:34",
         "Crystallized - 4:01",
@@ -1558,8 +1559,7 @@
         "Mount Hopeless - 4:32",
         "Snowcapped Andes Crash - 5:16",
         "Be Proud Of Your Kids - 3:09"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Currents",
@@ -1575,6 +1575,7 @@
       "instanceId": 2137855250,
       "dateAdded": "2026-04-21T22:40:23-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Let It Happen",
         "Nangs",
@@ -1589,8 +1590,7 @@
         "Reality In Motion",
         "Love / Paranoia",
         "New Person, Same Old Mistakes"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Three Imaginary Boys",
@@ -1606,6 +1606,7 @@
       "instanceId": 2137843138,
       "dateAdded": "2026-04-21T20:54:20-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "10:15 Saturday Night",
         "Accuracy",
@@ -1619,8 +1620,7 @@
         "Fire In Cairo",
         "It's Not You",
         "Three Imaginary Boys"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "MTV Unplugged In New York",
@@ -1636,6 +1636,7 @@
       "instanceId": 2137852386,
       "dateAdded": "2026-04-21T22:15:00-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "About A Girl - 3:37",
         "Come As You Are - 4:14",
@@ -1651,8 +1652,7 @@
         "Lake Of Fire - 2:55",
         "All Apologies - 4:23",
         "Where Did You Sleep Last Night - 5:07"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Nirvana",
@@ -1668,6 +1668,7 @@
       "instanceId": 1884988212,
       "dateAdded": "2025-01-03T00:22:45-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "You Know You're Right",
         "About A Girl",
@@ -1684,8 +1685,7 @@
         "All Apologies",
         "The Man Who Sold The World",
         "Where Did You Sleep Last Night"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "In Utero",
@@ -1701,6 +1701,7 @@
       "instanceId": 2137852345,
       "dateAdded": "2026-04-21T22:14:38-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Serve The Servants - 3:34",
         "Scentless Apprentice - 3:47",
@@ -1714,8 +1715,7 @@
         "Radio Friendly Unit Shifter - 4:49",
         "Tourette's - 1:33",
         "All Apologies - 3:50"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Weezer",
@@ -1731,6 +1731,7 @@
       "instanceId": 2137855827,
       "dateAdded": "2026-04-21T22:45:52-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "My Name Is Jonas - 3:24",
         "No One Else - 3:04",
@@ -1742,8 +1743,7 @@
         "In The Garage - 3:55",
         "Holiday - 3:24",
         "Only In Dreams - 7:59"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Weezer",
@@ -1759,6 +1759,7 @@
       "instanceId": 2137856045,
       "dateAdded": "2026-04-21T22:47:56-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Don't Let Go",
         "Photograph",
@@ -1770,8 +1771,7 @@
         "Simple Pages",
         "Glorious Day",
         "O Girlfriend"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Minecraft Volume Alpha",
@@ -1787,6 +1787,7 @@
       "instanceId": 1902653487,
       "dateAdded": "2025-01-17T19:27:11-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Subwoofer Lullaby - 3:28",
         "Living Mice - 2:57",
@@ -1800,8 +1801,7 @@
         "Sweden - 3:35",
         "Cat - 3:06",
         "Danny - 4:14"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Dummy",
@@ -1817,6 +1817,7 @@
       "instanceId": 2137853565,
       "dateAdded": "2026-04-21T22:24:24-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Mysterons - 4:56",
         "Sour Times - 4:05",
@@ -1828,8 +1829,7 @@
         "Pedestal - 3:30",
         "Biscuit - 4:34",
         "Glory Box - 4:49"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Dummy",
@@ -1845,6 +1845,7 @@
       "instanceId": 1884988386,
       "dateAdded": "2025-01-03T00:23:12-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Mysterons",
         "Sour Times",
@@ -1857,8 +1858,7 @@
         "Pedestal",
         "Biscuit",
         "Glory Box"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Hopes And Fears",
@@ -1874,6 +1874,7 @@
       "instanceId": 2137848165,
       "dateAdded": "2026-04-21T21:36:39-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Somewhere Only We Know",
         "Bend And Break",
@@ -1887,8 +1888,7 @@
         "On A Day Like Today",
         "Untitled 1",
         "Bedshaped"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Rise & Fall Of A Midwest Princess",
@@ -1904,6 +1904,7 @@
       "instanceId": 1884957930,
       "dateAdded": "2025-01-02T23:04:02-08:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Femininomenon",
         "Red Wine Supernova",
@@ -1919,8 +1920,7 @@
         "Naked in Manhattan",
         "California",
         "Guilty Pleasure"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Legend - The Best Of Bob Marley And The Wailers",
@@ -1936,6 +1936,7 @@
       "instanceId": 2137841796,
       "dateAdded": "2026-04-21T20:44:37-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Is This Love - 3:52",
         "No Woman No Cry - 4:05",
@@ -1951,8 +1952,7 @@
         "Satisfy My Soul - 3:45",
         "Exodus - 5:24",
         "Jamming - 3:17"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Time Out",
@@ -1968,6 +1968,7 @@
       "instanceId": 2137843281,
       "dateAdded": "2026-04-21T20:55:08-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Blue Rondo À La Turk - 6:46",
         "Strange Meadow Lark - 7:24",
@@ -1977,8 +1978,7 @@
         "Everybody's Jumpin' - 4:25",
         "Pick Up Sticks - 4:17",
         "Audrey - 3:36"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Los 3 Grandes",
@@ -1994,6 +1994,7 @@
       "instanceId": 1884969288,
       "dateAdded": "2025-01-02T23:32:59-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Neblina Morada = Purple Haze",
         "El Brillo De Tu Amor = Sunshine Of Your Love",
@@ -2003,8 +2004,7 @@
         "Trafico Citadino = Crosstown Traffic",
         "Amar A Alguien = To Love Somebody",
         "Vudu = Voodoo Chile, Part 2"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Point Of Know Return",
@@ -2020,6 +2020,7 @@
       "instanceId": 1884973569,
       "dateAdded": "2025-01-02T23:45:17-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Point Of Know Return - 3:11",
         "Paradox - 3:49",
@@ -2031,8 +2032,7 @@
         "Sparks Of The Tempest - 4:15",
         "Nobody's Home - 4:37",
         "Hopelessly Human - 7:10"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Crystal Castles",
@@ -2048,6 +2048,7 @@
       "instanceId": 2137843089,
       "dateAdded": "2026-04-21T20:54:04-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Untrust Us - 3:05",
         "Alice Practice - 2:42",
@@ -2065,8 +2066,7 @@
         "Reckless - 3:28",
         "Black Panther - 2:56",
         "Tell Me What To Swallow - 2:14"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Bela Lugosi's Dead - The Bela Session",
@@ -2082,6 +2082,7 @@
       "instanceId": 2137841004,
       "dateAdded": "2026-04-21T20:38:26-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "This Side",
         "Bela Lugosi's Dead - 9:35",
@@ -2090,8 +2091,7 @@
         "Bite My Hip - 2:49",
         "Harry - 2:44",
         "Boys (Original) - 3:02"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Very Best Of Electric Light Orchestra - All Over The World",
@@ -2107,6 +2107,7 @@
       "instanceId": 2137846136,
       "dateAdded": "2026-04-21T21:17:58-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Mr. Blue Sky",
         "Evil Woman",
@@ -2128,8 +2129,7 @@
         "Strange Magic",
         "Alright",
         "Rock 'N' Roll Is King"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Are You Experienced",
@@ -2145,6 +2145,7 @@
       "instanceId": 2137847164,
       "dateAdded": "2026-04-21T21:27:43-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Purple Haze - 2:50",
         "Manic Depression - 3:42",
@@ -2157,8 +2158,7 @@
         "3rd Stone From The Sun - 6:44",
         "Foxey Lady - 3:18",
         "Are You Experienced? - 4:14"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Grace",
@@ -2174,6 +2174,7 @@
       "instanceId": 2137847138,
       "dateAdded": "2026-04-21T21:27:26-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Mojo Pin - 5:41",
         "Grace - 5:22",
@@ -2185,8 +2186,7 @@
         "Corpus Christi Carol (For Roy) - 2:56",
         "Eternal Life - 4:52",
         "Dream Brother - 5:26"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Sadnecessary",
@@ -2202,6 +2202,7 @@
       "instanceId": 2137852151,
       "dateAdded": "2026-04-21T22:12:38-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Stunner - 4:48",
         "Flashed Junk Mind - 4:22",
@@ -2216,8 +2217,7 @@
         "Stolen Dance - 5:13",
         "Loveland (Studio Version) - 3:32",
         "Feathery - 4:24"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "One Fine Day = Un Día Fino",
@@ -2233,6 +2233,7 @@
       "instanceId": 1884979530,
       "dateAdded": "2025-01-03T00:01:27-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Mujer Enamorada = Woman In Love - 4:14",
         "Un Día Fino = One Fine Day - 3:00",
@@ -2244,8 +2245,7 @@
         "Lágrimas De Otoño = Autumn Tears - 3:22",
         "Mágico = Magic - 4:03",
         "Tonada De Romeo = Romeo's Tune - 3:29"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Deftones",
@@ -2261,6 +2261,7 @@
       "instanceId": 2137843775,
       "dateAdded": "2026-04-21T20:59:03-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Hexagram - 4:08",
         "Needles And Pins - 3:22",
@@ -2273,8 +2274,7 @@
         "Bloody Cape - 3:36",
         "Anniversary Of An Uninteresting Event - 3:56",
         "Moana - 5:02"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Saturday Night Wrist",
@@ -2290,6 +2290,7 @@
       "instanceId": 1884963405,
       "dateAdded": "2025-01-02T23:18:39-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Hole In The Earth",
         "Rapture",
@@ -2303,8 +2304,7 @@
         "Combat",
         "Kimdracula",
         "Rivière"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "White Pony",
@@ -2320,6 +2320,7 @@
       "instanceId": 1884964017,
       "dateAdded": "2025-01-02T23:20:12-08:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Feiticeira - 3:09",
         "Digital Bath - 4:15",
@@ -2332,8 +2333,7 @@
         "Passenger - 6:07",
         "Change (In The House Of Flies) - 4:59",
         "Pink Maggit - 7:32"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Adrenaline",
@@ -2349,6 +2349,7 @@
       "instanceId": 2137843637,
       "dateAdded": "2026-04-21T20:57:51-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Bored - 4:06",
         "Minus Blindfold - 4:04",
@@ -2360,8 +2361,7 @@
         "Birthmark - 4:18",
         "Engine No. 9 - 3:25",
         "Fireal - 6:25"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Around The Fur",
@@ -2377,6 +2377,7 @@
       "instanceId": 2137843658,
       "dateAdded": "2026-04-21T20:58:03-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "My Own Summer (Shove It)",
         "Lhabia",
@@ -2388,8 +2389,7 @@
         "Dai The Flu",
         "Headup",
         "MX"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Greatest Hits",
@@ -2405,6 +2405,7 @@
       "instanceId": 1884968301,
       "dateAdded": "2025-01-02T23:30:45-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Your Song - 4:00",
         "Daniel - 3:52",
@@ -2416,8 +2417,7 @@
         "Don't Let The Sun Go Down On Me - 5:33",
         "Border Song - 3:19",
         "Crocodile Rock - 3:56"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "TV Animation Bleach Original Soundtrack Vol 1-2",
@@ -2433,6 +2433,7 @@
       "instanceId": 1884956649,
       "dateAdded": "2025-01-02T23:00:21-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "On The Precipice Of Defeat",
         "Raw Breath Of Danger",
@@ -2465,8 +2466,7 @@
         "Torn Apart",
         "Swan Song",
         "999"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Ram",
@@ -2482,6 +2482,7 @@
       "instanceId": 2137852790,
       "dateAdded": "2026-04-21T22:17:45-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Too Many People",
         "3 Legs",
@@ -2495,8 +2496,7 @@
         "Long Haired Lady",
         "Ram On",
         "The Back Seat Of My Car"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Humanz",
@@ -2512,6 +2512,7 @@
       "instanceId": 1884987804,
       "dateAdded": "2025-01-03T00:21:48-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Intro: I Switched My Robot Off - 0:23",
         "Ascension - 2:36",
@@ -2533,8 +2534,7 @@
         "Interlude: The Elephant - 0:08",
         "Hallelujah Money - 4:26",
         "We Got The Power (Version 2:18:482) - 2:18"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Demon Days",
@@ -2550,6 +2550,7 @@
       "instanceId": 1884986805,
       "dateAdded": "2025-01-03T00:19:23-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Intro - 1:03",
         "Last Living Souls - 3:10",
@@ -2566,8 +2567,7 @@
         "Fire Coming Out Of The Monkey's Head - 3:16",
         "Don't Get Lost In Heaven - 2:00",
         "Demon Days - 4:29"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "G Sides",
@@ -2583,6 +2583,7 @@
       "instanceId": 1884987297,
       "dateAdded": "2025-01-03T00:20:33-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "19-2000 (Soulchild Remix) - 3:28",
         "Dracula - 4:41",
@@ -2596,8 +2597,7 @@
         "12D3 - 3:25",
         "Clint Eastwood (Video) - 4:23",
         "Rock The House (Video) - 3:39"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Moon Safari",
@@ -2613,6 +2613,7 @@
       "instanceId": 2137840062,
       "dateAdded": "2026-04-21T20:31:44-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "La Femme D'Argent",
         "Sexy Boy",
@@ -2624,8 +2625,7 @@
         "Ce Matin La",
         "New Star In The Sky",
         "Le Voyage De Penelope"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Parachutes",
@@ -2641,6 +2641,7 @@
       "instanceId": 2137842967,
       "dateAdded": "2026-04-21T20:53:08-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Don't Panic",
         "Shiver",
@@ -2653,8 +2654,7 @@
         "We Never Change",
         "Everything's Not Lost",
         "Life Is For Living"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Tomorrow Comes Today",
@@ -2670,13 +2670,13 @@
       "instanceId": 2137847103,
       "dateAdded": "2026-04-21T21:27:08-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Tomorrow Comes Today",
         "Rock The House",
         "Latin Simone",
         "12D3"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Rio",
@@ -2692,6 +2692,7 @@
       "instanceId": 2137846024,
       "dateAdded": "2026-04-21T21:16:51-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Rio",
         "My Own Way",
@@ -2702,8 +2703,7 @@
         "Last Chance On The Stairway",
         "Save A Prayer",
         "The Chauffeur"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Trainspotting (Music From The Motion Picture)",
@@ -2719,6 +2719,7 @@
       "instanceId": 2137855555,
       "dateAdded": "2026-04-21T22:43:15-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Lust For Life - 5:11",
         "Deep Blue Day - 3:56",
@@ -2734,8 +2735,7 @@
         "A Final Hit - 3:15",
         "Born Slippy (NUXX) - 9:43",
         "Closet Romantic - 3:08"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "The Rise And Fall Of Ziggy Stardust And The Spiders From Mars",
@@ -2751,6 +2751,7 @@
       "instanceId": 2137843603,
       "dateAdded": "2026-04-21T20:57:32-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Five Years - 4:42",
         "Soul Love - 3:34",
@@ -2763,8 +2764,7 @@
         "Ziggy Stardust - 3:13",
         "Suffragette City - 3:25",
         "Rock 'N' Roll Suicide - 2:58"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Gorillaz",
@@ -2780,6 +2780,7 @@
       "instanceId": 1884986685,
       "dateAdded": "2025-01-03T00:19:07-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Re-Hash - 3:40",
         "5/4 - 2:42",
@@ -2798,8 +2799,7 @@
         "M1 A1 - 4:01",
         "Clint Eastwood (Ed Case/Sweetie Irie Refix) - 3:43",
         "19-2000 (Soulchild Remix) - 3:27"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Singles Collection 2001-2011",
@@ -2815,6 +2815,7 @@
       "instanceId": 1884987420,
       "dateAdded": "2025-01-03T00:20:48-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Tomorrow Comes Today - 3:13",
         "Clint Eastwood - 5:42",
@@ -2831,8 +2832,7 @@
         "Doncamatic - 3:20",
         "Clint Eastwood (Ed Case/Sweetie Irie Refix) - 3:41",
         "19-2000 (Soulchild Remix) - 3:29"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Plastic Beach",
@@ -2848,6 +2848,7 @@
       "instanceId": 1884988752,
       "dateAdded": "2025-01-03T00:24:18-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Orchestral Intro - 1:09",
         "Welcome To The World Of The Plastic Beach - 3:36",
@@ -2865,8 +2866,7 @@
         "To Binge - 3:56",
         "Cloud Of Unknowing - 3:06",
         "Pirate Jet - 2:32"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Skinty Fia",
@@ -2882,6 +2882,7 @@
       "instanceId": 2137846197,
       "dateAdded": "2026-04-21T21:18:36-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "In Ár gCroíthe Go Deo - 5:59",
         "Big Shot - 4:14",
@@ -2893,8 +2894,7 @@
         "Skinty Fia - 3:56",
         "I Love You - 5:06",
         "Nabokov - 5:22"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Album De Coleccion Homenaje A Pedro Infante",
@@ -2910,6 +2910,7 @@
       "instanceId": 1884983106,
       "dateAdded": "2025-01-03T00:10:21-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Amorcito Corazon",
         "Sus Ojitos",
@@ -2959,8 +2960,7 @@
         "Tu Y Las Nubes",
         "Echenme La Tierra Encima",
         "Que Me Toquen Las Golondrinas"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Little Miss Sunshine (Original Motion Picture Soundtrack)",
@@ -2976,6 +2976,7 @@
       "instanceId": 2137851793,
       "dateAdded": "2026-04-21T22:09:48-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "The Winner Is",
         "Til The End Of Time",
@@ -2991,8 +2992,7 @@
         "Superfreak (Rocasound Revamp)",
         "La Llorona",
         "How It Ends"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Animals",
@@ -3008,14 +3008,14 @@
       "instanceId": 2137853286,
       "dateAdded": "2026-04-21T22:22:17-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Pigs on the Wing, Part One",
         "Dogs",
         "Pigs (Three Different Ones)",
         "Sheep",
         "Pigs on the Wing, Part Two"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Wall",
@@ -3031,6 +3031,7 @@
       "instanceId": 2137853338,
       "dateAdded": "2026-04-21T22:22:37-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "In The Flesh? - 3:16",
         "The Thin Ice - 2:27",
@@ -3058,8 +3059,7 @@
         "Stop - 0:30",
         "The Trial - 5:13",
         "Outside The Wall - 1:41"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Meddle",
@@ -3075,6 +3075,7 @@
       "instanceId": 1884983778,
       "dateAdded": "2025-01-03T00:12:05-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "One Of These Days",
         "A Pillow Of Winds",
@@ -3082,8 +3083,7 @@
         "San Tropez",
         "Seamus",
         "Echoes"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Dark Side Of The Moon",
@@ -3099,6 +3099,7 @@
       "instanceId": 1884983436,
       "dateAdded": "2025-01-03T00:11:15-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Speak To Me - 1:30",
         "Breathe (In The Air) - 2:43",
@@ -3110,8 +3111,35 @@
         "Any Colour You Like - 3:24",
         "Brain Damage - 3:50",
         "Eclipse - 1:45"
-      ],
-      "timesPlayed": 0
+      ]
+    },
+    {
+      "title": "Alvvays",
+      "artist": "Alvvays",
+      "releaseUrl": "https://www.discogs.com/release/32301257",
+      "artistUrl": "https://www.discogs.com/artist/3543546",
+      "imageUrl": "https://i.discogs.com/w6WuufZh44G_DAEVKkPxHwEoZngyhpmOxxEQs_H1WLM/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyMzAx/MjU3LTE3MzE3MDgw/MTctNTQ0MC5qcGVn.jpeg",
+      "imageAlt": "Alvvays cover",
+      "year": 2024,
+      "sourcePage": 2,
+      "rawText": "Vinyl (10th Anniversary Edition, Gatefold, Cerulean in Cloudy Clear); Rock, Indie Rock, Dream Pop, Jangle Pop",
+      "discogsId": 32301257,
+      "instanceId": 2138834125,
+      "dateAdded": "2026-04-25T00:30:14-07:00",
+      "rating": 0,
+      "timesPlayed": 1,
+      "tracks": [
+        "Adult Diversion",
+        "Archie, Marry Me",
+        "Ones Who Love You",
+        "Next Of Kin",
+        "Party Police",
+        "The Agency Group",
+        "Dives",
+        "Atop A Cake",
+        "Red Planet",
+        "Underneath Us"
+      ]
     },
     {
       "title": "Xylem Tube EP",
@@ -3127,6 +3155,7 @@
       "instanceId": 2137840275,
       "dateAdded": "2026-04-21T20:33:22-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Black Side",
         "Polynomial-C",
@@ -3134,8 +3163,7 @@
         "Silver Side",
         "Phlange Phace",
         "Dodeccaheedron"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Is This It",
@@ -3151,6 +3179,7 @@
       "instanceId": 1884979989,
       "dateAdded": "2025-01-03T00:02:46-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Is This It - 2:34",
         "The Modern Age - 3:32",
@@ -3163,8 +3192,7 @@
         "New York City Cops - 3:36",
         "Trying Your Luck - 3:27",
         "Take It Or Leave It - 3:16"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "First Impressions Of Earth",
@@ -3180,6 +3208,7 @@
       "instanceId": 2137854616,
       "dateAdded": "2026-04-21T22:34:31-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "You Only Live Once - 3:09",
         "Juicebox - 3:17",
@@ -3195,8 +3224,7 @@
         "Ize Of The World - 4:29",
         "Evening Sun - 3:06",
         "Red Light - 3:11"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Angles",
@@ -3212,6 +3240,7 @@
       "instanceId": 2137854666,
       "dateAdded": "2026-04-21T22:34:59-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Machu Picchu - 3:32",
         "Under Cover Of Darkness - 3:57",
@@ -3223,8 +3252,7 @@
         "Gratisfaction - 2:59",
         "Metabolism - 3:05",
         "Life Is Simple In The Moonlight - 4:15"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Room On Fire",
@@ -3240,6 +3268,7 @@
       "instanceId": 1884980853,
       "dateAdded": "2025-01-03T00:04:56-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "What Ever Happened?",
         "Reptilia",
@@ -3252,8 +3281,7 @@
         "The Way It Is",
         "The End Has No End",
         "I Can't Win"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The New Abnormal",
@@ -3269,6 +3297,7 @@
       "instanceId": 1884981219,
       "dateAdded": "2025-01-03T00:05:56-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "The Adults Are Talking",
         "Selfless",
@@ -3279,8 +3308,7 @@
         "Why Are Sundays So Depressing",
         "Not The Same Anymore",
         "Ode To The Mets"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Melophobia",
@@ -3296,6 +3324,7 @@
       "instanceId": 1884957402,
       "dateAdded": "2025-01-02T23:02:36-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Spiderhead",
         "Come A Little Closer",
@@ -3307,8 +3336,7 @@
         "Hypocrite",
         "Teeth",
         "Cigarette Daydreams"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Comedown Machine",
@@ -3324,6 +3352,7 @@
       "instanceId": 2137854392,
       "dateAdded": "2026-04-21T22:32:31-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Tap Out - 3:41",
         "All The Time - 3:01",
@@ -3336,8 +3365,7 @@
         "Chances - 3:24",
         "Happy Ending - 2:53",
         "Call It Fate, Call It Karma - 3:24"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Private Music",
@@ -3353,6 +3381,7 @@
       "instanceId": 2137844292,
       "dateAdded": "2026-04-21T21:03:08-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "My Mind Is A Mountain",
         "Locked Club",
@@ -3365,8 +3394,7 @@
         "Cut Hands",
         "~Metal Dream",
         "Departing The Body"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Dookie",
@@ -3382,6 +3410,7 @@
       "instanceId": 2137846231,
       "dateAdded": "2026-04-21T21:18:53-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Burnout - 2:07",
         "Having A Blast - 2:45",
@@ -3398,8 +3427,7 @@
         "In The End - 1:46",
         "F.O.D. - 2:49",
         "All By Myself"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "_Ohms",
@@ -3415,6 +3443,7 @@
       "instanceId": 2137844210,
       "dateAdded": "2026-04-21T21:02:24-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Genesis - 5:17",
         "Ceremony - 3:27",
@@ -3426,8 +3455,7 @@
         "Radiant City - 3:35",
         "Headless - 4:59",
         "Ohms - 4:10"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "White Pony",
@@ -3443,6 +3471,7 @@
       "instanceId": 2137843718,
       "dateAdded": "2026-04-21T20:58:35-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "White Pony",
         "Feiticeira",
@@ -3492,8 +3521,7 @@
         "Passenger (Mike Shinoda Remix)",
         "Change (In The House Of Flies) (Tourist Remix)",
         "Pink Maggit (Squarepusher Remix)"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Diamond Eyes",
@@ -3509,6 +3537,7 @@
       "instanceId": 2137844181,
       "dateAdded": "2026-04-21T21:02:10-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Diamond Eyes",
         "Royal",
@@ -3521,8 +3550,7 @@
         "Risk",
         "976-EVIL",
         "This Place Is Death"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Koi No Yokan",
@@ -3538,6 +3566,7 @@
       "instanceId": 1884962757,
       "dateAdded": "2025-01-02T23:16:53-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Swerve City - 2:45",
         "Romantic Dreams - 4:38",
@@ -3550,8 +3579,7 @@
         "Rosemary - 6:53",
         "Goon Squad - 5:40",
         "What Happened To You? - 3:54"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "15 Grandes De Frank Sinatra",
@@ -3567,6 +3595,7 @@
       "instanceId": 1884971436,
       "dateAdded": "2025-01-02T23:38:40-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "New York, New York - 3:30",
         "I've Got You Under My Skin -Te Llevo Dentro De Mi- - 4:41",
@@ -3583,8 +3612,7 @@
         "My Kind Of Town -Mi Tipo De Ciudad- - 2:51",
         "That's Life -Asi Es La Vida- - 3:09",
         "My Way -A Mi Manera- - 4:09"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Fleetwood Mac",
@@ -3600,6 +3628,7 @@
       "instanceId": 2137846168,
       "dateAdded": "2026-04-21T21:18:15-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Monday Morning - 2:48",
         "Warm Ways - 3:50",
@@ -3612,8 +3641,7 @@
         "World Turning - 4:25",
         "Sugar Daddy - 4:09",
         "I'm So Afraid - 4:15"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Meat Is Murder",
@@ -3629,6 +3657,7 @@
       "instanceId": 2137854065,
       "dateAdded": "2026-04-21T22:29:53-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "The Headmaster Ritual - 4:52",
         "Rusholme Ruffians - 4:19",
@@ -3639,8 +3668,7 @@
         "Well I Wonder - 4:00",
         "Barbarism Begins At Home - 7:00",
         "Meat Is Murder - 6:05"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Hatful Of Hollow",
@@ -3656,6 +3684,7 @@
       "instanceId": 2137854169,
       "dateAdded": "2026-04-21T22:30:34-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "William, It Was Really Nothing - 2:09",
         "What Difference Does It Make? - 3:12",
@@ -3673,8 +3702,7 @@
         "Back To The Old House - 3:02",
         "Reel Around The Fountain - 5:51",
         "Please Please Please, Let Me Get What I Want - 1:50"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Master Of Reality",
@@ -3690,6 +3718,7 @@
       "instanceId": 2137841698,
       "dateAdded": "2026-04-21T20:43:55-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Sweet Leaf - 5:06",
         "After Forever (Including The Elegy) - 5:27",
@@ -3699,8 +3728,7 @@
         "Lord Of This World - 5:26",
         "Solitude - 5:02",
         "Into The Void - 6:11"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Loaded",
@@ -3716,6 +3744,7 @@
       "instanceId": 2137855635,
       "dateAdded": "2026-04-21T22:43:56-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Who Loves The Sun - 2:50",
         "Sweet Jane - 3:15",
@@ -3727,8 +3756,7 @@
         "I Found A Reason - 4:15",
         "Train Round The Bend - 3:20",
         "Oh Sweet Nuthin' - 7:23"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Last Thing You Forget",
@@ -3744,13 +3772,13 @@
       "instanceId": 2137855456,
       "dateAdded": "2026-04-21T22:42:21-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Symmetry",
         "Introvert",
         "No One Stays At The Top Forever",
         "Untitled"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Mother Earth's Plantasia",
@@ -3766,6 +3794,7 @@
       "instanceId": 2137852256,
       "dateAdded": "2026-04-21T22:13:39-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Plantasia",
         "Symphony For A Spider Plant",
@@ -3777,8 +3806,7 @@
         "You Don't Have To Walk A Begonia",
         "A Mellow Mood For Maidenhair",
         "Music To Soothe The Savage Snake Plant"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Shed",
@@ -3794,6 +3822,7 @@
       "instanceId": 2137855380,
       "dateAdded": "2026-04-21T22:41:40-07:00",
       "rating": 0,
+      "timesPlayed": 4,
       "tracks": [
         "Coxton Yard",
         "Shed",
@@ -3807,8 +3836,7 @@
         "27",
         "Stab",
         "GMT (Greenwich Mean Time)"
-      ],
-      "timesPlayed": 4
+      ]
     },
     {
       "title": "Floral Green",
@@ -3824,6 +3852,7 @@
       "instanceId": 2137855352,
       "dateAdded": "2026-04-21T22:41:22-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Numb, But I Still Feel It",
         "Leaf",
@@ -3836,8 +3865,7 @@
         "Calloused",
         "Lefty",
         "In-Between"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Talking Heads: 77",
@@ -3853,6 +3881,7 @@
       "instanceId": 2137854982,
       "dateAdded": "2026-04-21T22:38:07-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Uh-Oh, Love Comes To Town - 2:48",
         "New Feeling - 3:09",
@@ -3865,8 +3894,7 @@
         "First Week / Last Week...Carefree - 3:19",
         "Psycho Killer - 4:19",
         "Pulled Up - 4:29"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Bocanada",
@@ -3882,6 +3910,7 @@
       "instanceId": 2137847005,
       "dateAdded": "2026-04-21T21:26:17-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Tabú - 4:47",
         "Engaña - 4:12",
@@ -3898,8 +3927,7 @@
         "Aquí & Ahora (Y Después) - 2:37",
         "Alma - 4:37",
         "Balsa - 5:10"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The Best Of Sade",
@@ -3915,6 +3943,7 @@
       "instanceId": 2137853873,
       "dateAdded": "2026-04-21T22:27:43-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Your Love Is King",
         "Hang On to Your Love",
@@ -3932,8 +3961,7 @@
         "Please Send Me Someone to Love",
         "Cherish the Day",
         "Pearls"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Torches",
@@ -3949,6 +3977,7 @@
       "instanceId": 1938298425,
       "dateAdded": "2025-02-18T21:04:52-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Helena Beat",
         "Pumped Up Kicks",
@@ -3960,8 +3989,7 @@
         "Life On The Nickel",
         "Miss You",
         "Warrant"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "崖の上のポニョ (サウンドトラック)",
@@ -3977,6 +4005,7 @@
       "instanceId": 1884972639,
       "dateAdded": "2025-01-02T23:42:25-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "深海牧場 - 4:18",
         "海のおかあさん - 2:21",
@@ -4014,8 +4043,7 @@
         "母と海の讃歌 - 2:15",
         "フィナーレ - 0:44",
         "崖の上のポニョ（映画バージョン） - 1:36"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Bloom",
@@ -4031,6 +4059,7 @@
       "instanceId": 1884955722,
       "dateAdded": "2025-01-02T22:57:32-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Myth - 4:19",
         "Wild - 4:58",
@@ -4043,8 +4072,7 @@
         "On The Sea - 5:32",
         "Irene - 6:45",
         "Wherever You Go - 3:35"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Future Past",
@@ -4060,6 +4088,7 @@
       "instanceId": 2137846087,
       "dateAdded": "2026-04-21T21:17:27-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Invisible",
         "All Of You",
@@ -4071,8 +4100,7 @@
         "Wing",
         "More Joy!",
         "Falling"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Siamese Dream",
@@ -4088,6 +4116,7 @@
       "instanceId": 2138161095,
       "dateAdded": "2026-04-22T20:54:50-07:00",
       "rating": 0,
+      "timesPlayed": 17,
       "tracks": [
         "Cherub Rock",
         "Quiet",
@@ -4102,8 +4131,7 @@
         "Silverfuck",
         "Sweet Sweet",
         "Luna"
-      ],
-      "timesPlayed": 14
+      ]
     },
     {
       "title": "TRON: El Legado (Soundtrack Original)",
@@ -4119,6 +4147,7 @@
       "instanceId": 1884988020,
       "dateAdded": "2025-01-03T00:22:19-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Overture",
         "The Grid",
@@ -4142,8 +4171,7 @@
         "Flynn Lives",
         "Tron Legacy (End Titles)",
         "Finale"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Hybrid Theory",
@@ -4159,6 +4187,7 @@
       "instanceId": 2137851622,
       "dateAdded": "2026-04-21T22:08:22-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Papercut - 3:05",
         "One Step Closer - 2:37",
@@ -4172,8 +4201,7 @@
         "Forgotten - 3:14",
         "Cure For The Itch - 2:37",
         "Pushing Me Away - 3:11"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Paranoid",
@@ -4189,6 +4217,7 @@
       "instanceId": 2137841660,
       "dateAdded": "2026-04-21T20:43:38-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "War Pigs / Luke's Wall - 7:55",
         "Paranoid - 2:47",
@@ -4198,8 +4227,7 @@
         "Hand Of Doom - 7:07",
         "Rat Salad - 2:29",
         "Jack The Stripper / Fairies Wear Boots - 6:13"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Discovery",
@@ -4215,6 +4243,7 @@
       "instanceId": 1884987945,
       "dateAdded": "2025-01-03T00:22:08-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "One More Time - 5:20",
         "Aerodynamic - 3:27",
@@ -4230,8 +4259,7 @@
         "Short Circuit - 3:24",
         "Face To Face - 3:58",
         "Too Long - 10:00"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "D-Sides",
@@ -4247,6 +4275,7 @@
       "instanceId": 1884987012,
       "dateAdded": "2025-01-03T00:19:51-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "68 State - 4:45",
         "People - 3:26",
@@ -4270,8 +4299,7 @@
         "Dare (Junior Sanchez Remix) - 5:25",
         "Dirty Harry (Schtung Chinese New Year Remix) - 3:51",
         "Kids With Guns (Quiet Village Remix) - 10:07"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Meteora",
@@ -4287,6 +4315,7 @@
       "instanceId": 1884975522,
       "dateAdded": "2025-01-02T23:50:52-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Foreword",
         "Don't Stay",
@@ -4301,8 +4330,7 @@
         "Nobody's Listening",
         "Session",
         "Numb"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Californication",
@@ -4318,6 +4346,7 @@
       "instanceId": 1884979305,
       "dateAdded": "2025-01-03T00:00:49-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Around The World - 3:59",
         "Parallel Universe - 4:31",
@@ -4334,8 +4363,7 @@
         "Purple Stain - 4:13",
         "Right On Time - 1:53",
         "Road Trippin' - 3:26"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "From Zero",
@@ -4351,6 +4379,7 @@
       "instanceId": 2137851743,
       "dateAdded": "2026-04-21T22:09:25-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "From Zero (Intro) - 0:22",
         "The Emptiness Machine - 3:10",
@@ -4363,8 +4392,7 @@
         "Stained - 3:05",
         "IGYEIH - 3:29",
         "Good Things Go - 3:29"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Rumours",
@@ -4380,6 +4408,7 @@
       "instanceId": 1884970743,
       "dateAdded": "2025-01-02T23:36:49-08:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Second Hand News - 2:43",
         "Dreams - 4:14",
@@ -4392,8 +4421,7 @@
         "I Don’t Want to Know - 3:11",
         "Oh Daddy - 3:54",
         "Gold Dust Woman - 4:51"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Come To Daddy",
@@ -4409,13 +4437,13 @@
       "instanceId": 2137840223,
       "dateAdded": "2026-04-21T20:32:58-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Come To Daddy (Pappy Mix) - 4:21",
         "Flim - 2:57",
         "Bucephalus Bouncing Ball - 5:45",
         "Come To Daddy (Little Lord Faulteroy Mix) - 3:50"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "Buena Vista Social Club",
@@ -4431,6 +4459,7 @@
       "instanceId": 2137841902,
       "dateAdded": "2026-04-21T20:45:27-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Chan Chan - 4:16",
         "De Camino A La Vereda - 5:03",
@@ -4446,8 +4475,7 @@
         "Murmullo - 3:50",
         "Buena Vista Social Club - 4:50",
         "La Bayamesa - 2:54"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "In Rainbows",
@@ -4463,6 +4491,7 @@
       "instanceId": 2137853731,
       "dateAdded": "2026-04-21T22:26:15-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "15 Step - 3:57",
         "Bodysnatchers - 4:02",
@@ -4474,8 +4503,7 @@
         "House Of Cards - 5:28",
         "Jigsaw Falling Into Place - 4:09",
         "Videotape - 4:40"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "Pablo Honey",
@@ -4491,6 +4519,7 @@
       "instanceId": 2137853589,
       "dateAdded": "2026-04-21T22:24:39-07:00",
       "rating": 0,
+      "timesPlayed": 1,
       "tracks": [
         "You",
         "Creep",
@@ -4504,8 +4533,7 @@
         "I Can't",
         "Lurgee",
         "Blow Out"
-      ],
-      "timesPlayed": 1
+      ]
     },
     {
       "title": "The Bends",
@@ -4521,6 +4549,7 @@
       "instanceId": 2137853708,
       "dateAdded": "2026-04-21T22:25:51-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Planet Telex",
         "The Bends",
@@ -4534,8 +4563,7 @@
         "Black Star",
         "Sulk",
         "Street Spirit (Fade Out)"
-      ],
-      "timesPlayed": 0
+      ]
     },
     {
       "title": "The King Of Limbs",
@@ -4551,6 +4579,7 @@
       "instanceId": 2137853781,
       "dateAdded": "2026-04-21T22:26:46-07:00",
       "rating": 0,
+      "timesPlayed": 0,
       "tracks": [
         "Bloom",
         "Morning Mr Magpie",
@@ -4560,9 +4589,8 @@
         "Codex",
         "Give Up The Ghost",
         "Separator"
-      ],
-      "timesPlayed": 0
+      ]
     }
   ],
-  "totalItems": 149
+  "totalItems": 150
 }
