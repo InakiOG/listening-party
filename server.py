@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from discogs_scraper import backfill_missing_tracks, update_collection_cache
 
 ROOT = Path(__file__).resolve().parent
+SERVER_BOOT_ID = f"{int(time.time() * 1000)}-{secrets.token_hex(4)}"
 
 # Load .env file if present (never overwrites a real env var)
 _env_path = ROOT / ".env"
@@ -1090,6 +1091,11 @@ def _prefetch_worker():
 
 
 class ListeningPartyHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        # Expose a stable identifier for this server process so clients can detect restarts.
+        self.send_header("X-Server-Boot-Id", SERVER_BOOT_ID)
+        super().end_headers()
+
     def _send_json(self, payload, status_code=200, extra_headers=None):
         response = json.dumps(payload).encode("utf-8")
         self.send_response(status_code)

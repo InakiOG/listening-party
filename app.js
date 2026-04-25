@@ -69,6 +69,21 @@ const ACTIVE_USER_BUBBLE_COLORS = [
 
 const ACTIVE_USERS_POLL_INTERVAL_MS = 2000;
 
+let knownServerBootId = "";
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const response = await nativeFetch(...args);
+  const bootId = response.headers.get("X-Server-Boot-Id") || "";
+  if (bootId) {
+    if (!knownServerBootId) {
+      knownServerBootId = bootId;
+    } else if (knownServerBootId !== bootId) {
+      window.location.reload();
+    }
+  }
+  return response;
+};
+
 function isAdminUser() {
   return String(sessionState.currentUser?.accountName || "").trim().toLowerCase() === "administrador";
 }

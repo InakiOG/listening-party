@@ -8,6 +8,12 @@
       :root {
         color-scheme: dark;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --ui-scale: 1;
+        --active-user-size: calc(48px * var(--ui-scale));
+        --review-bubble-max: calc(240px * var(--ui-scale));
+        --review-avatar-size: calc(26px * var(--ui-scale));
+        --liker-size: calc(20px * var(--ui-scale));
+        --fun-fact-max: calc(210px * var(--ui-scale));
       }
 
       *, *::before, *::after { box-sizing: border-box; }
@@ -18,6 +24,10 @@
         overflow: hidden;
         background: #0f172a;
         color: #e2e8f0;
+      }
+
+      html {
+        font-size: calc(16px * var(--ui-scale));
       }
 
       body {
@@ -59,10 +69,10 @@
       /* ── Active user bubbles ── */
       .active-user-bubble {
         position: absolute;
-        width: 48px;
-        height: 48px;
+        width: var(--active-user-size);
+        height: var(--active-user-size);
         border-radius: 999px;
-        border: 2px solid rgba(226, 232, 240, 0.82);
+        border: calc(2px * var(--ui-scale)) solid rgba(226, 232, 240, 0.82);
         overflow: hidden;
         box-shadow: 0 8px 20px rgba(15, 23, 42, 0.45);
         pointer-events: auto;
@@ -93,7 +103,7 @@
       /* ── Review bubbles ── */
       .review-bubble {
         position: absolute;
-        max-width: 240px;
+        max-width: var(--review-bubble-max);
         padding: 0.65rem 0.75rem;
         border-radius: 0.9rem;
         border: 1px solid rgba(56, 189, 248, 0.45);
@@ -149,8 +159,8 @@
       }
 
       .review-avatar-image {
-        width: 26px;
-        height: 26px;
+        width: var(--review-avatar-size);
+        height: var(--review-avatar-size);
         border-radius: 999px;
         object-fit: cover;
         border: 1px solid rgba(148, 163, 184, 0.45);
@@ -260,7 +270,7 @@
       }
 
       .liker-avatar {
-        width: 20px; height: 20px;
+        width: var(--liker-size); height: var(--liker-size);
         border-radius: 999px;
         object-fit: cover;
         border: 1px solid rgba(148, 163, 184, 0.5);
@@ -268,7 +278,7 @@
       }
 
       .liker-initial {
-        width: 20px; height: 20px;
+        width: var(--liker-size); height: var(--liker-size);
         border-radius: 999px;
         background: rgba(100, 116, 139, 0.55);
         color: #e2e8f0;
@@ -543,7 +553,7 @@
 
       .fun-fact {
         position: absolute;
-        max-width: 210px;
+        max-width: var(--fun-fact-max);
         color: rgba(226, 232, 240, 0.9);
         font-weight: 500;
         line-height: 1.55;
@@ -594,6 +604,21 @@
         return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
 
+      let knownServerBootId = '';
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = async (...args) => {
+        const response = await nativeFetch(...args);
+        const bootId = response.headers.get('X-Server-Boot-Id') || '';
+        if (bootId) {
+          if (!knownServerBootId) {
+            knownServerBootId = bootId;
+          } else if (knownServerBootId !== bootId) {
+            window.location.reload();
+          }
+        }
+        return response;
+      };
+
       function starsHtml(rating) {
         const r = Math.max(0, Math.min(5, Number(rating) || 0));
         let html = '';
@@ -643,6 +668,16 @@
         const d = new Date(iso);
         if (isNaN(d)) return '';
         return d.toLocaleString([], { month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+      }
+
+      function computeDesktopScale() {
+        const wScale = window.innerWidth / 1920;
+        const hScale = window.innerHeight / 1080;
+        return Math.max(0.72, Math.min(1.35, Math.min(wScale, hScale)));
+      }
+
+      function applyDesktopScale() {
+        document.documentElement.style.setProperty('--ui-scale', computeDesktopScale().toFixed(3));
       }
 
       /* ─────────────── physics engine ─────────────── */
@@ -1171,27 +1206,81 @@
 
       /* ─────────────── fun facts ─────────────── */
       let lastFactsSig = '';
+      let funFactsTimer = null;
+
+      function stopFunFacts() {
+        if (!funFactsTimer) return;
+        clearInterval(funFactsTimer);
+        funFactsTimer = null;
+      }
 
       function clearFunFacts() {
         const layer = document.getElementById('fun-facts-layer');
+        stopFunFacts();
         layer.innerHTML = '';
       }
 
       function renderFunFacts(facts) {
         const layer = document.getElementById('fun-facts-layer');
         const rnd = (min, max) => Math.random() * (max - min) + min;
-        layer.innerHTML = facts.map((fact, i) => {
-          const onLeft  = i % 2 === 0;
-          const left    = onLeft ? rnd(1, 17) : rnd(77, 85);
-          const startY  = rnd(88, 105);
-          const dur     = rnd(32, 50).toFixed(1);
-          const delay   = rnd(0, -20).toFixed(1); // negative = already mid-float on load
-          const rot     = rnd(-3, 3).toFixed(1);
-          const swayA   = `${rnd(-25, 25).toFixed(0)}px`;
-          const swayB   = `${rnd(-25, 25).toFixed(0)}px`;
-          const size    = `${rnd(1.04, 1.20).toFixed(2)}rem`;
-          return `<p class="fun-fact" style="left:${left.toFixed(1)}%;top:${startY.toFixed(1)}%;font-size:${size};--dur:${dur}s;--delay:${delay}s;--rot:${rot}deg;--sway-a:${swayA};--sway-b:${swayB};">${esc(fact)}</p>`;
-        }).join('');
+        layer.innerHTML = '';
+
+        const leftLanes = [3, 8, 13, 18, 23];
+        const rightLanes = [77, 82, 87, 92, 97];
+        let leftIdx = 0;
+        let rightIdx = 0;
+        let nextSide = 'left';
+        let i = 0;
+
+        const createFact = (factText) => {
+          const side = nextSide;
+          nextSide = nextSide === 'left' ? 'right' : 'left';
+
+          const lane = side === 'left'
+            ? leftLanes[(leftIdx++) % leftLanes.length]
+            : rightLanes[(rightIdx++) % rightLanes.length];
+
+          const left = lane + rnd(-0.8, 0.8);
+          const startY = rnd(93, 101);
+          const dur = rnd(38, 46).toFixed(1);
+          const rot = rnd(-3, 3).toFixed(1);
+          const swayA = `${rnd(-16, 16).toFixed(0)}px`;
+          const swayB = `${rnd(-16, 16).toFixed(0)}px`;
+          const size = `${rnd(1.04, 1.20).toFixed(2)}rem`;
+
+          const p = document.createElement('p');
+          p.className = 'fun-fact';
+          p.textContent = String(factText || '');
+          p.style.left = `${left.toFixed(1)}%`;
+          p.style.top = `${startY.toFixed(1)}%`;
+          p.style.fontSize = size;
+          p.style.setProperty('--dur', `${dur}s`);
+          p.style.setProperty('--delay', '0s');
+          p.style.setProperty('--rot', `${rot}deg`);
+          p.style.setProperty('--sway-a', swayA);
+          p.style.setProperty('--sway-b', swayB);
+          p.style.animationIterationCount = '1';
+          p.style.animationFillMode = 'forwards';
+          layer.appendChild(p);
+
+          setTimeout(() => {
+            if (p.parentElement === layer) p.remove();
+          }, (Number(dur) + 0.6) * 1000);
+        };
+
+        const queue = facts.slice(0, 24);
+        if (!queue.length) return;
+
+        createFact(queue[i++]);
+        if (i >= queue.length) return;
+
+        funFactsTimer = setInterval(() => {
+          if (i >= queue.length) {
+            stopFunFacts();
+            return;
+          }
+          createFact(queue[i++]);
+        }, 5000);
       }
 
       async function fetchAndRenderFunFacts(albumTitle, albumArtist) {
@@ -1318,6 +1407,11 @@
       });
 
       /* ─────────────── start ─────────────── */
+      applyDesktopScale();
+      window.addEventListener('resize', () => {
+        applyDesktopScale();
+        syncEntities();
+      });
       document.documentElement.requestFullscreen().catch(() => {});
       loadAlbumCollection().then(() => pollNowPlaying());
       pollUsers();
