@@ -717,6 +717,24 @@
         }
       ],
       "reviews": []
+    },
+    {
+      "id": "2026-04-25T21:50:45.767925+00:00",
+      "date": "2026-04-25T21:50:45.767925+00:00",
+      "startedAt": "2026-04-25T21:50:45.767925+00:00",
+      "savedAt": "2026-04-25T21:50:45.868439+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Pinkerton",
+          "artist": "Weezer",
+          "coverUrl": "https://i.discogs.com/0FSAWq-LCNfxWZ2IXzQozh8sYSMFbHwOKw-U7K0UmrU/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkyNTg1/ODUtMTYzOTUwNDA2/Ny03MTg0LmpwZWc.jpeg"
+        }
+      ],
+      "reviews": []
     }
   ]
 }
