@@ -2204,6 +2204,7 @@ function buildAlbumCardHtml(album) {
   const safeGenre = escapeHtml(album.genre);
   const safeNotes = escapeHtml(album.notes);
   const safeGiftedBy = escapeHtml(album.giftedBy || "");
+  const safeAdminThanks = escapeHtml(album.adminThanks || "");
   const safeOwner = escapeHtml(album.owner || "");
   const safeCoverUrl = escapeHtml(album.coverUrl);
   const safeVinylColor = escapeHtml(album.vinylColor || "#0b0b0b");
@@ -2235,6 +2236,9 @@ function buildAlbumCardHtml(album) {
     : "";
   const giftedByMarkup = safeGiftedBy
     ? `<p class="gifted-by"><em>Regalado por: ${safeGiftedBy}</em></p>`
+    : "";
+  const adminThanksMarkup = safeAdminThanks
+    ? `<p class="admin-thanks"><em>${safeAdminThanks}</em></p>`
     : "";
   const ownerMarkup = safeOwner
     ? `<p class="album-owner">De: ${safeOwner}</p>`
@@ -2271,6 +2275,7 @@ function buildAlbumCardHtml(album) {
             <p class="notes">${safeNotes}</p>
             ${ownerMarkup}
             ${giftedByMarkup}
+            ${adminThanksMarkup}
             ${linksMarkup}
             <ol class="track-list">${detailListMarkup}</ol>
           </div>
@@ -2818,6 +2823,7 @@ async function loadAlbums() {
     const giftedBy = String(
       item.regaladoPor || item["regalado por"] || item.regalado_por || item.giftedBy || ""
     ).trim();
+    const adminThanks = String(item.admin_thanks || "").trim();
     const descriptor = buildReleaseDescriptor(item);
     const [vinylColor, vinylColorSecondary] = detectVinylColors(descriptor);
     const discType = detectDiscType(descriptor);
@@ -2846,7 +2852,8 @@ async function loadAlbums() {
       tracks,
       details,
       ownedByUser: item.isOwned !== false,
-      giftedBy
+      giftedBy,
+      adminThanks
     };
   });
 }

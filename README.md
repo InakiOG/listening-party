@@ -105,3 +105,7 @@ Collection cache is stored in:
 
 The scraper is implemented in [discogs_scraper.py](discogs_scraper.py) and uses the public Discogs collection API.
 
+## Fun facts to add:
+
+Hearth Shaped Box by Nirvana:
+- Intentaron usar una luz parpadeante para que Dave mantuviera el ritmo de la canción, pero no funcionó, así que terminó tocando con un metrónomo de batería.

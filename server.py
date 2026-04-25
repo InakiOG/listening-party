@@ -899,7 +899,7 @@ def _write_fun_facts_db(db):
         pass
 
 
-def _call_gemini(album, artist):
+def _call_gemini(album, artist, existing_facts=None):
     global _gemini_last_call
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
@@ -911,10 +911,17 @@ def _call_gemini(album, artist):
             time.sleep(wait)
         _gemini_last_call = time.time()
 
+    existing_part = (
+        f'\nYa existen estos datos sobre este álbum — NO los repitas ni los parafrasees: '
+        f'{json.dumps(existing_facts, ensure_ascii=False)}\n'
+        if existing_facts else ""
+    )
     prompt = (
-        f'Devuelve ÚNICAMENTE un array JSON con 8 datos curiosos sobre el álbum "{album}" de "{artist}". '
+        f'Devuelve ÚNICAMENTE un array JSON con 15 datos curiosos sobre el álbum "{album}" de "{artist}". '
+        "Incluye datos sobre el álbum en general, sobre canciones individuales del álbum y sobre los videos musicales de esas canciones. "
         "Cada dato debe tener 1-2 oraciones, genuinamente interesante. "
         "Escribe en español, manteniendo en inglés los nombres de artistas, álbumes, canciones, publicaciones y premios. "
+        + existing_part +
         "Sin markdown, solo un array JSON puro de strings."
     )
     url = (
@@ -923,7 +930,7 @@ def _call_gemini(album, artist):
     )
     body = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 700, "temperature": 0.75},
+        "generationConfig": {"maxOutputTokens": 1800, "temperature": 0.75},
     }).encode("utf-8")
     req = urllib.request.Request(
         url, data=body,
@@ -942,7 +949,7 @@ def _call_gemini(album, artist):
             text = text.strip()
         facts = json.loads(text)
         if isinstance(facts, list):
-            return [str(f) for f in facts if f][:8]
+            return [str(f) for f in facts if f][:15]
     except urllib.error.HTTPError as e:
         raw = e.read().decode("utf-8", errors="replace")
         if e.code == 429:
@@ -966,22 +973,29 @@ def _call_gemini(album, artist):
     return []
 
 
-def _call_groq(album, artist):
+def _call_groq(album, artist, existing_facts=None):
     api_key = os.environ.get("GROQ_API_KEY", "").strip()
     if not api_key:
         return []
 
+    existing_part = (
+        f'\nYa existen estos datos sobre este álbum — NO los repitas ni los parafrasees: '
+        f'{json.dumps(existing_facts, ensure_ascii=False)}\n'
+        if existing_facts else ""
+    )
     prompt = (
-        f'Devuelve un objeto JSON con una única clave "facts" cuyo valor sea un array de 8 datos curiosos '
+        f'Devuelve un objeto JSON con una única clave "facts" cuyo valor sea un array de 15 datos curiosos '
         f'sobre el álbum "{album}" de "{artist}". '
+        "Incluye datos sobre el álbum en general, sobre canciones individuales del álbum y sobre los videos musicales de esas canciones. "
         "Cada dato debe tener 1-2 oraciones, genuinamente interesante. "
         "Escribe en español, manteniendo en inglés los nombres de artistas, álbumes, canciones, publicaciones y premios. "
+        + existing_part +
         'Ejemplo: {"facts": ["Dato uno.", "Dato dos."]}'
     )
     body = json.dumps({
         "model": "llama-3.1-8b-instant",
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 700,
+        "max_tokens": 1800,
         "temperature": 0.5,
         "response_format": {"type": "json_object"},
     }).encode("utf-8")
@@ -1002,7 +1016,7 @@ def _call_groq(album, artist):
         parsed = json.loads(text)
         facts = parsed.get("facts", parsed) if isinstance(parsed, dict) else parsed
         if isinstance(facts, list):
-            return [str(f) for f in facts if f][:8]
+            return [str(f) for f in facts if f][:15]
     except urllib.error.HTTPError as e:
         print(f"[fun-facts] Groq HTTP {e.code}: {e.read().decode('utf-8', errors='replace')}", flush=True)
     except Exception as e:
@@ -1010,11 +1024,11 @@ def _call_groq(album, artist):
     return []
 
 
-def _fetch_fun_facts(album, artist):
+def _fetch_fun_facts(album, artist, existing_facts=None):
     """Try Gemini first; fall back to Groq on 429."""
-    result = _call_gemini(album, artist)
+    result = _call_gemini(album, artist, existing_facts)
     if result is None:  # Gemini rate-limited
-        result = _call_groq(album, artist)
+        result = _call_groq(album, artist, existing_facts)
     return result or []
 
 
@@ -1033,7 +1047,7 @@ def _pick_next_prefetch():
         return None
 
     with _fun_facts_lock:
-        populated_keys = {k for k, v in _fun_facts_db.items() if v}
+        populated_keys = {k for k, v in _fun_facts_db.items() if len(v) >= 15}
 
     if _priority_album:
         a, b = _priority_album
@@ -1063,9 +1077,10 @@ def _prefetch_worker():
         album, artist = target
         key = _make_facts_key(album, artist)
         with _fun_facts_lock:
-            if _fun_facts_db.get(key):
+            existing = _fun_facts_db.get(key, [])
+            if len(existing) >= 15:
                 continue
-        facts = _fetch_fun_facts(album, artist)
+        facts = _fetch_fun_facts(album, artist, existing or None)
         if facts:
             with _fun_facts_lock:
                 _fun_facts_db[key] = facts
@@ -1347,12 +1362,14 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             key = _make_facts_key(album, artist)
 
             with _fun_facts_lock:
-                if _fun_facts_db.get(key):
-                    self._send_json({"facts": _fun_facts_db[key]})
+                cached = _fun_facts_db.get(key, [])
+                if len(cached) >= 15:
+                    self._send_json({"facts": cached})
                     return
+                existing = cached or []
 
-            # Cache miss: fetch inline so the desktop doesn't wait for the background thread
-            facts = _fetch_fun_facts(album, artist)
+            # Cache miss or incomplete: fetch inline so the desktop doesn't wait for the background thread
+            facts = _fetch_fun_facts(album, artist, existing or None)
             if facts:
                 with _fun_facts_lock:
                     _fun_facts_db[key] = facts
@@ -1587,6 +1604,20 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         write_users_store(users_store)
                 add_session_sticky_attendee(_current_session, actor_key)
 
+                admin_thanks = ""
+                try:
+                    with COLLECTION_PATH.open(encoding="utf-8") as _cf:
+                        _items = json.load(_cf).get("items", [])
+                    _title_l = album_title.strip().lower()
+                    _artist_l = album_artist.strip().lower()
+                    for _item in _items:
+                        if (str(_item.get("title", "")).strip().lower() == _title_l and
+                                str(_item.get("artist", "")).strip().lower() == _artist_l):
+                            admin_thanks = str(_item.get("admin_thanks", "") or "").strip()
+                            break
+                except Exception:
+                    pass
+
                 now_playing_payload = {
                     "albumNumber": 0,
                     "songNumber": 0,
@@ -1595,6 +1626,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "songTitle": song_title,
                     "reviewScope": review_scope,
                     "coverUrl": cover_url,
+                    "adminThanks": admin_thanks,
                     "updatedAt": datetime.now(timezone.utc).isoformat(),
                     "updatedBy": actor_profile.get("name", actor_name),
                     "partyId": _current_session["id"]

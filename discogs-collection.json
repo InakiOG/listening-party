@@ -1046,7 +1046,7 @@
       "instanceId": 2137840119,
       "dateAdded": "2026-04-21T20:32:12-07:00",
       "rating": 0,
-      "timesPlayed": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Rotten Apple",
         "Nutshell",
@@ -3076,6 +3076,7 @@
       "dateAdded": "2025-01-03T00:12:05-08:00",
       "rating": 0,
       "timesPlayed": 0,
+      "admin_thanks": "Este álbum me lo regaló mi abuelo en mi cumpleaños número 24. Te quiero Ildefonso",
       "tracks": [
         "One Of These Days",
         "A Pillow Of Winds",
@@ -3127,7 +3128,8 @@
       "instanceId": 2138834125,
       "dateAdded": "2026-04-25T00:30:14-07:00",
       "rating": 0,
-      "timesPlayed": 1,
+      "timesPlayed": 3,
+      "admin_thanks": "Este álbum me lo enseñó Rita cuando teníamos 21 años, te quiero mucho Rita",
       "tracks": [
         "Adult Diversion",
         "Archie, Marry Me",
@@ -3298,6 +3300,7 @@
       "dateAdded": "2025-01-03T00:05:56-08:00",
       "rating": 0,
       "timesPlayed": 0,
+      "admin_thanks": "Un regalo de Pe y Arce en navidad 2025, los quiero mucho, a veces me dan risa sus chistes",
       "tracks": [
         "The Adults Are Talking",
         "Selfless",
@@ -4520,6 +4523,7 @@
       "dateAdded": "2026-04-21T22:24:39-07:00",
       "rating": 0,
       "timesPlayed": 1,
+      "admin_thanks": "Un regalo de mi papá en marzo 2026, patrocinado por él para escucharlo juntos, te quiero Humberto!",
       "tracks": [
         "You",
         "Creep",

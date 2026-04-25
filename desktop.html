@@ -372,6 +372,7 @@
         width: calc(var(--cover-size) + var(--cover-size) * 0.55);
         height: var(--cover-size);
         --cover-size: clamp(220px, 28vw, 380px);
+        transform: translateX(4vw);
       }
 
       .cover-img {
@@ -417,6 +418,7 @@
         background:
           radial-gradient(circle at center, transparent 0 8%, rgba(226,232,240,0.9) 8.4% 10.6%, transparent 11%),
           radial-gradient(circle at center, transparent 0 74%, rgba(226,232,240,0.92) 74.4% 76.2%, transparent 76.6%),
+          repeating-radial-gradient(circle at center, rgba(255,255,255,0.55) 0 1px, transparent 1px 5px),
           radial-gradient(circle at 28% 20%, rgba(255,255,255,0.32), transparent 47%),
           transparent;
         box-shadow: 0 0 0 2px rgba(255,255,255,0.95), 0 12px 40px rgba(0,0,0,0.4);
@@ -489,6 +491,15 @@
 
       .track-song[hidden] { display: none; }
 
+      .track-thanks {
+        margin: 0.35rem 0 0;
+        font-size: clamp(0.8rem, 1.2vw, 1rem);
+        color: #94a3b8;
+        font-style: italic;
+      }
+
+      .track-thanks[hidden] { display: none; }
+
       /* ── Fullscreen button ── */
       #fs-btn {
         position: fixed;
@@ -521,21 +532,26 @@
         overflow: hidden;
       }
 
+      @keyframes bubble-float {
+        0%   { transform: translateY(0)      translateX(0)              rotate(var(--rot)); opacity: 0; }
+        8%   { opacity: 0.75; }
+        35%  { transform: translateY(-32vh)  translateX(var(--sway-a))  rotate(var(--rot)); }
+        65%  { transform: translateY(-62vh)  translateX(var(--sway-b))  rotate(var(--rot)); }
+        92%  { opacity: 0.75; }
+        100% { transform: translateY(-108vh) translateX(var(--sway-a))  rotate(var(--rot)); opacity: 0; }
+      }
+
       .fun-fact {
         position: absolute;
-        max-width: 300px;
-        color: rgba(226, 232, 240, 1);
+        max-width: 210px;
+        color: rgba(226, 232, 240, 0.9);
         font-weight: 500;
         line-height: 1.55;
         text-align: center;
         opacity: 0;
-        transition: opacity 2s ease;
         user-select: none;
-        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-      }
-
-      .fun-fact.visible {
-        opacity: 1;
+        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+        animation: bubble-float var(--dur) ease-in-out var(--delay) infinite;
       }
     </style>
   </head>
@@ -568,6 +584,7 @@
         <p id="np-album" class="track-title"></p>
         <p id="np-artist" class="track-artist"></p>
         <p id="np-song" class="track-song" hidden></p>
+        <p id="np-thanks" class="track-thanks" hidden></p>
       </div>
     </div>
 
@@ -677,46 +694,54 @@
         startPhysics();
       }
 
-      // Returns a padded bounding rect of the visible album/vinyl area, or null when idle.
+      // Returns exact per-shape geometry for the cover rect + disc circle, or null when idle.
       function getCenterObstacle() {
         if (!playScreen.classList.contains('visible')) return null;
-
-        // Prefer the cover+vinyl wrapper so bubbles bounce against the album zone,
-        // not the full now-playing layout (which includes text and empty space).
         const wrap = playScreen.querySelector('.cover-vinyl-wrap');
-        const target = wrap || playScreen;
-        const r = target.getBoundingClientRect();
+        if (!wrap) return null;
+        const r = wrap.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) return null;
 
-        const pad = wrap ? 6 : 10;
-        return {
-          left: r.left - pad,
-          top: r.top - pad,
-          right: r.right + pad,
-          bottom: r.bottom + pad
-        };
+        // Cover size is the wrap height (wrap height === --cover-size).
+        const S = r.height;
+
+        // Cover: square on the left side of the wrap.
+        const coverRect = { left: r.left, top: r.top, right: r.left + S, bottom: r.bottom };
+
+        // Disc: position: absolute; top:50%; right: S*0.20; width/height: S*0.95
+        const discDiam = S * 0.95;
+        const discR    = discDiam / 2;
+        const discCx   = r.right - S * 0.20 - discR;  // right edge minus its own right offset
+        const discCy   = r.top + S / 2;               // vertically centered in wrap
+
+        return { coverRect, disc: { cx: discCx, cy: discCy, r: discR } };
       }
 
       function bounceOffRect(e, rect) {
-        // Closest point on the rectangle to the circle center
         const cx = Math.max(rect.left, Math.min(e.x, rect.right));
         const cy = Math.max(rect.top,  Math.min(e.y, rect.bottom));
         const dx = e.x - cx, dy = e.y - cy;
         const dist = Math.hypot(dx, dy) || 0.001;
         if (dist >= e.r) return;
-
-        // Push the bubble out
         const overlap = e.r - dist;
         const nx = dx / dist, ny = dy / dist;
         e.x += nx * overlap;
         e.y += ny * overlap;
-
-        // Reflect velocity along the collision normal (only if moving into the rect)
         const dot = e.vx * nx + e.vy * ny;
-        if (dot < 0) {
-          e.vx -= 2 * dot * nx;
-          e.vy -= 2 * dot * ny;
-        }
+        if (dot < 0) { e.vx -= 2 * dot * nx; e.vy -= 2 * dot * ny; }
+      }
+
+      function bounceOffCircle(e, obs) {
+        const dx = e.x - obs.cx, dy = e.y - obs.cy;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        const minD = e.r + obs.r;
+        if (dist >= minD) return;
+        const nx = dx / dist, ny = dy / dist;
+        const overlap = minD - dist;
+        e.x += nx * overlap;
+        e.y += ny * overlap;
+        const dot = e.vx * nx + e.vy * ny;
+        if (dot < 0) { e.vx -= 2 * dot * nx; e.vy -= 2 * dot * ny; }
       }
 
       function stepPhysics(dt) {
@@ -732,7 +757,10 @@
           if (e.y - e.r < 0)  { e.y = e.r;      e.vy =  Math.abs(e.vy); }
           if (e.y + e.r > lh) { e.y = lh - e.r; e.vy = -Math.abs(e.vy); }
 
-          if (obstacle) bounceOffRect(e, obstacle);
+          if (obstacle) {
+            bounceOffRect(e, obstacle.coverRect);
+            bounceOffCircle(e, obstacle.disc);
+          }
 
           const spd = Math.hypot(e.vx, e.vy);
           if (spd > e.baseSpeed && spd > 0.1) {
@@ -1113,41 +1141,28 @@
       }
 
       /* ─────────────── fun facts ─────────────── */
-      const FACT_POSITIONS = [
-        { left: '3%',  top: '7%',  rot: -2, size: '0.82rem' },
-        { left: '25%', top: '4%',  rot: -1, size: '0.9rem'  },
-        { left: '58%', top: '5%',  rot:  1, size: '0.78rem' },
-        { left: '70%', top: '13%', rot:  3, size: '0.8rem'  },
-        { left: '2%',  top: '44%', rot: -3, size: '0.85rem' },
-        { left: '67%', top: '48%', rot:  2, size: '0.83rem' },
-        { left: '4%',  top: '75%', rot:  1, size: '0.87rem' },
-        { left: '59%', top: '80%', rot: -2, size: '0.8rem'  },
-      ];
-
       let lastFactsSig = '';
-      let _factsTimers = [];
 
       function clearFunFacts() {
-        _factsTimers.forEach(t => clearTimeout(t));
-        _factsTimers = [];
         const layer = document.getElementById('fun-facts-layer');
-        layer.querySelectorAll('.fun-fact').forEach(el => el.classList.remove('visible'));
-        const t = setTimeout(() => { layer.innerHTML = ''; }, 2100);
-        _factsTimers.push(t);
+        layer.innerHTML = '';
       }
 
       function renderFunFacts(facts) {
-        _factsTimers.forEach(t => clearTimeout(t));
-        _factsTimers = [];
         const layer = document.getElementById('fun-facts-layer');
-        layer.innerHTML = facts.slice(0, FACT_POSITIONS.length).map((fact, i) => {
-          const p = FACT_POSITIONS[i];
-          return `<p class="fun-fact" style="left:${p.left};top:${p.top};transform:rotate(${p.rot}deg);font-size:${p.size};">${esc(fact)}</p>`;
+        const rnd = (min, max) => Math.random() * (max - min) + min;
+        layer.innerHTML = facts.map((fact, i) => {
+          const onLeft  = i % 2 === 0;
+          const left    = onLeft ? rnd(1, 17) : rnd(77, 85);
+          const startY  = rnd(88, 105);
+          const dur     = rnd(32, 50).toFixed(1);
+          const delay   = rnd(0, -20).toFixed(1); // negative = already mid-float on load
+          const rot     = rnd(-3, 3).toFixed(1);
+          const swayA   = `${rnd(-25, 25).toFixed(0)}px`;
+          const swayB   = `${rnd(-25, 25).toFixed(0)}px`;
+          const size    = `${rnd(1.04, 1.20).toFixed(2)}rem`;
+          return `<p class="fun-fact" style="left:${left.toFixed(1)}%;top:${startY.toFixed(1)}%;font-size:${size};--dur:${dur}s;--delay:${delay}s;--rot:${rot}deg;--sway-a:${swayA};--sway-b:${swayB};">${esc(fact)}</p>`;
         }).join('');
-        layer.querySelectorAll('.fun-fact').forEach((el, i) => {
-          const t = setTimeout(() => el.classList.add('visible'), 400 + i * 200);
-          _factsTimers.push(t);
-        });
       }
 
       async function fetchAndRenderFunFacts(albumTitle, albumArtist) {
@@ -1160,6 +1175,8 @@
           const r = await fetch(`/api/fun-facts?${params}`, { cache: 'no-store' });
           if (!r.ok) return;
           const data = await r.json();
+          // Discard if album changed while the fetch was in flight
+          if (sig !== lastFactsSig) return;
           if (Array.isArray(data.facts) && data.facts.length) renderFunFacts(data.facts);
         } catch { /* non-fatal */ }
       }
@@ -1174,6 +1191,7 @@
       const npAlbum    = document.getElementById('np-album');
       const npArtist   = document.getElementById('np-artist');
       const npSong     = document.getElementById('np-song');
+      const npThanks   = document.getElementById('np-thanks');
 
       function applyDiscVisual(data) {
         const meta = findAlbumMeta(data.albumTitle, data.albumArtist);
@@ -1224,6 +1242,9 @@
         const hasSong = data.reviewScope === 'song' && data.songTitle;
         npSong.hidden = !hasSong;
         if (hasSong) npSong.textContent = data.songTitle;
+        const hasThanks = Boolean(data.adminThanks);
+        npThanks.hidden = !hasThanks;
+        if (hasThanks) npThanks.textContent = data.adminThanks;
 
         idleScreen.classList.add('hidden');
         playScreen.classList.add('visible');
