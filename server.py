@@ -912,9 +912,10 @@ def _call_gemini(album, artist):
         _gemini_last_call = time.time()
 
     prompt = (
-        f'Return ONLY a JSON array of 8 fun facts about the album "{album}" by "{artist}". '
-        "Each fact must be 1-2 sentences, genuinely interesting. "
-        "No markdown, raw JSON array of strings only."
+        f'Devuelve ÚNICAMENTE un array JSON con 8 datos curiosos sobre el álbum "{album}" de "{artist}". '
+        "Cada dato debe tener 1-2 oraciones, genuinamente interesante. "
+        "Escribe en español, manteniendo en inglés los nombres de artistas, álbumes, canciones, publicaciones y premios. "
+        "Sin markdown, solo un array JSON puro de strings."
     )
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -945,18 +946,76 @@ def _call_gemini(album, artist):
     except urllib.error.HTTPError as e:
         raw = e.read().decode("utf-8", errors="replace")
         if e.code == 429:
+            retry_s = 60
             try:
-                retry_s = int(json.loads(raw)["error"]["details"][-1]["retryDelay"].rstrip("s"))
+                details = json.loads(raw)["error"]["details"]
+                for d in details:
+                    if d.get("@type", "").endswith("RetryInfo"):
+                        retry_s = int(d["retryDelay"].rstrip("s")) + 5
+                        break
             except Exception:
-                retry_s = 30
-            print(f"[fun-facts] Gemini 429 — waiting {retry_s}s before retry", flush=True)
+                pass
+            print(f"[fun-facts] Gemini 429 — backing off {retry_s}s, switching to Groq", flush=True)
             with _gemini_rate_lock:
                 _gemini_last_call = time.time() + retry_s
+            return None  # sentinel: caller should try Groq
         else:
             print(f"[fun-facts] Gemini HTTP {e.code}: {raw}", flush=True)
     except Exception as e:
         print(f"[fun-facts] Gemini error: {e}", flush=True)
     return []
+
+
+def _call_groq(album, artist):
+    api_key = os.environ.get("GROQ_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    prompt = (
+        f'Devuelve un objeto JSON con una única clave "facts" cuyo valor sea un array de 8 datos curiosos '
+        f'sobre el álbum "{album}" de "{artist}". '
+        "Cada dato debe tener 1-2 oraciones, genuinamente interesante. "
+        "Escribe en español, manteniendo en inglés los nombres de artistas, álbumes, canciones, publicaciones y premios. "
+        'Ejemplo: {"facts": ["Dato uno.", "Dato dos."]}'
+    )
+    body = json.dumps({
+        "model": "llama-3.1-8b-instant",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 700,
+        "temperature": 0.5,
+        "response_format": {"type": "json_object"},
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "listening-party/1.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        text = result["choices"][0]["message"]["content"].strip()
+        parsed = json.loads(text)
+        facts = parsed.get("facts", parsed) if isinstance(parsed, dict) else parsed
+        if isinstance(facts, list):
+            return [str(f) for f in facts if f][:8]
+    except urllib.error.HTTPError as e:
+        print(f"[fun-facts] Groq HTTP {e.code}: {e.read().decode('utf-8', errors='replace')}", flush=True)
+    except Exception as e:
+        print(f"[fun-facts] Groq error: {e}", flush=True)
+    return []
+
+
+def _fetch_fun_facts(album, artist):
+    """Try Gemini first; fall back to Groq on 429."""
+    result = _call_gemini(album, artist)
+    if result is None:  # Gemini rate-limited
+        result = _call_groq(album, artist)
+    return result or []
 
 
 def _pick_next_prefetch():
@@ -1006,11 +1065,13 @@ def _prefetch_worker():
         with _fun_facts_lock:
             if _fun_facts_db.get(key):
                 continue
-        facts = _call_gemini(album, artist)  # rate-limited inside _call_gemini
+        facts = _fetch_fun_facts(album, artist)
         if facts:
             with _fun_facts_lock:
                 _fun_facts_db[key] = facts
                 _write_fun_facts_db(_fun_facts_db)
+        else:
+            time.sleep(5)  # brief pause before retrying next album
 
 
 class ListeningPartyHandler(SimpleHTTPRequestHandler):
@@ -1291,10 +1352,11 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     return
 
             # Cache miss: fetch inline so the desktop doesn't wait for the background thread
-            facts = _call_gemini(album, artist)
-            with _fun_facts_lock:
-                _fun_facts_db[key] = facts
-                _write_fun_facts_db(_fun_facts_db)
+            facts = _fetch_fun_facts(album, artist)
+            if facts:
+                with _fun_facts_lock:
+                    _fun_facts_db[key] = facts
+                    _write_fun_facts_db(_fun_facts_db)
 
             self._send_json({"facts": facts})
             return

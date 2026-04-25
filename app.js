@@ -134,20 +134,21 @@ function detectAmpersandVinylGradient(text, translucent) {
 
 function detectVinylColors(rawText) {
   const text = String(rawText || "").toLowerCase();
+  const formatSegment = text.split(";")[0] || text;
 
-  if (!text) {
+  if (!formatSegment) {
     return ["#0b0b0b", ""];
   }
 
-  const translucent = /(translucent|transparent|clear)/.test(text);
-  const clearOnly = /\bclear\b/.test(text);
-  const ampersandGradient = detectAmpersandVinylGradient(text, translucent);
+  const translucent = /(translucent|transparent|clear)/.test(formatSegment);
+  const clearOnly = /\bclear\b/.test(formatSegment);
+  const ampersandGradient = detectAmpersandVinylGradient(formatSegment, translucent);
   if (ampersandGradient) {
     return [ampersandGradient, ""];
   }
   const matchedRules = VINYL_COLOR_RULES.filter((rule) => {
     if (rule.pattern instanceof RegExp) {
-      return rule.pattern.test(text);
+      return rule.pattern.test(formatSegment);
     }
     return false;
   });
@@ -209,6 +210,51 @@ function detectDiscCount(rawText) {
 
 function detectClearVinyl(rawText) {
   return /\bclear\b/.test(String(rawText || "").toLowerCase());
+}
+
+function appendDescriptorTokens(target, value) {
+  if (value === null || value === undefined) {
+    return;
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    const token = String(value).trim();
+    if (token) {
+      target.push(token);
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => appendDescriptorTokens(target, entry));
+    return;
+  }
+
+  if (typeof value === "object") {
+    Object.values(value).forEach((entry) => appendDescriptorTokens(target, entry));
+  }
+}
+
+function buildReleaseDescriptor(item) {
+  const tokens = [];
+  appendDescriptorTokens(tokens, item?.rawText);
+  appendDescriptorTokens(tokens, item?.notes);
+  appendDescriptorTokens(tokens, item?.format);
+  appendDescriptorTokens(tokens, item?.formats);
+  appendDescriptorTokens(tokens, item?.formatDescriptions);
+  appendDescriptorTokens(tokens, item?.descriptions);
+  return tokens.join(" ");
+}
+
+function normalizeAlbumIdentityPart(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function extractPrimaryGenre(rawText) {
@@ -1248,16 +1294,16 @@ function findAlbumByNowPlaying(nowPlaying) {
     return null;
   }
 
-  const targetTitle = String(nowPlaying.albumTitle || "").trim().toLowerCase();
-  const targetArtist = String(nowPlaying.albumArtist || "").trim().toLowerCase();
+  const targetTitle = normalizeAlbumIdentityPart(nowPlaying.albumTitle);
+  const targetArtist = normalizeAlbumIdentityPart(nowPlaying.albumArtist);
 
   if (!targetTitle) {
     return null;
   }
 
   return appState.albums.find((album) => {
-    const albumTitle = String(album.title || "").trim().toLowerCase();
-    const albumArtist = String(album.artist || "").trim().toLowerCase();
+    const albumTitle = normalizeAlbumIdentityPart(album.title);
+    const albumArtist = normalizeAlbumIdentityPart(album.artist);
 
     if (albumTitle !== targetTitle) {
       return false;
@@ -2772,12 +2818,7 @@ async function loadAlbums() {
     const giftedBy = String(
       item.regaladoPor || item["regalado por"] || item.regalado_por || item.giftedBy || ""
     ).trim();
-    const descriptor = [
-      item.rawText,
-      item.notes,
-      item.format,
-      item.formats
-    ].filter(Boolean).join(" ");
+    const descriptor = buildReleaseDescriptor(item);
     const [vinylColor, vinylColorSecondary] = detectVinylColors(descriptor);
     const discType = detectDiscType(descriptor);
     const discCount = detectDiscCount(descriptor);

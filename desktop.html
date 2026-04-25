@@ -399,8 +399,8 @@
         --disc-color: #0b0b0b;
         position: absolute;
         top: 50%; right: calc(var(--cover-size) * 0.20);
-        width: var(--cover-size);
-        height: var(--cover-size);
+        width: calc(var(--cover-size) * 0.95);
+        height: calc(var(--cover-size) * 0.95);
         border-radius: 50%;
         transform: translateY(-50%);
         background:
@@ -524,7 +524,7 @@
       .fun-fact {
         position: absolute;
         max-width: 300px;
-        color: rgba(226, 232, 240, 0.22);
+        color: rgba(226, 232, 240, 1);
         font-weight: 500;
         line-height: 1.55;
         text-align: center;
@@ -677,13 +677,24 @@
         startPhysics();
       }
 
-      // Returns a padded bounding rect of the center playing area, or null when idle.
+      // Returns a padded bounding rect of the visible album/vinyl area, or null when idle.
       function getCenterObstacle() {
         if (!playScreen.classList.contains('visible')) return null;
-        const r = playScreen.getBoundingClientRect();
-        if (r.width === 0) return null;
-        const pad = 12;
-        return { left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad };
+
+        // Prefer the cover+vinyl wrapper so bubbles bounce against the album zone,
+        // not the full now-playing layout (which includes text and empty space).
+        const wrap = playScreen.querySelector('.cover-vinyl-wrap');
+        const target = wrap || playScreen;
+        const r = target.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return null;
+
+        const pad = wrap ? 6 : 10;
+        return {
+          left: r.left - pad,
+          top: r.top - pad,
+          right: r.right + pad,
+          bottom: r.bottom + pad
+        };
       }
 
       function bounceOffRect(e, rect) {
@@ -996,12 +1007,13 @@
 
       function detectVinylColors(rawText) {
         const text = String(rawText||'').toLowerCase();
-        if (!text) return ['#0b0b0b', ''];
-        const translucent = /(translucent|transparent|clear)/.test(text);
-        const clearOnly   = /\bclear\b/.test(text);
-        const ampGrad = detectAmpersandVinylGradient(text, translucent);
+        const formatSegment = text.split(';')[0] || text;
+        if (!formatSegment) return ['#0b0b0b', ''];
+        const translucent = /(translucent|transparent|clear)/.test(formatSegment);
+        const clearOnly   = /\bclear\b/.test(formatSegment);
+        const ampGrad = detectAmpersandVinylGradient(formatSegment, translucent);
         if (ampGrad) return [ampGrad, ''];
-        const matched = VINYL_COLOR_RULES.filter(r => r.pattern.test(text));
+        const matched = VINYL_COLOR_RULES.filter(r => r.pattern.test(formatSegment));
         if (matched.length >= 2) return [resolveVinylColor(matched[0], translucent), resolveVinylColor(matched[1], translucent)];
         if (matched.length === 1) return clearOnly ? ['#f8fafc', ''] : [resolveVinylColor(matched[0], translucent), ''];
         if (translucent) return clearOnly ? ['#f8fafc', ''] : ['rgba(255,255,255,0.88)', ''];
@@ -1031,6 +1043,44 @@
         return /\bclear\b/.test(String(rawText||'').toLowerCase());
       }
 
+      function appendDescriptorTokens(target, value) {
+        if (value === null || value === undefined) return;
+        if (typeof value === 'string' || typeof value === 'number') {
+          const token = String(value).trim();
+          if (token) target.push(token);
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach(v => appendDescriptorTokens(target, v));
+          return;
+        }
+        if (typeof value === 'object') {
+          Object.values(value).forEach(v => appendDescriptorTokens(target, v));
+        }
+      }
+
+      function buildReleaseDescriptor(item) {
+        const tokens = [];
+        appendDescriptorTokens(tokens, item?.rawText);
+        appendDescriptorTokens(tokens, item?.notes);
+        appendDescriptorTokens(tokens, item?.format);
+        appendDescriptorTokens(tokens, item?.formats);
+        appendDescriptorTokens(tokens, item?.formatDescriptions);
+        appendDescriptorTokens(tokens, item?.descriptions);
+        return tokens.join(' ');
+      }
+
+      function normalizeAlbumIdentityPart(value) {
+        return String(value || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/&/g, ' and ')
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim()
+          .replace(/\s+/g, ' ');
+      }
+
       /* ─────────────── album collection lookup ─────────────── */
       let albumCollection = new Map(); // "title::artist" -> album meta
 
@@ -1042,7 +1092,7 @@
           const items = Array.isArray(payload.items) ? payload.items : [];
           albumCollection = new Map();
           for (const item of items) {
-            const descriptor = [item.rawText, item.notes, item.format, item.formats].filter(Boolean).join(' ');
+            const descriptor = buildReleaseDescriptor(item);
             const [vinylColor, vinylColorSecondary] = detectVinylColors(descriptor);
             const meta = {
               vinylColor,
@@ -1051,14 +1101,14 @@
               discCount:   detectDiscCount(descriptor),
               isClearVinyl: detectClearVinyl(descriptor)
             };
-            const key = `${String(item.title||'').trim().toLowerCase()}::${String(item.artist||'').trim().toLowerCase()}`;
+            const key = `${normalizeAlbumIdentityPart(item.title)}::${normalizeAlbumIdentityPart(item.artist)}`;
             albumCollection.set(key, meta);
           }
         } catch { /* non-fatal */ }
       }
 
       function findAlbumMeta(title, artist) {
-        const key = `${String(title||'').trim().toLowerCase()}::${String(artist||'').trim().toLowerCase()}`;
+        const key = `${normalizeAlbumIdentityPart(title)}::${normalizeAlbumIdentityPart(artist)}`;
         return albumCollection.get(key) || null;
       }
 
