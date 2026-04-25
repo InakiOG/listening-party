@@ -1,7 +1,9 @@
 import json
 import argparse
+import os
 import secrets
 import threading
+import urllib.request
 from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -11,6 +13,16 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from discogs_scraper import backfill_missing_tracks, update_collection_cache
 
 ROOT = Path(__file__).resolve().parent
+
+# Load .env file if present (never overwrites a real env var)
+_env_path = ROOT / ".env"
+if _env_path.exists():
+    with _env_path.open(encoding="utf-8") as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _, _v = _line.partition("=")
+                os.environ.setdefault(_k.strip(), _v.strip())
 REVIEWS_DB_PATH = ROOT / "reviews-db.json"
 USERS_DB_PATH = ROOT / "users-db.json"
 CREDENTIALS_DB_PATH = ROOT / "user-credentials.local.json"
@@ -21,6 +33,8 @@ COLLECTION_PATH = ROOT / "discogs-collection.json"
 REVIEWS_LOCK = threading.Lock()
 LIVE_ALBUMS_LOCK = threading.Lock()
 _current_session = None
+_fun_facts_cache = {}
+_fun_facts_lock = threading.Lock()
 ADMIN_USER_KEY = "iñaki"
 ADMIN_DEFAULT_NAME = "Iñaki"
 ADMIN_DEFAULT_PASSWORD = "14agosto"
@@ -857,6 +871,56 @@ def increment_album_times_played(album_title, album_artist=""):
     return True
 
 
+def _fetch_gemini_fun_facts(album, artist, song=None):
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    if song:
+        prompt = (
+            f'Return ONLY a JSON array of 8 fun facts about the song "{song}" '
+            f'from the album "{album}" by "{artist}". '
+            'Each fact must be 1-2 sentences, genuinely interesting, no markdown, raw JSON array of strings only.'
+        )
+    else:
+        prompt = (
+            f'Return ONLY a JSON array of 8 fun facts about the album "{album}" by "{artist}". '
+            'Each fact must be 1-2 sentences, genuinely interesting, no markdown, raw JSON array of strings only.'
+        )
+
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-1.5-flash:generateContent?key={api_key}"
+    )
+    body = json.dumps({
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": 700, "temperature": 0.75},
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        url, data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+        # Strip markdown code fences if the model wraps the JSON
+        if text.startswith("```"):
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else text
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+        facts = json.loads(text)
+        if isinstance(facts, list):
+            return [str(f) for f in facts if f][:8]
+    except Exception:
+        pass
+    return []
+
+
 class ListeningPartyHandler(SimpleHTTPRequestHandler):
     def _send_json(self, payload, status_code=200, extra_headers=None):
         response = json.dumps(payload).encode("utf-8")
@@ -1116,6 +1180,31 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 reverse=True
             )
             self._send_json({"parties": parties})
+            return
+
+        if parsed.path == "/api/fun-facts":
+            params = parse_qs(parsed.query)
+            album  = (params.get("album",  [""])[0] or "").strip()
+            artist = (params.get("artist", [""])[0] or "").strip()
+            song   = (params.get("song",   [""])[0] or "").strip()
+
+            if not album or not artist:
+                self._send_json({"facts": []})
+                return
+
+            cache_key = f"{album.lower()}|{artist.lower()}|{song.lower()}"
+
+            with _fun_facts_lock:
+                if cache_key in _fun_facts_cache:
+                    self._send_json({"facts": _fun_facts_cache[cache_key]})
+                    return
+
+            facts = _fetch_gemini_fun_facts(album, artist, song or None)
+
+            with _fun_facts_lock:
+                _fun_facts_cache[cache_key] = facts
+
+            self._send_json({"facts": facts})
             return
 
         super().do_GET()
