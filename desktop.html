@@ -671,8 +671,22 @@
           if (!bubbleEntities.has(k)) bubbleEntities.set(k, spawnEntity(40));
           const e = bubbleEntities.get(k);
           e.el = el;
-          el.style.left = `${e.x - e.r}px`;
-          el.style.top  = `${e.y - e.r}px`;
+          // Measure actual rendered size so physics center == visual center
+          const br = el.getBoundingClientRect();
+          if (br.width > 0 && br.height > 0) {
+            const hw = br.width  / 2;
+            const hh = br.height / 2;
+            const newR = Math.max(hw, hh);
+            if (Math.abs(newR - e.r) > 1) {
+              e.hw = hw; e.hh = hh; e.r = newR;
+              e.x  = Math.max(newR, Math.min(lw - newR, e.x));
+              e.y  = Math.max(newR, Math.min(lh - newR, e.y));
+            } else {
+              e.hw = hw; e.hh = hh;
+            }
+          }
+          el.style.left = `${e.x - (e.hw || e.r)}px`;
+          el.style.top  = `${e.y - (e.hh || e.r)}px`;
         }
 
         for (const el of document.querySelectorAll('#active-users-layer .active-user-bubble')) {
@@ -717,31 +731,48 @@
         return { coverRect, disc: { cx: discCx, cy: discCy, r: discR } };
       }
 
-      function bounceOffRect(e, rect) {
-        const cx = Math.max(rect.left, Math.min(e.x, rect.right));
-        const cy = Math.max(rect.top,  Math.min(e.y, rect.bottom));
-        const dx = e.x - cx, dy = e.y - cy;
-        const dist = Math.hypot(dx, dy) || 0.001;
-        if (dist >= e.r) return;
-        const overlap = e.r - dist;
-        const nx = dx / dist, ny = dy / dist;
-        e.x += nx * overlap;
-        e.y += ny * overlap;
-        const dot = e.vx * nx + e.vy * ny;
-        if (dot < 0) { e.vx -= 2 * dot * nx; e.vy -= 2 * dot * ny; }
-      }
+      // Unified AABB-vs-compound-obstacle: cover rect + disc circle.
+      // Uses max-penetration selection so the overlap zone never double-pushes.
+      function bounceOffObstacle(e, obstacle) {
+        const { coverRect, disc } = obstacle;
+        const hw = e.hw || e.r, hh = e.hh || e.r;
+        const bL = e.x - hw, bR = e.x + hw, bT = e.y - hh, bB = e.y + hh;
 
-      function bounceOffCircle(e, obs) {
-        const dx = e.x - obs.cx, dy = e.y - obs.cy;
-        const dist = Math.hypot(dx, dy) || 0.001;
-        const minD = e.r + obs.r;
-        if (dist >= minD) return;
-        const nx = dx / dist, ny = dy / dist;
-        const overlap = minD - dist;
-        e.x += nx * overlap;
-        e.y += ny * overlap;
-        const dot = e.vx * nx + e.vy * ny;
-        if (dot < 0) { e.vx -= 2 * dot * nx; e.vy -= 2 * dot * ny; }
+        // ── AABB vs disc circle ─────────────────────────────────────────
+        // Closest point on bubble AABB to disc center
+        const cpDx = Math.max(bL, Math.min(disc.cx, bR));
+        const cpDy = Math.max(bT, Math.min(disc.cy, bB));
+        const dDx  = cpDx - disc.cx, dDy = cpDy - disc.cy;
+        const distD = Math.hypot(dDx, dDy) || 0.001;
+        const penD  = disc.r - distD; // positive = bubble overlaps disc
+
+        // ── AABB vs cover rect ──────────────────────────────────────────
+        const ovL = bR - coverRect.left, ovR = coverRect.right - bL;
+        const ovT = bB - coverRect.top,  ovB = coverRect.bottom - bT;
+        const penC = (ovL > 0 && ovR > 0 && ovT > 0 && ovB > 0)
+          ? Math.min(ovL, ovR, ovT, ovB) : 0;
+
+        // Apply only the deeper penetration to prevent oscillation in the overlap zone
+        if (penD > 0 && penD >= penC) {
+          // Push along disc-center → bubble-center axis
+          const ecx = e.x - disc.cx, ecy = e.y - disc.cy;
+          const ecd = Math.hypot(ecx, ecy) || 0.001;
+          const nx = ecx / ecd, ny = ecy / ecd;
+          e.x += nx * penD; e.y += ny * penD;
+          const dot = e.vx * nx + e.vy * ny;
+          if (dot < 0) { e.vx -= 2 * dot * nx; e.vy -= 2 * dot * ny; }
+        } else if (penC > 0) {
+          // Push along minimum-overlap axis of the cover rect
+          let nx = 0, ny = 0;
+          const m = Math.min(ovL, ovR, ovT, ovB);
+          if (m === ovL) nx =  1;
+          else if (m === ovR) nx = -1;
+          else if (m === ovT) ny =  1;
+          else ny = -1;
+          e.x += nx * penC; e.y += ny * penC;
+          const dot = e.vx * nx + e.vy * ny;
+          if (dot < 0) { e.vx -= 2 * dot * nx; e.vy -= 2 * dot * ny; }
+        }
       }
 
       function stepPhysics(dt) {
@@ -750,17 +781,15 @@
         const obstacle = getCenterObstacle();
 
         for (const e of active) {
+          const hw = e.hw || e.r, hh = e.hh || e.r;
           e.x += e.vx * dt;
           e.y += e.vy * dt;
-          if (e.x - e.r < 0)  { e.x = e.r;      e.vx =  Math.abs(e.vx); }
-          if (e.x + e.r > lw) { e.x = lw - e.r; e.vx = -Math.abs(e.vx); }
-          if (e.y - e.r < 0)  { e.y = e.r;      e.vy =  Math.abs(e.vy); }
-          if (e.y + e.r > lh) { e.y = lh - e.r; e.vy = -Math.abs(e.vy); }
+          if (e.x - hw < 0)  { e.x = hw;      e.vx =  Math.abs(e.vx); }
+          if (e.x + hw > lw) { e.x = lw - hw; e.vx = -Math.abs(e.vx); }
+          if (e.y - hh < 0)  { e.y = hh;      e.vy =  Math.abs(e.vy); }
+          if (e.y + hh > lh) { e.y = lh - hh; e.vy = -Math.abs(e.vy); }
 
-          if (obstacle) {
-            bounceOffRect(e, obstacle.coverRect);
-            bounceOffCircle(e, obstacle.disc);
-          }
+          if (obstacle) bounceOffObstacle(e, obstacle);
 
           const spd = Math.hypot(e.vx, e.vy);
           if (spd > e.baseSpeed && spd > 0.1) {
@@ -768,8 +797,8 @@
             e.vx *= s; e.vy *= s;
           }
 
-          e.el.style.left = `${e.x - e.r}px`;
-          e.el.style.top  = `${e.y - e.r}px`;
+          e.el.style.left = `${e.x - hw}px`;
+          e.el.style.top  = `${e.y - hh}px`;
         }
 
         for (let i = 0; i < active.length; i++) {
@@ -788,8 +817,8 @@
               a.vx -= imp*nx; a.vy -= imp*ny;
               b.vx += imp*nx; b.vy += imp*ny;
             }
-            a.el.style.left = `${a.x - a.r}px`; a.el.style.top = `${a.y - a.r}px`;
-            b.el.style.left = `${b.x - b.r}px`; b.el.style.top = `${b.y - b.r}px`;
+            a.el.style.left = `${a.x - (a.hw||a.r)}px`; a.el.style.top = `${a.y - (a.hh||a.r)}px`;
+            b.el.style.left = `${b.x - (b.hw||b.r)}px`; b.el.style.top = `${b.y - (b.hh||b.r)}px`;
           }
         }
       }

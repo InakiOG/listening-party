@@ -563,7 +563,7 @@
       "id": "2026-04-25T20:24:16.635119+00:00",
       "date": "2026-04-25T20:24:16.635119+00:00",
       "startedAt": "2026-04-25T20:24:16.635119+00:00",
-      "savedAt": "2026-04-25T20:38:57.177403+00:00",
+      "savedAt": "2026-04-25T20:50:52.979043+00:00",
       "attendees": [
         "I\u00f1aki"
       ],
@@ -600,6 +600,47 @@
           "rating": 4.0,
           "text": "Incre\u00edble bajo ac\u00fastico, Rotten Apple es mi favorita",
           "scope": "album",
+          "createdAt": "25/04/26",
+          "likes": []
+        },
+        {
+          "reviewer": "I\u00f1aki",
+          "albumTitle": "Jar Of Flies",
+          "songTitle": "Rotten Apple",
+          "rating": 4.0,
+          "text": "Mi favorita del \u00e1lbum, ese riff del bajo del inicio es crudo",
+          "scope": "song",
+          "createdAt": "25/04/26",
+          "likes": []
+        }
+      ]
+    },
+    {
+      "id": "2026-04-25T20:58:31.446560+00:00",
+      "date": "2026-04-25T20:58:31.446560+00:00",
+      "startedAt": "2026-04-25T20:58:31.446560+00:00",
+      "savedAt": "2026-04-25T20:59:08.603131+00:00",
+      "attendees": [
+        "I\u00f1aki"
+      ],
+      "listeners": [
+        "I\u00f1aki"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "White Pony",
+          "artist": "Deftones",
+          "coverUrl": "https://i.discogs.com/Sgk5czUL_Ryipikpx5sTlERTOlTJNnErBMbmzS-F7xg/rs:fit/g:sm/q:90/h:588/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE3Mzg0/MDYyLTE2MTc3NjQ5/MjEtNTc2Ny5qcGVn.jpeg"
+        }
+      ],
+      "reviews": [
+        {
+          "reviewer": "I\u00f1aki",
+          "albumTitle": "White Pony",
+          "songTitle": "Knife Prty",
+          "rating": 4.0,
+          "text": "Que buena bater\u00eda, es de mis favoritas del \u00e1lbum, el canto llegando al final me recuerda a Great Gig in the Sky",
+          "scope": "song",
           "createdAt": "25/04/26",
           "likes": []
         }

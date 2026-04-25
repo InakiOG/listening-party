@@ -21,6 +21,7 @@ const USER_STORAGE_KEY = "listeningPartyUserName";
 
 let lastNowPlayingSignature = "";
 let selectedRating = 0;
+let selectedSongForReview = null; // null = reviewing album, string = song title override
 let currentNowPlaying = null;
 const bubbleUiState = new Map();
 let activeBubbleDrag = null;
@@ -3160,15 +3161,36 @@ async function fetchCurrentSongReviews() {
   }
 
   try {
-    const [songReviews, albumReviews] = await Promise.all([
+    // When a full album is playing, also fetch reviews for every track
+    const trackEntries = reviewScope === "album"
+      ? getAlbumTracksForNowPlaying(currentNowPlaying).map((t) => ({
+          title: t,
+          key: `${currentNowPlaying.albumTitle}::${t}`
+        }))
+      : [];
+
+    const [songReviews, albumReviews, ...perTrackResults] = await Promise.all([
       reviewScope === "song" && songKey ? fetchReviewsForKey(songKey) : Promise.resolve([]),
-      fetchReviewsForKey(albumKey)
+      fetchReviewsForKey(albumKey),
+      ...trackEntries.map(({ key }) => fetchReviewsForKey(key))
     ]);
 
-    const reviewItems = [
-      ...songReviews.map((review) => ({ ...review, scope: "song", _reviewKey: songKey })),
-      ...albumReviews.map((review) => ({ ...review, scope: "album", _reviewKey: albumKey }))
+    const rawItems = [
+      ...songReviews.map((r) => ({ ...r, scope: "song", _reviewKey: songKey, _songTitle: currentNowPlaying.songTitle })),
+      ...albumReviews.map((r) => ({ ...r, scope: "album", _reviewKey: albumKey })),
+      ...perTrackResults.flatMap((reviews, i) =>
+        reviews.map((r) => ({ ...r, scope: "song", _reviewKey: trackEntries[i].key, _songTitle: trackEntries[i].title }))
+      )
     ];
+
+    // Deduplicate by key+name+createdAt (same review might appear twice if reviewScope===song matches a track)
+    const seen = new Set();
+    const reviewItems = rawItems.filter((r) => {
+      const id = `${r._reviewKey}::${r.name}::${r.createdAt}`;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
 
     const currentReviews = currentPartyId
       ? reviewItems.filter((r) => r.partyId === currentPartyId)
@@ -3486,42 +3508,54 @@ function renderReviewBubbles(currentReviews, pastReviews, signature = "") {
     })
     .join("");
 
-  let pastBubbleHtml = "";
-  if (pastReviews.length > 0) {
-    const savedState = bubbleUiState.get("past-reviews");
-    const expanded = savedState?.expanded ?? false;
-    const sorted = [...pastReviews].sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
+  // Split past reviews: album-scope in one bubble, each song with reviews gets its own bubble
+  const pastAlbum = pastReviews.filter((r) => r.scope === "album");
+  const pastSongMap = new Map();
+  for (const r of pastReviews.filter((r) => r.scope === "song")) {
+    const title = r._songTitle || r._reviewKey?.split("::").slice(1).join("::") || "Canción";
+    if (!pastSongMap.has(title)) pastSongMap.set(title, []);
+    pastSongMap.get(title).push(r);
+  }
 
-    const pastHistoryMarkup = sorted.map((entry) => {
+  function buildPastBubble(id, label, reviews) {
+    const savedState = bubbleUiState.get(id);
+    const expanded = savedState?.expanded ?? false;
+    const sorted = [...reviews].sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
+    const markup = sorted.map((entry) => {
       const safeName = escapeHtml(String(entry.name || "Anonymous").trim() || "Anonymous");
       const safeText = String(entry.text || "").trim();
       const safeRating = Number(entry.rating || 0).toFixed(1);
       const safeDate = escapeHtml(formatReviewDate(entry.createdAt));
-      const scopeLabel = entry.scope === "album" ? "Album" : "Canción";
       const textMarkup = safeText ? `<p class="review-history-text">${escapeHtml(safeText)}</p>` : "";
       return `
         <li class="review-history-item">
           <p class="review-history-meta">
-            <span class="past-review-author">${safeName}</span> · ${scopeLabel} · ${safeDate} · ${safeRating}/5
+            <span class="past-review-author">${safeName}</span> · ${safeDate} · ${safeRating}/5
           </p>
           ${textMarkup}
-        </li>
-      `;
+        </li>`;
     }).join("");
-
-    pastBubbleHtml = `
+    return `
       <article class="review-bubble past-reviews-bubble ${expanded ? "expanded" : ""}"
-        data-review-id="${encodeURIComponent("past-reviews")}"
+        data-review-id="${encodeURIComponent(id)}"
         data-review-key=""
         data-reviewer-name=""
         style="left:0;top:0;">
         <div class="review-bubble-summary">
-          <p class="review-bubble-name past-reviews-title">Anteriores</p>
-          <span class="past-reviews-count">${pastReviews.length}</span>
+          <p class="review-bubble-name past-reviews-title">${escapeHtml(label)}</p>
+          <span class="past-reviews-count">${reviews.length}</span>
         </div>
-        <ol class="review-bubble-text review-history-list">${pastHistoryMarkup}</ol>
-      </article>
-    `;
+        <ol class="review-bubble-text review-history-list">${markup}</ol>
+      </article>`;
+  }
+
+  let pastBubbleHtml = "";
+  if (pastAlbum.length > 0) {
+    pastBubbleHtml += buildPastBubble("past-reviews-album", "Anteriores · Album", pastAlbum);
+  }
+  for (const [songTitle, reviews] of pastSongMap) {
+    const displayTitle = songTitle.replace(/ - \d+:\d+$/, "");
+    pastBubbleHtml += buildPastBubble(`past-reviews-song::${songTitle}`, `Ant. · ${displayTitle}`, reviews);
   }
 
   bubbleLayer.innerHTML = pastBubbleHtml + currentBubblesHtml;
@@ -3972,13 +4006,18 @@ function showReviewStatus(message) {
 
 function resetReviewInputs() {
   const reviewInput = document.getElementById("album-review");
-
-  if (reviewInput) {
-    reviewInput.value = "";
-  }
+  if (reviewInput) reviewInput.value = "";
 
   selectedRating = 0;
   renderRating(selectedRating);
+
+  selectedSongForReview = null;
+  const list = document.getElementById("song-selector-list");
+  if (list) {
+    list.querySelectorAll(".song-selector-btn").forEach((b) => b.classList.remove("active"));
+    const first = list.querySelector(".song-selector-btn");
+    if (first) first.classList.add("active");
+  }
 }
 
 function closeReviewPanel() {
@@ -3996,8 +4035,6 @@ function closeReviewPanel() {
 
 async function saveCurrentReview() {
   const reviewInput = document.getElementById("album-review");
-  const key = getActiveReviewKey(currentNowPlaying);
-  const scope = currentNowPlaying?.reviewScope === "album" ? "album" : "song";
   const userName = normalizeUserName(sessionState.currentUser?.name || "");
 
   if (!userName) {
@@ -4005,7 +4042,23 @@ async function saveCurrentReview() {
     return;
   }
 
-  if (!currentNowPlaying || !key) {
+  if (!currentNowPlaying) {
+    showReviewStatus("No hay objetivo de reseña activo.");
+    return;
+  }
+
+  // When album is playing but user picked a specific song, review that song instead
+  const isAlbumMode = currentNowPlaying.reviewScope === "album";
+  let key, scope;
+  if (isAlbumMode && selectedSongForReview) {
+    key = getSongKey({ ...currentNowPlaying, songTitle: selectedSongForReview });
+    scope = "song";
+  } else {
+    key = getActiveReviewKey(currentNowPlaying);
+    scope = isAlbumMode ? "album" : "song";
+  }
+
+  if (!key) {
     showReviewStatus("No hay objetivo de reseña activo.");
     return;
   }
@@ -4073,20 +4126,61 @@ function renderRating(rating) {
   }
 }
 
+function getAlbumTracksForNowPlaying(nowPlaying) {
+  if (!nowPlaying?.albumTitle) return [];
+  const titleL = nowPlaying.albumTitle.toLowerCase();
+  const artistL = (nowPlaying.albumArtist || "").toLowerCase();
+  const album = (appState.albums || []).find(
+    (a) => a.title.toLowerCase() === titleL && a.artist.toLowerCase() === artistL
+  );
+  return album?.tracks || [];
+}
+
+function populateSongSelector(nowPlaying) {
+  const selector = document.getElementById("song-review-selector");
+  const list = document.getElementById("song-selector-list");
+  if (!selector || !list) return;
+
+  if (nowPlaying?.reviewScope !== "album") {
+    selector.hidden = true;
+    return;
+  }
+
+  const tracks = getAlbumTracksForNowPlaying(nowPlaying);
+  if (!tracks.length) {
+    selector.hidden = true;
+    return;
+  }
+
+  selector.hidden = false;
+  const activeTitle = selectedSongForReview || "";
+  list.innerHTML = [
+    `<button type="button" class="song-selector-btn${activeTitle === "" ? " active" : ""}" data-song="">Álbum completo</button>`,
+    ...tracks.map(
+      (t) =>
+        `<button type="button" class="song-selector-btn${t === activeTitle ? " active" : ""}" data-song="${escapeHtml(t)}">${escapeHtml(t)}</button>`
+    )
+  ].join("");
+}
+
 function updateReviewTargetCopy(nowPlaying) {
   const hint = document.querySelector(".now-playing-hint");
   const reviewLabel = document.querySelector("label[for='album-review']");
-  const reviewScope = nowPlaying?.reviewScope === "album" ? "album" : "song";
+
+  const isAlbumMode = nowPlaying?.reviewScope === "album";
+  const effectiveScope = isAlbumMode && !selectedSongForReview ? "album" : "song";
 
   if (hint) {
-    hint.textContent = reviewScope === "album"
+    hint.textContent = effectiveScope === "album"
       ? "Toca para calificar este album"
       : "Toca para calificar esta cancion";
   }
 
   if (reviewLabel) {
-    reviewLabel.textContent = reviewScope === "album" ? "Reseña del album" : "Reseña de la cancion";
+    reviewLabel.textContent = effectiveScope === "album" ? "Reseña del album" : "Reseña de la cancion";
   }
+
+  populateSongSelector(nowPlaying);
 }
 
 function setupNowPlayingInteractions() {
@@ -4115,6 +4209,18 @@ function setupNowPlayingInteractions() {
     panel.hidden = isOpen;
     toggle.setAttribute("aria-expanded", String(!isOpen));
   });
+
+  const songSelectorList = document.getElementById("song-selector-list");
+  if (songSelectorList) {
+    songSelectorList.addEventListener("click", (e) => {
+      const btn = e.target.closest(".song-selector-btn");
+      if (!btn) return;
+      songSelectorList.querySelectorAll(".song-selector-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedSongForReview = btn.dataset.song || null;
+      updateReviewTargetCopy(currentNowPlaying);
+    });
+  }
 
   ratingContainer.addEventListener("click", (event) => {
     const starButton = event.target.closest(".star-button");

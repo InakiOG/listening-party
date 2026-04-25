@@ -1,12 +1,13 @@
 {
   "albumNumber": 0,
   "songNumber": 0,
-  "albumTitle": "Jar Of Flies",
-  "albumArtist": "Alice In Chains",
-  "songTitle": "",
-  "reviewScope": "album",
-  "coverUrl": "https://i.discogs.com/2KB5pHu_upoPWo6Q19KuCbtBO-ntVCRYrCptmCIW6Ww/rs:fit/g:sm/q:90/h:600/w:580/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwMTA2/ODk4LTE3MTM0Njkz/NTktMjEwNy5qcGVn.jpeg",
-  "updatedAt": "2026-04-25T20:24:53.284434+00:00",
+  "albumTitle": "White Pony",
+  "albumArtist": "Deftones",
+  "songTitle": "Knife Prty",
+  "reviewScope": "song",
+  "coverUrl": "https://i.discogs.com/Sgk5czUL_Ryipikpx5sTlERTOlTJNnErBMbmzS-F7xg/rs:fit/g:sm/q:90/h:588/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE3Mzg0/MDYyLTE2MTc3NjQ5/MjEtNTc2Ny5qcGVn.jpeg",
+  "adminThanks": "",
+  "updatedAt": "2026-04-25T20:58:31.457562+00:00",
   "updatedBy": "I\u00f1aki",
-  "partyId": "2026-04-25T20:24:16.635119+00:00"
+  "partyId": "2026-04-25T20:58:31.446560+00:00"
 }

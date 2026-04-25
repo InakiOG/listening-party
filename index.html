@@ -346,6 +346,43 @@
         resize: vertical;
       }
 
+      .song-selector-label {
+        display: block;
+        font-size: 0.72rem;
+        color: #94a3b8;
+        margin: 0 0 0.3rem;
+        text-align: left;
+      }
+
+      .song-selector-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-bottom: 0.5rem;
+        max-height: 100px;
+        overflow-y: auto;
+      }
+
+      .song-selector-btn {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 0.4rem;
+        color: #cbd5e1;
+        font-size: 0.68rem;
+        padding: 0.2rem 0.45rem;
+        cursor: pointer;
+        white-space: nowrap;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .song-selector-btn.active {
+        background: #0284c7;
+        border-color: #0ea5e9;
+        color: #f8fafc;
+      }
+
       .rating-label {
         display: block;
         text-align: left;
@@ -2943,6 +2980,10 @@
       </button>
 
       <div id="review-panel" class="review-panel" hidden>
+        <div id="song-review-selector" hidden>
+          <p class="song-selector-label">Reseñando</p>
+          <div id="song-selector-list" class="song-selector-list"></div>
+        </div>
         <label for="album-review">Reseña</label>
         <textarea id="album-review" placeholder="Escribe tu reseña"></textarea>
 
