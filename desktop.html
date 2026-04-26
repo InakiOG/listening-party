@@ -604,6 +604,9 @@
         return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
 
+      const albumCoverFallbackUrl = './resources/404_album.png';
+      const profileDefaultPhotoUrl = './resources/profile_default.jpg';
+
       let knownServerBootId = '';
       const nativeFetch = window.fetch.bind(window);
       window.fetch = async (...args) => {
@@ -658,7 +661,7 @@
               if (lk && !seen.has(lk)) { seen.add(lk); allLikes.push(l); }
             }
           }
-          const photo = sorted.find(r => r.photoDataUrl)?.photoDataUrl || '';
+          const photo = sorted.find(r => r.photoDataUrl)?.photoDataUrl || profileDefaultPhotoUrl;
           return { ...g, reviews: sorted, averageRating: avg, avatarUrl: photo, likes: allLikes };
         });
       }
@@ -899,12 +902,8 @@
         layer.innerHTML = users.slice(0, 14).map((user, i) => {
           const key = encodeURIComponent((user.name||`user${i}`).toLowerCase());
           const name = esc(user.name || 'Usuario');
-          const photo = String(user.photoDataUrl || '').trim();
-          const color = userColor(user.name);
-          const letter = esc(String(user.name||'?')[0].toUpperCase());
-          const inner = photo
-            ? `<img src="${esc(photo)}" alt="${name}" loading="lazy" />`
-            : `<span class="active-user-letter" style="background:${color};">${letter}</span>`;
+          const photo = String(user.photoDataUrl || '').trim() || profileDefaultPhotoUrl;
+          const inner = `<img src="${esc(photo)}" alt="${name}" loading="lazy" onerror="this.onerror=null;this.src='${profileDefaultPhotoUrl}'" />`;
           return `<article class="active-user-bubble" data-user-key="${key}" title="${name}" style="left:0;top:0;">${inner}</article>`;
         }).join('');
 
@@ -957,9 +956,8 @@
           // Liker photos
           const likerPhotos = g.likes.map(l => {
             const ln = esc(String(l.name||'?'));
-            return l.photoDataUrl
-              ? `<img class="liker-avatar" src="${esc(l.photoDataUrl)}" alt="${ln}" title="${ln}" loading="lazy" />`
-              : `<span class="liker-initial" title="${ln}">${esc(String(l.name||'?')[0].toUpperCase())}</span>`;
+            const likerPhoto = String(l.photoDataUrl || '').trim() || profileDefaultPhotoUrl;
+            return `<img class="liker-avatar" src="${esc(likerPhoto)}" alt="${ln}" title="${ln}" loading="lazy" onerror="this.onerror=null;this.src='${profileDefaultPhotoUrl}'" />`;
           }).join('');
           const likesSection = g.likes.length
             ? `<div class="review-likes-section">${likerPhotos}</div>`
@@ -1348,17 +1346,22 @@
       }
 
       function showPlaying(data) {
-        const sig = `${data.albumTitle}|${data.songTitle}|${data.coverUrl}`;
+        const coverUrl = String(data.coverUrl || '').trim() || albumCoverFallbackUrl;
+        const sig = `${data.albumTitle}|${data.songTitle}|${coverUrl}`;
         const changed = sig !== lastNpSig;
         lastNpSig = sig;
 
-        ambientBg.style.backgroundImage = `url(${data.coverUrl})`;
+        ambientBg.style.backgroundImage = `url(${coverUrl})`;
         ambientBg.style.opacity = '1';
 
         if (changed) {
           npCover.classList.remove('arriving');
           void npCover.offsetWidth;
-          npCover.src = data.coverUrl;
+          npCover.onerror = () => {
+            npCover.onerror = null;
+            npCover.src = albumCoverFallbackUrl;
+          };
+          npCover.src = coverUrl;
           npCover.classList.add('arriving');
           fetchAndRenderFunFacts(data.albumTitle, data.albumArtist);
         }
@@ -1394,7 +1397,7 @@
           const r = await fetch('./now-playing.json?t=' + Date.now());
           if (!r.ok) { showIdle(); return; }
           const data = await r.json();
-          if (data && data.albumTitle && data.coverUrl) {
+          if (data && data.albumTitle) {
             currentNowPlaying = data;
             showPlaying(data);
             // Immediately fetch reviews when now-playing changes

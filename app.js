@@ -16,7 +16,8 @@ const sessionState = {
   currentUser: null
 };
 
-const coverFallbackUrl = "./mi%20dise%C3%B1o.png";
+const coverFallbackUrl = "./resources/404_album.png";
+const profileDefaultPhotoUrl = "./resources/profile_default.jpg";
 const USER_STORAGE_KEY = "listeningPartyUserName";
 
 let lastNowPlayingSignature = "";
@@ -594,7 +595,7 @@ async function apiLogout() {
 
 function getProfilePhotoUrl(user) {
   const photo = String(user?.photoDataUrl || "").trim();
-  return photo || coverFallbackUrl;
+  return photo || profileDefaultPhotoUrl;
 }
 
 function getActiveUserKey(user) {
@@ -985,11 +986,7 @@ function renderActiveUserBubbles(users) {
       const savedState = activeUserBubbleUiState.get(userKey);
       const expanded = Boolean(savedState?.expanded);
       const safeName = escapeHtml(String(user?.name || "Usuario"));
-      const photoUrl = String(user?.photoDataUrl || "").trim();
-      const hasPhoto = Boolean(photoUrl);
-      const safePhotoUrl = escapeHtml(photoUrl);
-      const letter = escapeHtml(getActiveUserLetter(user));
-      const color = escapeHtml(getActiveUserBubbleColor(user));
+      const safePhotoUrl = escapeHtml(getProfilePhotoUrl(user));
       const description = escapeHtml(normalizeProfileDescription(user?.description || ""));
       const instagram = escapeHtml(normalizeInstagramHandle(user?.instagramUsername || ""));
       const spotify = escapeHtml(normalizeSpotifyUrl(user?.spotifyUrl || ""));
@@ -1011,11 +1008,9 @@ function renderActiveUserBubbles(users) {
               const displayText = safeAlbumArtist
                 ? `${safeAlbumTitle} - ${safeAlbumArtist}`
                 : safeAlbumTitle;
-              const coverUrl = entry.coverUrl || ensureTopAlbumCover(entry.title, entry.artist);
+              const coverUrl = entry.coverUrl || ensureTopAlbumCover(entry.title, entry.artist) || coverFallbackUrl;
               const safeCoverUrl = escapeHtml(coverUrl);
-              const artworkMarkup = safeCoverUrl
-                ? `<img src="${safeCoverUrl}" alt="Portada de ${safeAlbumTitle}" loading="lazy" />`
-                : `<span class="active-user-top-album-placeholder">♪</span>`;
+              const artworkMarkup = `<img src="${safeCoverUrl}" alt="Portada de ${safeAlbumTitle}" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />`;
 
               return `
                 <li class="active-user-top-album-item">
@@ -1029,9 +1024,7 @@ function renderActiveUserBubbles(users) {
 
       return `
         <article class="active-user-bubble ${expanded ? "expanded" : ""}" data-user-key="${encodedUserKey}" title="${safeName}" style="left:-9999px;top:-9999px;">
-          ${hasPhoto
-            ? `<img src="${safePhotoUrl}" alt="Foto de ${safeName}" loading="lazy" />`
-            : `<span class="active-user-letter" style="background:${color};">${letter}</span>`}
+          <img src="${safePhotoUrl}" alt="Foto de ${safeName}" loading="lazy" onerror="this.onerror=null;this.src='${profileDefaultPhotoUrl}'" />
           <div class="active-user-bubble-details">
             <p class="active-user-detail-name">${safeName}</p>
             <p class="active-user-detail-label">Descripcion</p>
@@ -1150,6 +1143,10 @@ function setCurrentUser(user) {
 
   if (profileAvatar) {
     profileAvatar.src = getProfilePhotoUrl(sessionState.currentUser);
+    profileAvatar.onerror = () => {
+      profileAvatar.onerror = null;
+      profileAvatar.src = profileDefaultPhotoUrl;
+    };
   }
 
   if (profileMenuUser) {
@@ -1686,7 +1683,7 @@ function buildPartyAlbumsMarkup(party) {
   const allReviews = Array.isArray(party.reviews) ? party.reviews : [];
 
   return (Array.isArray(party.albumsPlayed) ? party.albumsPlayed : []).map((album) => {
-    const safeCover = escapeHtml(album.coverUrl || "");
+    const safeCover = escapeHtml(album.coverUrl || coverFallbackUrl);
     const safeTitle = escapeHtml(album.title || "");
     const safeArtist = escapeHtml(album.artist || "");
 
@@ -1867,9 +1864,8 @@ function renderPartyRecords(parties) {
         const likersMarkup = likes.length
           ? `<div class="party-review-likers">${likes.map((l) => {
               const safeName = escapeHtml(String(l.name || "?"));
-              return l.photoDataUrl
-                ? `<img class="party-liker-avatar" src="${escapeHtml(l.photoDataUrl)}" alt="${safeName}" title="${safeName}" loading="lazy" />`
-                : `<span class="party-liker-initial" title="${safeName}">${escapeHtml(String(l.name || "?")[0].toUpperCase())}</span>`;
+              const likerPhotoUrl = escapeHtml(String(l.photoDataUrl || "").trim() || profileDefaultPhotoUrl);
+              return `<img class="party-liker-avatar" src="${likerPhotoUrl}" alt="${safeName}" title="${safeName}" loading="lazy" onerror="this.onerror=null;this.src='${profileDefaultPhotoUrl}'" />`;
             }).join("")}</div>`
           : "";
         return `
@@ -2067,10 +2063,8 @@ function renderUsersBoard(users) {
     const safeName = escapeHtml(String(user.name || ""));
     const safeAccount = escapeHtml(String(user.accountName || ""));
     const safePassword = escapeHtml(String(user.password || "—"));
-    const photoUrl = String(user.photoDataUrl || "").trim();
-    const avatarMarkup = photoUrl
-      ? `<img class="user-board-avatar" src="${escapeHtml(photoUrl)}" alt="Foto de ${safeName}" />`
-      : `<div class="user-board-avatar-placeholder">?</div>`;
+    const photoUrl = escapeHtml(String(user.photoDataUrl || "").trim() || profileDefaultPhotoUrl);
+    const avatarMarkup = `<img class="user-board-avatar" src="${photoUrl}" alt="Foto de ${safeName}" onerror="this.onerror=null;this.src='${profileDefaultPhotoUrl}'" />`;
 
     const reviews = Array.isArray(user.reviews) ? user.reviews : [];
     const reviewsMarkup = reviews.length
@@ -3498,20 +3492,13 @@ function renderReviewBubbles(currentReviews, pastReviews, signature = "") {
       const safeAverage = Number(group.averageRating || 0).toFixed(1);
       const bubbleClass = group.scope === "album" ? "album-review" : "song-review";
       const scopeLabel = group.scope === "album" ? "Album" : "Cancion";
-      const safeAvatarUrl = escapeHtml(group.avatarUrl || "");
-      const hasAvatar = Boolean(group.avatarUrl);
-      const headerMarkup = hasAvatar
-        ? `
+      const safeAvatarUrl = escapeHtml(group.avatarUrl || profileDefaultPhotoUrl);
+      const headerMarkup = `
             <div class="review-avatar-badge">
-              <img class="review-avatar-image" src="${safeAvatarUrl}" alt="Avatar de ${safeName}" loading="lazy" />
+              <img class="review-avatar-image" src="${safeAvatarUrl}" alt="Avatar de ${safeName}" loading="lazy" onerror="this.onerror=null;this.src='${profileDefaultPhotoUrl}'" />
               <span class="review-avatar-score">${safeAverage} / 5</span>
             </div>
             <p class="review-bubble-scope">${scopeLabel}</p>
-          `
-        : `
-            <p class="review-bubble-name">${safeName}</p>
-            <p class="review-bubble-scope">${scopeLabel}</p>
-            <p class="review-bubble-rating">Avg ${safeAverage} / 5</p>
           `;
       const historyMarkup = group.reviews
         .map((entry) => {
@@ -3539,9 +3526,8 @@ function renderReviewBubbles(currentReviews, pastReviews, signature = "") {
 
       const likerPhotosMarkup = group.likes.map((l) => {
         const safeLikerName = escapeHtml(String(l.name || "?"));
-        return l.photoDataUrl
-          ? `<img class="liker-avatar" src="${escapeHtml(l.photoDataUrl)}" alt="${safeLikerName}" title="${safeLikerName}" loading="lazy" />`
-          : `<span class="liker-initial" title="${safeLikerName}">${escapeHtml(String(l.name || "?")[0].toUpperCase())}</span>`;
+        const likerPhotoUrl = escapeHtml(String(l.photoDataUrl || "").trim() || profileDefaultPhotoUrl);
+        return `<img class="liker-avatar" src="${likerPhotoUrl}" alt="${safeLikerName}" title="${safeLikerName}" loading="lazy" onerror="this.onerror=null;this.src='${profileDefaultPhotoUrl}'" />`;
       }).join("");
       const heartIcon = alreadyLiked ? "❤️" : "🤍";
       const likeBtnMarkup = !isOwnReview && currentUserKey
@@ -4386,12 +4372,14 @@ function renderNowPlaying(nowPlaying) {
     return;
   }
 
-  if (!nowPlaying || !nowPlaying.albumTitle || !nowPlaying.coverUrl) {
+  if (!nowPlaying || !nowPlaying.albumTitle) {
     hideNowPlaying();
     return;
   }
 
-  const signature = `${nowPlaying.albumTitle}|${nowPlaying.songTitle || ""}|${nowPlaying.coverUrl}|${reviewScope}`;
+  const coverUrl = String(nowPlaying.coverUrl || "").trim() || coverFallbackUrl;
+
+  const signature = `${nowPlaying.albumTitle}|${nowPlaying.songTitle || ""}|${coverUrl}|${reviewScope}`;
 
   if (signature !== lastNowPlayingSignature || section.hidden) {
     // Reset selected song when now-playing changes to avoid reviewing the wrong song
@@ -4404,7 +4392,7 @@ function renderNowPlaying(nowPlaying) {
       cover.onerror = null;
       cover.src = coverFallbackUrl;
     };
-    cover.src = nowPlaying.coverUrl;
+    cover.src = coverUrl;
     cover.alt = `${nowPlaying.albumTitle} album cover`;
     cover.classList.remove("np-cover-arriving");
     cover.classList.add("np-cover-arriving");
@@ -4414,10 +4402,10 @@ function renderNowPlaying(nowPlaying) {
     document.documentElement.style.setProperty("--layout-top-space", "5.5rem");
 
     const ambientBg = document.getElementById("np-ambient-bg");
-    if (ambientBg && nowPlaying.coverUrl) {
+    if (ambientBg) {
       ambientBg.style.opacity = "0";
       setTimeout(() => {
-        ambientBg.style.backgroundImage = `url('${nowPlaying.coverUrl.replace(/'/g, "\\'")}')`;
+        ambientBg.style.backgroundImage = `url('${coverUrl.replace(/'/g, "\\'")}')`;
         ambientBg.style.opacity = "1";
       }, 250);
     }
