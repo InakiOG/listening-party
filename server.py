@@ -1,5 +1,6 @@
 import json
 import argparse
+import hashlib
 import os
 import secrets
 import threading
@@ -50,6 +51,47 @@ SESSION_COOKIE_NAME = "listening_party_session"
 SESSION_USER_COOKIE_NAME = "listening_party_user"
 SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 10
 ACTIVE_USER_WINDOW_SECONDS = 90
+
+_READ_CACHE_LOCK = threading.Lock()
+_READ_CACHE = {}
+_READ_CACHE_TTLS_SECONDS = {
+    "users": 2.0,
+    "users_reviews": 2.0,
+    "reviews": 1.5,
+    "live_albums": 3.0,
+}
+
+
+def _read_cache_get(key):
+    now = time.time()
+    with _READ_CACHE_LOCK:
+        entry = _READ_CACHE.get(key)
+        if not entry:
+            return None
+
+        expires_at, payload = entry
+        if expires_at <= now:
+            _READ_CACHE.pop(key, None)
+            return None
+
+        return payload
+
+
+def _read_cache_set(key, payload, ttl_seconds):
+    with _READ_CACHE_LOCK:
+        _READ_CACHE[key] = (time.time() + max(0.0, float(ttl_seconds)), payload)
+
+
+def _read_cache_invalidate_prefix(prefix):
+    with _READ_CACHE_LOCK:
+        doomed = [k for k in _READ_CACHE if str(k).startswith(prefix)]
+        for key in doomed:
+            _READ_CACHE.pop(key, None)
+
+
+def _read_cache_invalidate_many(prefixes):
+    for prefix in prefixes:
+        _read_cache_invalidate_prefix(prefix)
 
 
 def ensure_reviews_db():
@@ -109,18 +151,22 @@ def ensure_party_records_db():
 
 
 def read_json_dict_or_reset(path):
+    should_persist = False
     try:
         with path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
     except (json.JSONDecodeError, OSError):
         payload = {}
+        should_persist = True
 
     if not isinstance(payload, dict):
         payload = {}
+        should_persist = True
 
-    # Persist normalized content so future reads stay valid.
-    with path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
+    # Persist normalized content only when we had to repair invalid data.
+    if should_persist:
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2)
 
     return payload
 
@@ -760,6 +806,19 @@ def reconcile_auth_stores(users_store, credentials_store):
     return normalized_users, normalized_credentials
 
 
+def reconcile_auth_stores_with_persist(users_store, credentials_store):
+    normalized_users, normalized_credentials = reconcile_auth_stores(users_store, credentials_store)
+    users_changed = normalized_users != users_store
+    credentials_changed = normalized_credentials != credentials_store
+
+    if users_changed:
+        write_users_store(normalized_users)
+    if credentials_changed:
+        write_credentials_store(normalized_credentials)
+
+    return normalized_users, normalized_credentials, users_changed, credentials_changed
+
+
 def build_user_reviews(store, user_name):
     normalized_name = normalize_user_key(user_name)
     if not normalized_name:
@@ -1113,15 +1172,22 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             params = parse_qs(parsed.query)
             name = (params.get("name", [""])[0] or "").strip()
             user_key = normalize_user_key(name)
+            cache_key = f"users::{user_key}"
+            cached_payload = _read_cache_get(cache_key)
+            if cached_payload is not None:
+                self._send_json(cached_payload)
+                return
 
             with REVIEWS_LOCK:
                 users_store = read_users_store()
                 user_profile = sanitize_user_profile(users_store.get(user_key)) if user_key else None
 
-            self._send_json({
+            response_payload = {
                 "exists": bool(user_profile),
                 "user": user_profile
-            })
+            }
+            _read_cache_set(cache_key, response_payload, _READ_CACHE_TTLS_SECONDS["users"])
+            self._send_json(response_payload)
             return
 
         if parsed.path == "/api/users/me":
@@ -1132,9 +1198,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             with REVIEWS_LOCK:
                 users_store = read_users_store()
                 credentials_store = read_credentials_store()
-                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
-                write_users_store(users_store)
-                write_credentials_store(credentials_store)
+                users_store, credentials_store, _, _ = reconcile_auth_stores_with_persist(users_store, credentials_store)
                 user_key = find_user_key_by_session_token(credentials_store, session_token)
                 if not user_key and user_cookie_key:
                     fallback_key = normalize_user_key(user_cookie_key)
@@ -1183,14 +1247,22 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 self._send_json({"error": "name is required"}, status_code=400)
                 return
 
+            cache_key = f"users_reviews::{normalize_user_key(name)}"
+            cached_payload = _read_cache_get(cache_key)
+            if cached_payload is not None:
+                self._send_json(cached_payload)
+                return
+
             with REVIEWS_LOCK:
                 reviews_store = read_reviews_store()
                 user_reviews = build_user_reviews(reviews_store, name)
 
-            self._send_json({
+            response_payload = {
                 "name": name,
                 "reviews": user_reviews
-            })
+            }
+            _read_cache_set(cache_key, response_payload, _READ_CACHE_TTLS_SECONDS["users_reviews"])
+            self._send_json(response_payload)
             return
 
         if parsed.path == "/api/users/active":
@@ -1200,10 +1272,9 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             with REVIEWS_LOCK:
                 users_store = read_users_store()
                 credentials_store = read_credentials_store()
-                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
-                write_users_store(users_store)
+                users_store, credentials_store, _, credentials_changed = reconcile_auth_stores_with_persist(users_store, credentials_store)
                 caller_key = find_user_key_by_session_token(credentials_store, session_token)
-                credentials_changed = touch_session_activity(credentials_store, caller_key)
+                session_touched = touch_session_activity(credentials_store, caller_key)
                 if _current_session and _current_session.get("albumsPlayed"):
                     add_session_sticky_attendee(_current_session, caller_key)
 
@@ -1229,7 +1300,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
                 active_users = list(active_users_by_key.values())
 
-                if credentials_changed:
+                if session_touched or credentials_changed:
                     write_credentials_store(credentials_store)
 
                 active_users.sort(key=lambda user: str(user.get("name", "")).lower())
@@ -1243,6 +1314,11 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             params = parse_qs(parsed.query)
             song_key = (params.get("songKey", [""])[0] or "").strip()
             party_id_filter = (params.get("partyId", [""])[0] or "").strip()
+            cache_key = f"reviews::{song_key}::party::{party_id_filter}"
+            cached_payload = _read_cache_get(cache_key)
+            if cached_payload is not None:
+                self._send_json(cached_payload)
+                return
 
             with REVIEWS_LOCK:
                 store = read_reviews_store()
@@ -1251,10 +1327,12 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             if party_id_filter:
                 reviews = [r for r in reviews if isinstance(r, dict) and r.get("partyId") == party_id_filter]
 
-            self._send_json({
+            response_payload = {
                 "songKey": song_key,
                 "reviews": reviews
-            })
+            }
+            _read_cache_set(cache_key, response_payload, _READ_CACHE_TTLS_SECONDS["reviews"])
+            self._send_json(response_payload)
             return
 
         if parsed.path == "/api/admin/users":
@@ -1294,9 +1372,17 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             return
 
         if parsed.path == "/api/live-albums":
+            cache_key = "live_albums::all"
+            cached_payload = _read_cache_get(cache_key)
+            if cached_payload is not None:
+                self._send_json(cached_payload)
+                return
+
             with LIVE_ALBUMS_LOCK:
                 store = read_live_albums_store()
-            self._send_json({"albums": store.get("albums", [])})
+            response_payload = {"albums": store.get("albums", [])}
+            _read_cache_set(cache_key, response_payload, _READ_CACHE_TTLS_SECONDS["live_albums"])
+            self._send_json(response_payload)
             return
 
         if parsed.path == "/api/party-records":
@@ -1725,6 +1811,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     add_session_sticky_attendee(_current_session, user_key)
                 write_users_store(users_store)
                 write_credentials_store(credentials_store)
+                _read_cache_invalidate_prefix("users::")
 
             self._send_json({
                 "user": sanitize_user_profile(profile)
@@ -1866,6 +1953,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 profile["photoDataUrl"] = photo_data_url
                 users_store[user_key] = profile
                 write_users_store(users_store)
+                _read_cache_invalidate_many([
+                    "users::",
+                    "users_reviews::",
+                ])
 
                 updated_profile = sanitize_user_profile(profile)
 
@@ -1961,6 +2052,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 profile["topAlbums"] = top_albums
                 users_store[user_key] = profile
                 write_users_store(users_store)
+                _read_cache_invalidate_many([
+                    "users::",
+                    "users_reviews::",
+                ])
 
                 updated_profile = sanitize_user_profile(profile)
 
@@ -2015,6 +2110,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 if safe_album["id"] not in existing_ids:
                     store["albums"].append(safe_album)
                     write_live_albums_store(store)
+                    _read_cache_invalidate_prefix("live_albums::")
 
             self._send_json({"album": safe_album})
             return
@@ -2076,6 +2172,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 review_list[target_idx] = review
                 store[song_key] = review_list
                 write_reviews_store(store)
+                _read_cache_invalidate_many([
+                    "reviews::",
+                    "users_reviews::",
+                ])
 
                 if _current_session and _current_session.get("albumsPlayed"):
                     users_store = read_users_store()
@@ -2171,6 +2271,10 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
             store[song_key] = existing
             write_reviews_store(store)
+            _read_cache_invalidate_many([
+                "reviews::",
+                "users_reviews::",
+            ])
             updated_reviews = existing
 
             if _current_session and _current_session.get("albumsPlayed"):
@@ -2239,6 +2343,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     return
                 album["tracks"] = safe_tracks
                 write_live_albums_store(store)
+                _read_cache_invalidate_prefix("live_albums::")
 
             self._send_json({"ok": True})
             return

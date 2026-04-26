@@ -69,6 +69,14 @@ const ACTIVE_USER_BUBBLE_COLORS = [
 ];
 
 const ACTIVE_USERS_POLL_INTERVAL_MS = 2000;
+let activeUsersPollTimerId = null;
+let activeUsersPollInFlight = false;
+let liveAlbumsPollTimerId = null;
+let liveAlbumsPollInFlight = false;
+let reviewPollTimerId = null;
+let reviewPollInFlight = false;
+let nowPlayingPollTimerId = null;
+let nowPlayingPollInFlight = false;
 
 let knownServerBootId = "";
 const nativeFetch = window.fetch.bind(window);
@@ -1107,18 +1115,33 @@ function renderActiveUserBubbles(users) {
 }
 
 function startActiveUsersPolling() {
-  const refresh = () => {
-    apiGetActiveUsers()
-      .then((users) => {
-        renderActiveUserBubbles(users);
-      })
-      .catch(() => {
-        renderActiveUserBubbles([]);
-      });
+  if (activeUsersPollTimerId) {
+    return;
+  }
+
+  const refresh = async () => {
+    if (document.hidden || activeUsersPollInFlight) {
+      return;
+    }
+
+    activeUsersPollInFlight = true;
+    try {
+      const users = await apiGetActiveUsers();
+      renderActiveUserBubbles(users);
+    } catch {
+      renderActiveUserBubbles([]);
+    } finally {
+      activeUsersPollInFlight = false;
+    }
   };
 
-  refresh();
-  window.setInterval(refresh, ACTIVE_USERS_POLL_INTERVAL_MS);
+  void refresh();
+  activeUsersPollTimerId = window.setInterval(refresh, ACTIVE_USERS_POLL_INTERVAL_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      void refresh();
+    }
+  });
 }
 
 function refreshActiveUsersNow() {
@@ -3023,7 +3046,16 @@ function mergeLiveAlbums(liveAlbums) {
 }
 
 function startLiveAlbumsPolling() {
-  setInterval(async () => {
+  if (liveAlbumsPollTimerId) {
+    return;
+  }
+
+  const refresh = async () => {
+    if (document.hidden || liveAlbumsPollInFlight) {
+      return;
+    }
+
+    liveAlbumsPollInFlight = true;
     try {
       const liveAlbums = await apiGetLiveAlbums();
       if (mergeLiveAlbums(liveAlbums)) {
@@ -3032,8 +3064,18 @@ function startLiveAlbumsPolling() {
       }
     } catch {
       // ignore
+    } finally {
+      liveAlbumsPollInFlight = false;
     }
-  }, 5000);
+  };
+
+  void refresh();
+  liveAlbumsPollTimerId = setInterval(refresh, 5000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      void refresh();
+    }
+  });
 }
 
 function hideNowPlaying() {
@@ -3419,14 +3461,30 @@ function checkForNewLikes(reviewGroups) {
 }
 
 function startReviewPolling() {
-  const refresh = () => {
-    if (currentNowPlaying) {
-      void fetchCurrentSongReviews();
+  if (reviewPollTimerId) {
+    return;
+  }
+
+  const refresh = async () => {
+    if (document.hidden || reviewPollInFlight || !currentNowPlaying) {
+      return;
+    }
+
+    reviewPollInFlight = true;
+    try {
+      await fetchCurrentSongReviews();
+    } finally {
+      reviewPollInFlight = false;
     }
   };
 
-  refresh();
-  window.setInterval(refresh, 2000);
+  void refresh();
+  reviewPollTimerId = window.setInterval(refresh, 2000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      void refresh();
+    }
+  });
 }
 
 function getReviewerKey(name) {
@@ -3800,12 +3858,17 @@ function stepPhysics(dt) {
 
 function startPhysicsLoop() {
   if (physicsRafId) return;
+  if (document.hidden || bubbleEntities.size === 0) return;
   let prevTime = performance.now();
   function tick(now) {
-    physicsRafId = requestAnimationFrame(tick);
+    if (document.hidden || bubbleEntities.size === 0) {
+      physicsRafId = null;
+      return;
+    }
     const dt = Math.min((now - prevTime) / 1000, 0.05);
     prevTime = now;
     stepPhysics(dt);
+    physicsRafId = requestAnimationFrame(tick);
   }
   physicsRafId = requestAnimationFrame(tick);
 }
@@ -4508,26 +4571,42 @@ async function loadNowPlaying() {
 let lastKnownPartyActive = false;
 
 function startNowPlayingPolling() {
-  const refresh = () => {
-    loadNowPlaying()
-      .then((data) => {
-        // Party is active as long as the file exists
-        // Only consider it ended if the file is deleted (404 error caught below)
-        lastKnownPartyActive = true;
-        renderNowPlaying(data);
-      })
-      .catch(() => {
-        // File doesn't exist (404) - party has been ended by admin or server shutdown
-        if (lastKnownPartyActive) {
-          void handlePartyJustEnded();
-        }
-        lastKnownPartyActive = false;
-        hideNowPlaying();
-      });
+  if (nowPlayingPollTimerId) {
+    return;
+  }
+
+  const refresh = async () => {
+    if (document.hidden || nowPlayingPollInFlight) {
+      return;
+    }
+
+    nowPlayingPollInFlight = true;
+    try {
+      const data = await loadNowPlaying();
+      // Party is active as long as the file exists
+      // Only consider it ended if the file is deleted (404 error caught below)
+      lastKnownPartyActive = true;
+      renderNowPlaying(data);
+    } catch {
+      // File doesn't exist (404) - party has been ended by admin or server shutdown
+      if (lastKnownPartyActive) {
+        void handlePartyJustEnded();
+      }
+      lastKnownPartyActive = false;
+      hideNowPlaying();
+    } finally {
+      nowPlayingPollInFlight = false;
+    }
   };
 
-  refresh();
-  window.setInterval(refresh, 2000);
+  void refresh();
+  nowPlayingPollTimerId = window.setInterval(refresh, 2000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      startPhysicsLoop();
+      void refresh();
+    }
+  });
 }
 
 function setupAuthInteractions() {
