@@ -408,6 +408,9 @@
 
       .vinyl-disc {
         --disc-color: #0b0b0b;
+        --disc-border-color: rgba(15,23,42,0.7);
+        --disc-groove-light: rgba(255,255,255,0.08);
+        --disc-groove-dark: rgba(0,0,0,0.10);
         position: absolute;
         top: 50%; right: calc(var(--cover-size) * 0.20);
         width: calc(var(--cover-size) * 0.95);
@@ -416,22 +419,24 @@
         transform: translateY(-50%);
         background:
           radial-gradient(circle at center, #0f172a 0 8%, #d4d4d8 8.5% 10.5%, transparent 11%),
-          repeating-radial-gradient(circle at center, rgba(255,255,255,0.08) 0 2px, rgba(0,0,0,0.08) 2px 4px),
+          repeating-radial-gradient(circle at center, var(--disc-groove-light) 0 1.5px, var(--disc-groove-dark) 1.5px 3.5px),
           radial-gradient(circle at 30% 22%, rgba(255,255,255,0.3), transparent 45%),
           var(--disc-color);
-        box-shadow: 0 0 0 3px rgba(15,23,42,0.7), 0 12px 40px rgba(0,0,0,0.6);
+        box-shadow: 0 0 0 3px var(--disc-border-color), 0 12px 40px rgba(0,0,0,0.6);
         z-index: 1;
         animation: spinDisc 2.2s linear infinite;
       }
 
       .vinyl-disc.clear-vinyl {
+        --disc-border-color: rgba(255,255,255,0.95);
+        --disc-groove-light: rgba(255,255,255,0.55);
         background:
           radial-gradient(circle at center, transparent 0 8%, rgba(226,232,240,0.9) 8.4% 10.6%, transparent 11%),
           radial-gradient(circle at center, transparent 0 74%, rgba(226,232,240,0.92) 74.4% 76.2%, transparent 76.6%),
-          repeating-radial-gradient(circle at center, rgba(255,255,255,0.55) 0 1px, transparent 1px 5px),
+          repeating-radial-gradient(circle at center, var(--disc-groove-light) 0 1px, transparent 1px 5px),
           radial-gradient(circle at 28% 20%, rgba(255,255,255,0.32), transparent 47%),
           transparent;
-        box-shadow: 0 0 0 2px rgba(255,255,255,0.95), 0 12px 40px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 2px var(--disc-border-color), 0 12px 40px rgba(0,0,0,0.4);
       }
 
       .vinyl-disc.cd-disc {
@@ -598,6 +603,7 @@
       </div>
     </div>
 
+    <script src="./disc.js?v=20260426-03"></script>
     <script>
       /* ─────────────── helpers ─────────────── */
       function esc(s) {
@@ -1130,88 +1136,6 @@
         }
       }
 
-      /* ─────────────── vinyl detection (mirrors app.js exactly) ─────────────── */
-      const VINYL_COLOR_RULES = [
-        { key: 'glow in the dark', color: '#16a34a', pattern: /\bglow[\s-]*in[\s-]*the[\s-]*dark\b/ },
-        { key: 'grape',   color: '#7e22ce', pattern: /\bgrape\b/ },
-        { key: 'coral',   color: '#fb7185', pattern: /\bcoral\b/ },
-        { key: 'green',   color: '#16a34a', pattern: /\bgreen\b/ },
-        { key: 'red',     color: '#dc2626', pattern: /\bred\b/ },
-        { key: 'blue',    color: '#2563eb', pattern: /\bblue\b/ },
-        { key: 'yellow',  color: '#eab308', pattern: /\byellow\b/ },
-        { key: 'orange',  color: '#f97316', pattern: /\borange\b/ },
-        { key: 'pink',    color: '#ec4899', pattern: /\bpink\b/ },
-        { key: 'purple',  color: '#8b5cf6', pattern: /\bpurple\b/ },
-        { key: 'white',   color: '#f8fafc', pattern: /\bwhite\b/ },
-        { key: 'gold',    color: '#ca8a04', pattern: /\bgold\b/ },
-        { key: 'silver',  color: '#94a3b8', pattern: /\bsilver\b/ }
-      ];
-
-      function withAlpha(hex, a) {
-        const c = String(hex||'').replace('#','');
-        if (c.length !== 6) return `rgba(20,20,20,${a})`;
-        return `rgba(${parseInt(c.slice(0,2),16)},${parseInt(c.slice(2,4),16)},${parseInt(c.slice(4,6),16)},${a})`;
-      }
-
-      function resolveVinylColor(rule, translucent) {
-        if (!rule?.color) return '#0b0b0b';
-        if (translucent && rule.key === 'grape') return withAlpha(rule.color, 0.7);
-        return translucent ? withAlpha(rule.color, 0.82) : rule.color;
-      }
-
-      function detectAmpersandVinylGradient(text, translucent) {
-        const descriptor = String(text||'').split(';')[0] || '';
-        if (!descriptor.includes('&')) return '';
-        const rules = VINYL_COLOR_RULES.filter(r => r.key !== 'glow in the dark');
-        for (const a of rules) {
-          for (const b of rules) {
-            if (a.key === b.key) continue;
-            const pat = new RegExp(`${a.pattern.source}\\s*&\\s*${b.pattern.source}`);
-            if (!pat.test(descriptor)) continue;
-            return `linear-gradient(135deg, ${resolveVinylColor(a, translucent)} 0%, ${resolveVinylColor(b, translucent)} 100%)`;
-          }
-        }
-        return '';
-      }
-
-      function detectVinylColors(rawText) {
-        const text = String(rawText||'').toLowerCase();
-        const formatSegment = text.split(';')[0] || text;
-        if (!formatSegment) return ['#0b0b0b', ''];
-        const translucent = /(translucent|transparent|clear)/.test(formatSegment);
-        const clearOnly   = /\bclear\b/.test(formatSegment);
-        const ampGrad = detectAmpersandVinylGradient(formatSegment, translucent);
-        if (ampGrad) return [ampGrad, ''];
-        const matched = VINYL_COLOR_RULES.filter(r => r.pattern.test(formatSegment));
-        if (matched.length >= 2) return [resolveVinylColor(matched[0], translucent), resolveVinylColor(matched[1], translucent)];
-        if (matched.length === 1) return clearOnly ? ['#f8fafc', ''] : [resolveVinylColor(matched[0], translucent), ''];
-        if (translucent) return clearOnly ? ['#f8fafc', ''] : ['rgba(255,255,255,0.88)', ''];
-        return ['#0b0b0b', ''];
-      }
-
-      function detectDiscType(rawText) {
-        const t = String(rawText||'').toLowerCase();
-        if (!t) return 'vinyl';
-        const hasVinyl = /\bvinyl\b/.test(t);
-        const hasCd    = /\bcd\b|compact\s*disc|cdr|cd-r/.test(t);
-        if (hasVinyl && hasCd) return 'both';
-        if (hasCd) return 'cd';
-        return 'vinyl';
-      }
-
-      function detectDiscCount(rawText) {
-        const t = String(rawText||'').toLowerCase();
-        const m1 = t.match(/\bx\s*(\d+)\b/);
-        if (m1 && Number(m1[1]) > 0) return Number(m1[1]);
-        const m2 = t.match(/\b(\d+)\s*x\b/);
-        if (m2 && Number(m2[1]) > 0) return Number(m2[1]);
-        return 1;
-      }
-
-      function detectClearVinyl(rawText) {
-        return /\bclear\b/.test(String(rawText||'').toLowerCase());
-      }
-
       function appendDescriptorTokens(target, value) {
         if (value === null || value === undefined) return;
         if (typeof value === 'string' || typeof value === 'number') {
@@ -1390,19 +1314,16 @@
 
       function applyDiscVisual(data) {
         const meta = findAlbumMeta(data.albumTitle, data.albumArtist);
-        const discType      = meta?.discType === 'cd' ? 'cd' : 'vinyl';
-        const primaryColor  = String(meta?.vinylColor || '#0b0b0b').trim() || '#0b0b0b';
+        const discType       = meta?.discType === 'cd' ? 'cd' : 'vinyl';
+        const primaryColor   = String(meta?.vinylColor || '#0b0b0b').trim() || '#0b0b0b';
         const secondaryColor = String(meta?.vinylColorSecondary || '').trim();
-        const discCount     = Number(meta?.discCount || 1);
-        const showSecond    = discCount > 1 || Boolean(secondaryColor);
-        const isClear       = discType === 'vinyl' && Boolean(meta?.isClearVinyl);
+        const discCount      = Number(meta?.discCount || 1);
+        const showSecond     = discCount > 1 || Boolean(secondaryColor);
+        const isClear        = discType === 'vinyl' && Boolean(meta?.isClearVinyl);
 
-        // Spin speed: album scope = slower, song scope = faster (matches phone app)
         const scope = data.reviewScope === 'album' ? 'album' : 'song';
-        const primarySpeed   = scope === 'album' ? '3.8s' : '1.9s';
-        const secondarySpeed = scope === 'album' ? '5.3s' : '2.7s';
-        npDisc.style.animationDuration    = primarySpeed;
-        npDiscSec.style.animationDuration = secondarySpeed;
+        npDisc.style.animationDuration    = scope === 'album' ? '3.8s' : '1.9s';
+        npDiscSec.style.animationDuration = scope === 'album' ? '5.3s' : '2.7s';
 
         npDisc.style.setProperty('--disc-color', primaryColor);
         npDiscSec.style.setProperty('--disc-color', secondaryColor || primaryColor);
@@ -1412,6 +1333,10 @@
         npDisc.classList.toggle('clear-vinyl',    isClear);
         npDiscSec.classList.toggle('clear-vinyl', isClear);
         npDiscSec.classList.toggle('visible', showSecond);
+
+        const coverUrl = String(data.coverUrl || '').trim();
+        applyDiscStyle(npDisc,    discType, isClear, primaryColor,              coverUrl);
+        applyDiscStyle(npDiscSec, discType, isClear, secondaryColor || primaryColor, coverUrl);
       }
 
       function showPlaying(data) {

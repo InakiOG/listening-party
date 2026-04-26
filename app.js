@@ -41,22 +41,6 @@ let lastActiveUsersSignature = "";
 let lastRenderedActiveUsers = [];
 let viewBeforeReviews = "main";
 
-const VINYL_COLOR_RULES = [
-  { key: "glow in the dark", color: "#16a34a", pattern: /\bglow[\s-]*in[\s-]*the[\s-]*dark\b/ },
-  { key: "grape", color: "#7e22ce", pattern: /\bgrape\b/ },
-  { key: "coral", color: "#fb7185", pattern: /\bcoral\b/ },
-  { key: "green", color: "#16a34a", pattern: /\bgreen\b/ },
-  { key: "red", color: "#dc2626", pattern: /\bred\b/ },
-  { key: "blue", color: "#2563eb", pattern: /\bblue\b/ },
-  { key: "yellow", color: "#eab308", pattern: /\byellow\b/ },
-  { key: "orange", color: "#f97316", pattern: /\borange\b/ },
-  { key: "pink", color: "#ec4899", pattern: /\bpink\b/ },
-  { key: "purple", color: "#8b5cf6", pattern: /\bpurple\b/ },
-  { key: "white", color: "#f8fafc", pattern: /\bwhite\b/ },
-  { key: "gold", color: "#ca8a04", pattern: /\bgold\b/ },
-  { key: "silver", color: "#94a3b8", pattern: /\bsilver\b/ }
-];
-
 const ACTIVE_USER_BUBBLE_COLORS = [
   "#ef4444",
   "#f97316",
@@ -102,140 +86,6 @@ function normalizeTrackLabel(value) {
   return text.replace(/^[A-Z]{1,3}\d+[A-Z]?\s*-\s*/i, "");
 }
 
-function withAlpha(hexColor, alpha) {
-  const clean = String(hexColor || "").replace("#", "");
-  if (clean.length !== 6) {
-    return "rgba(20, 20, 20, 0.95)";
-  }
-
-  const red = Number.parseInt(clean.slice(0, 2), 16);
-  const green = Number.parseInt(clean.slice(2, 4), 16);
-  const blue = Number.parseInt(clean.slice(4, 6), 16);
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-}
-
-function resolveVinylColor(rule, translucent) {
-  if (!rule || !rule.color) {
-    return "#0b0b0b";
-  }
-
-  if (translucent && rule.key === "grape") {
-    return withAlpha(rule.color, 0.7);
-  }
-
-  return translucent ? withAlpha(rule.color, 0.82) : rule.color;
-}
-
-function detectAmpersandVinylGradient(text, translucent) {
-  const formatDescriptor = String(text || "").split(";")[0] || "";
-  if (!formatDescriptor.includes("&")) {
-    return "";
-  }
-
-  const colorRules = VINYL_COLOR_RULES.filter((rule) => rule.key !== "glow in the dark");
-
-  for (const firstRule of colorRules) {
-    for (const secondRule of colorRules) {
-      if (firstRule.key === secondRule.key) {
-        continue;
-      }
-
-      const pairPattern = new RegExp(
-        `${firstRule.pattern.source}\\s*&\\s*${secondRule.pattern.source}`
-      );
-
-      if (!pairPattern.test(formatDescriptor)) {
-        continue;
-      }
-
-      const firstColor = resolveVinylColor(firstRule, translucent);
-      const secondColor = resolveVinylColor(secondRule, translucent);
-      return `linear-gradient(135deg, ${firstColor} 0%, ${secondColor} 100%)`;
-    }
-  }
-
-  return "";
-}
-
-function detectVinylColors(rawText) {
-  const text = String(rawText || "").toLowerCase();
-  const formatSegment = text.split(";")[0] || text;
-
-  if (!formatSegment) {
-    return ["#0b0b0b", ""];
-  }
-
-  const translucent = /(translucent|transparent|clear)/.test(formatSegment);
-  const clearOnly = /\bclear\b/.test(formatSegment);
-  const ampersandGradient = detectAmpersandVinylGradient(formatSegment, translucent);
-  if (ampersandGradient) {
-    return [ampersandGradient, ""];
-  }
-  const matchedRules = VINYL_COLOR_RULES.filter((rule) => {
-    if (rule.pattern instanceof RegExp) {
-      return rule.pattern.test(formatSegment);
-    }
-    return false;
-  });
-
-  if (matchedRules.length >= 2) {
-    return [
-      resolveVinylColor(matchedRules[0], translucent),
-      resolveVinylColor(matchedRules[1], translucent)
-    ];
-  }
-
-  if (matchedRules.length === 1) {
-    if (clearOnly) {
-      return ["#f8fafc", ""];
-    }
-
-    return [resolveVinylColor(matchedRules[0], translucent), ""];
-  }
-
-  if (translucent) {
-    if (clearOnly) {
-      return ["#f8fafc", ""];
-    }
-
-    return ["rgba(255, 255, 255, 0.88)", ""];
-  }
-
-  return ["#0b0b0b", ""];
-}
-
-function detectDiscType(rawText) {
-  const text = String(rawText || "").toLowerCase();
-  if (!text) return "vinyl";
-  const hasVinyl = /\bvinyl\b/.test(text);
-  const hasCd = /\bcd\b|compact\s*disc|cdr|cd-r/.test(text);
-  if (hasVinyl && hasCd) return "both";
-  if (hasCd) return "cd";
-  return "vinyl";
-}
-
-function detectDiscCount(rawText) {
-  const text = String(rawText || "").toLowerCase();
-  if (!text) {
-    return 1;
-  }
-
-  const timesMatch = text.match(/\bx\s*(\d+)\b/);
-  if (timesMatch && Number(timesMatch[1]) > 0) {
-    return Number(timesMatch[1]);
-  }
-
-  const prefixMatch = text.match(/\b(\d+)\s*x\b/);
-  if (prefixMatch && Number(prefixMatch[1]) > 0) {
-    return Number(prefixMatch[1]);
-  }
-
-  return 1;
-}
-
-function detectClearVinyl(rawText) {
-  return /\bclear\b/.test(String(rawText || "").toLowerCase());
-}
 
 function appendDescriptorTokens(target, value) {
   if (value === null || value === undefined) {
@@ -1610,6 +1460,10 @@ function applyNowPlayingDiscVisual(nowPlaying) {
   primaryDisc.classList.toggle("clear-vinyl", clearVinyl);
   secondaryDisc.classList.toggle("clear-vinyl", clearVinyl);
 
+  const coverUrl = String(nowPlaying?.coverUrl || "").trim();
+  applyDiscStyle(primaryDisc, discType, clearVinyl, primaryColor, coverUrl);
+  applyDiscStyle(secondaryDisc, discType, clearVinyl, secondaryColor || primaryColor, coverUrl);
+
   secondaryDisc.classList.toggle("visible", showSecondDisc);
 }
 
@@ -2362,8 +2216,8 @@ function buildAlbumCardHtml(album) {
           >
             <img class="${coverClassName}" src="${safeCoverUrl}" alt="${safeTitle} album cover" loading="lazy" onerror="this.onerror=null;this.src='${coverFallbackUrl}'" />
             <span class="vinyl-overlay ${isCdDisc ? "cd-overlay" : ""}" aria-hidden="true">
-              <span class="vinyl-disc vinyl-disc-primary ${isCdDisc ? "cd-disc" : ""} ${clearVinylClass}" style="--vinyl-color:${safeVinylColor}"></span>
-              ${hasSecondDisc ? `<span class="vinyl-disc vinyl-disc-secondary ${hasBothFormats ? "cd-disc cd-disc-secondary" : clearVinylClass}" style="--vinyl-color:${secondaryVinylColor}"></span>` : ""}
+              <span class="vinyl-disc vinyl-disc-primary ${isCdDisc ? "cd-disc" : ""} ${clearVinylClass}" style="${buildDiscInlineStyle(isCdDisc, album.isClearVinyl, album.vinylColor, album.coverUrl)}"></span>
+              ${hasSecondDisc ? `<span class="vinyl-disc vinyl-disc-secondary ${hasBothFormats ? "cd-disc cd-disc-secondary" : clearVinylClass}" style="${buildDiscInlineStyle(hasBothFormats, album.isClearVinyl, album.vinylColorSecondary || album.vinylColor, album.coverUrl)}"></span>` : ""}
             </span>
             ${ownerBadgeMarkup}
           </button>

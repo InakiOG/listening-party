@@ -204,6 +204,9 @@
 
       .now-playing-disc {
         --disc-color: #0b0b0b;
+        --disc-border-color: rgba(15, 23, 42, 0.7);
+        --disc-groove-light: rgba(255, 255, 255, 0.08);
+        --disc-groove-dark: rgba(0, 0, 0, 0.10);
         position: absolute;
         top: 50%;
         right: 15px;
@@ -213,21 +216,24 @@
         transform: translateY(-50%);
         background:
           radial-gradient(circle at center, #0f172a 0 8%, #d4d4d8 8.5% 10.5%, transparent 11%),
-          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0 2px, rgba(0, 0, 0, 0.08) 2px 4px),
+          repeating-radial-gradient(circle at center, var(--disc-groove-light) 0 1.5px, var(--disc-groove-dark) 1.5px 3.5px),
           radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.3), transparent 45%),
           var(--disc-color);
-        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.7), 0 5px 14px rgba(0, 0, 0, 0.45);
+        box-shadow: 0 0 0 2px var(--disc-border-color), 0 5px 14px rgba(0, 0, 0, 0.45);
         z-index: 1;
         animation: spinNowPlayingDisc var(--np-spin-primary, 2.2s) linear infinite;
       }
 
       .now-playing-disc.clear-vinyl {
+        --disc-border-color: rgba(255, 255, 255, 0.95);
+        --disc-groove-light: rgba(255, 255, 255, 0.55);
         background:
           radial-gradient(circle at center, transparent 0 8%, rgba(226, 232, 240, 0.9) 8.4% 10.6%, transparent 11%),
           radial-gradient(circle at center, transparent 0 74%, rgba(226, 232, 240, 0.92) 74.4% 76.2%, transparent 76.6%),
+          repeating-radial-gradient(circle at center, var(--disc-groove-light) 0 1px, transparent 1px 5px),
           radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.32), transparent 47%),
           transparent;
-        box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.95), 0 5px 14px rgba(0, 0, 0, 0.26);
+        box-shadow: 0 0 0 1.5px var(--disc-border-color), 0 5px 14px rgba(0, 0, 0, 0.26);
       }
 
       .now-playing-disc.cd-disc {
@@ -1642,6 +1648,9 @@
 
       .vinyl-disc {
         --vinyl-color: #0b0b0b;
+        --disc-border-color: rgba(15, 23, 42, 0.65);
+        --disc-groove-light: rgba(255, 255, 255, 0.08);
+        --disc-groove-dark: rgba(0, 0, 0, 0.10);
         position: absolute;
         inset: 0;
         width: 100%;
@@ -1650,10 +1659,10 @@
         background:
           radial-gradient(circle at center, #0f172a 0 8%, #d4d4d8 8.4% 10.5%, transparent 11%),
           radial-gradient(circle at center, transparent 0 74%, rgba(255, 255, 255, 0.35) 74.5% 76%, transparent 76.5%),
-          repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0 2px, rgba(0, 0, 0, 0.08) 2px 4px),
+          repeating-radial-gradient(circle at center, var(--disc-groove-light) 0 1.5px, var(--disc-groove-dark) 1.5px 3.5px),
           radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.26), transparent 45%),
           var(--vinyl-color);
-        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.65), 0 8px 22px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0 0 2px var(--disc-border-color), 0 8px 22px rgba(0, 0, 0, 0.5);
         z-index: 1;
       }
 
@@ -1669,12 +1678,15 @@
       }
 
       .vinyl-disc.clear-vinyl {
+        --disc-border-color: rgba(255, 255, 255, 0.96);
+        --disc-groove-light: rgba(255, 255, 255, 0.55);
         background:
           radial-gradient(circle at center, transparent 0 8%, rgba(226, 232, 240, 0.92) 8.4% 10.6%, transparent 11%),
           radial-gradient(circle at center, transparent 0 74%, rgba(226, 232, 240, 0.94) 74.4% 76.2%, transparent 76.6%),
+          repeating-radial-gradient(circle at center, var(--disc-groove-light) 0 1px, transparent 1px 5px),
           radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.34), transparent 47%),
           transparent;
-        box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.96), 0 8px 22px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 0 0 1.5px var(--disc-border-color), 0 8px 22px rgba(0, 0, 0, 0.28);
       }
 
       .cd-disc {
@@ -3271,6 +3283,7 @@
       <button id="party-picture-lightbox-close" class="party-picture-lightbox-close" type="button" aria-label="Cerrar foto">×</button>
       <img id="party-picture-lightbox-image" class="party-picture-lightbox-image" src="" alt="" />
     </section>
-    <script src="./app.js?v=20260424-01"></script>
+    <script src="./disc.js?v=20260426-03"></script>
+    <script src="./app.js?v=20260426-01"></script>
   </body>
 </html>
