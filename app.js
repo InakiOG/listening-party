@@ -3124,18 +3124,34 @@ async function enrichReviewsWithPhotos(reviews) {
     photoDataUrl: String(review.photoDataUrl || "").trim()
   }));
 
+  // Create tasks for missing photos, but add a timeout so rendering doesn't get blocked
   const tasks = enriched.map(async (review) => {
     if (review.photoDataUrl) {
       return;
     }
 
-    const photo = await getUserPhotoByName(review.name);
-    if (photo) {
-      review.photoDataUrl = photo;
+    try {
+      const photo = await Promise.race([
+        getUserPhotoByName(review.name),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 1500))
+      ]);
+      if (photo) {
+        review.photoDataUrl = photo;
+      }
+    } catch {
+      // Skip on timeout or error - photos aren't critical for displaying reviews
+      // Background fetch can happen later if needed
     }
   });
 
-  await Promise.all(tasks);
+  // Wait for photos with a timeout to avoid hanging
+  await Promise.race([
+    Promise.all(tasks),
+    new Promise((resolve) => setTimeout(resolve, 2000))
+  ]).catch(() => {
+    // Ignore timeout errors
+  });
+
   return enriched;
 }
 
@@ -3150,10 +3166,24 @@ async function enrichLikesInReviews(reviews) {
   if (!toFetch.size) return reviews;
 
   const photoMap = new Map();
-  await Promise.all([...toFetch].map(async (name) => {
-    const photo = await getUserPhotoByName(name);
-    if (photo) photoMap.set(name.toLowerCase(), photo);
-  }));
+  
+  // Fetch photos with timeout to avoid hanging
+  await Promise.race([
+    Promise.all([...toFetch].map(async (name) => {
+      try {
+        const photo = await Promise.race([
+          getUserPhotoByName(name),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 1000))
+        ]);
+        if (photo) photoMap.set(name.toLowerCase(), photo);
+      } catch {
+        // Skip on timeout
+      }
+    })),
+    new Promise((resolve) => setTimeout(resolve, 1500))
+  ]).catch(() => {
+    // Ignore timeout
+  });
 
   return reviews.map((r) => ({
     ...r,
@@ -3176,29 +3206,37 @@ async function fetchCurrentSongReviews() {
   }
 
   try {
-    // When a full album is playing, also fetch reviews for every track
-    const trackEntries = reviewScope === "album"
-      ? getAlbumTracksForNowPlaying(currentNowPlaying).map((t) => ({
-          title: t,
-          key: `${currentNowPlaying.albumTitle}::${t}`
-        }))
-      : [];
+    // Build list of keys to fetch
+    const keysToFetch = [albumKey];
+    
+    if (reviewScope === "song" && songKey) {
+      keysToFetch.push(songKey);
+    } else if (reviewScope === "album" && selectedSongForReview) {
+      // When in album mode but a specific song is selected for review, also fetch that song's reviews
+      const selectedSongKey = getSongKey({ ...currentNowPlaying, songTitle: selectedSongForReview });
+      if (selectedSongKey && selectedSongKey !== albumKey) {
+        keysToFetch.push(selectedSongKey);
+      }
+    }
 
-    const [songReviews, albumReviews, ...perTrackResults] = await Promise.all([
-      reviewScope === "song" && songKey ? fetchReviewsForKey(songKey) : Promise.resolve([]),
-      fetchReviewsForKey(albumKey),
-      ...trackEntries.map(({ key }) => fetchReviewsForKey(key))
-    ]);
+    const results = await Promise.all(keysToFetch.map((key) => fetchReviewsForKey(key)));
+    console.log("Fetched reviews:", { keysToFetch, results, selectedSongForReview });
 
-    const rawItems = [
-      ...songReviews.map((r) => ({ ...r, scope: "song", _reviewKey: songKey, _songTitle: currentNowPlaying.songTitle })),
-      ...albumReviews.map((r) => ({ ...r, scope: "album", _reviewKey: albumKey })),
-      ...perTrackResults.flatMap((reviews, i) =>
-        reviews.map((r) => ({ ...r, scope: "song", _reviewKey: trackEntries[i].key, _songTitle: trackEntries[i].title }))
-      )
-    ];
+    const rawItems = [];
+    for (let i = 0; i < results.length; i++) {
+      const reviews = results[i];
+      const key = keysToFetch[i];
+      
+      if (key === albumKey) {
+        rawItems.push(...reviews.map((r) => ({ ...r, scope: "album", _reviewKey: albumKey })));
+      } else {
+        // Song reviews
+        const songTitle = key === songKey ? currentNowPlaying.songTitle : selectedSongForReview;
+        rawItems.push(...reviews.map((r) => ({ ...r, scope: "song", _reviewKey: key, _songTitle: songTitle })));
+      }
+    }
 
-    // Deduplicate by key+name+createdAt (same review might appear twice if reviewScope===song matches a track)
+    // Deduplicate by key+name+createdAt
     const seen = new Set();
     const reviewItems = rawItems.filter((r) => {
       const id = `${r._reviewKey}::${r.name}::${r.createdAt}`;
@@ -3207,12 +3245,16 @@ async function fetchCurrentSongReviews() {
       return true;
     });
 
+    console.log("After dedup:", { rawItemsCount: rawItems.length, reviewItemsCount: reviewItems.length, currentPartyId });
+
     const currentReviews = currentPartyId
       ? reviewItems.filter((r) => r.partyId === currentPartyId)
       : reviewItems;
     const pastReviews = currentPartyId
       ? reviewItems.filter((r) => r.partyId !== currentPartyId)
       : [];
+
+    console.log("Filtered by party:", { currentReviewsCount: currentReviews.length, pastReviewsCount: pastReviews.length });
 
     const hydratedCurrent = await enrichLikesInReviews(await enrichReviewsWithPhotos(currentReviews));
     const reviewGroups = groupReviewsByReviewer(hydratedCurrent);
@@ -3227,7 +3269,8 @@ async function fetchCurrentSongReviews() {
         }
       });
     }
-  } catch {
+  } catch (err) {
+    console.error("Error fetching reviews:", err);
     renderReviewBubbles([], [], `${songKey}|${albumKey}|${reviewScope}`);
     showReviewStatus("No se pudieron cargar las reseñas.");
   }
@@ -3573,9 +3616,12 @@ function renderReviewBubbles(currentReviews, pastReviews, signature = "") {
     pastBubbleHtml += buildPastBubble(`past-reviews-song::${songTitle}`, `Ant. · ${displayTitle}`, reviews);
   }
 
-  bubbleLayer.innerHTML = pastBubbleHtml + currentBubblesHtml;
-  lastBubbleSignature = combinedSignature;
-  syncBubblesFromDom();
+  // Use requestAnimationFrame to batch DOM updates and prevent flickering
+  requestAnimationFrame(() => {
+    bubbleLayer.innerHTML = pastBubbleHtml + currentBubblesHtml;
+    lastBubbleSignature = combinedSignature;
+    syncBubblesFromDom();
+  });
 }
 
 function spawnBubbleEntity(lw, lh, r) {
@@ -4087,39 +4133,51 @@ async function saveCurrentReview() {
 
   // Capture rating before resetting so the fetch below still uses the right value.
   const ratingToSave = selectedRating;
+  const createdAtIso = new Date().toISOString();
 
-  // Close and reset immediately so the UI feels instant.
-  resetReviewInputs();
+  // Close review panel but DON'T reset inputs yet - we need selectedSongForReview for the fetch
   closeReviewPanel();
 
   try {
+    const payload = {
+      songKey: key,
+      scope,
+      partyId: currentNowPlaying?.partyId || null,
+      review: {
+        name: userName,
+        photoDataUrl: String(sessionState.currentUser?.photoDataUrl || "").trim(),
+        text,
+        rating: ratingToSave,
+        createdAt: createdAtIso
+      }
+    };
+
     const response = await fetch("/api/reviews", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        songKey: key,
-        scope,
-        partyId: currentNowPlaying?.partyId || null,
-        review: {
-          name: userName,
-          photoDataUrl: String(sessionState.currentUser?.photoDataUrl || "").trim(),
-          text,
-          rating: ratingToSave,
-          createdAt: new Date().toISOString()
-        }
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
+      console.error("Review save failed:", response.status, response.statusText);
       throw new Error("No se pudo guardar la reseña");
     }
 
-    await response.json();
-    void fetchCurrentSongReviews();
-  } catch {
+    const result = await response.json();
+    console.log("Review saved successfully:", result);
+    
+    // Fetch reviews while selectedSongForReview is still set
+    await fetchCurrentSongReviews();
+    // Now reset after fetching
+    resetReviewInputs();
+    showReviewStatus("Reseña guardada!");
+  } catch (err) {
+    console.error("Error saving review:", err);
     showReviewStatus("No se pudo guardar la reseña.");
+    // Reset inputs even if there was an error
+    resetReviewInputs();
   }
 }
 
@@ -4336,6 +4394,9 @@ function renderNowPlaying(nowPlaying) {
   const signature = `${nowPlaying.albumTitle}|${nowPlaying.songTitle || ""}|${nowPlaying.coverUrl}|${reviewScope}`;
 
   if (signature !== lastNowPlayingSignature || section.hidden) {
+    // Reset selected song when now-playing changes to avoid reviewing the wrong song
+    selectedSongForReview = null;
+    
     text.textContent = reviewScope === "album"
       ? `Review de album: ${nowPlaying.albumTitle}`
       : `${nowPlaying.albumTitle} - ${nowPlaying.songTitle}`;

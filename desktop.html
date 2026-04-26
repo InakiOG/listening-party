@@ -1033,14 +1033,15 @@
         const songKey = getSongKey(np);
         const albumKey = getAlbumKey(np);
 
-        const [songRevs, albumRevs] = await Promise.all([
-          scope === 'song' && songKey ? fetchReviews(songKey) : Promise.resolve([]),
-          fetchReviews(albumKey)
+        // Fetch both album and current song reviews to capture reviews from individual song selections in album mode
+        const [albumRevs, songRevs] = await Promise.all([
+          fetchReviews(albumKey),
+          songKey ? fetchReviews(songKey) : Promise.resolve([])
         ]);
 
         const all = [
-          ...songRevs.map(r => ({ ...r, scope: 'song', _reviewKey: songKey })),
-          ...albumRevs.map(r => ({ ...r, scope: 'album', _reviewKey: albumKey }))
+          ...albumRevs.map(r => ({ ...r, scope: 'album', _reviewKey: albumKey })),
+          ...songRevs.map(r => ({ ...r, scope: 'song', _reviewKey: songKey }))
         ];
 
         const partyId = np.partyId || null;
@@ -1396,6 +1397,8 @@
           if (data && data.albumTitle && data.coverUrl) {
             currentNowPlaying = data;
             showPlaying(data);
+            // Immediately fetch reviews when now-playing changes
+            await pollReviews();
           } else {
             showIdle();
           }
@@ -1422,7 +1425,10 @@
         syncEntities();
       });
       document.documentElement.requestFullscreen().catch(() => {});
-      loadAlbumCollection().then(() => pollNowPlaying());
+      loadAlbumCollection().then(() => {
+        pollNowPlaying();
+        pollReviews();
+      });
       pollUsers();
       setInterval(pollNowPlaying, 2000);
       setInterval(pollUsers, 2000);

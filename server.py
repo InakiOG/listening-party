@@ -2134,7 +2134,11 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             return
 
         normalized_rating = round(rating * 2) / 2
-        created_at = datetime.now(timezone.utc).strftime("%d/%m/%y")
+        # Use the createdAt from the client if provided, otherwise generate a timestamp
+        # Keep full ISO format to ensure uniqueness and prevent duplicate filtering
+        created_at = str(review_payload.get("createdAt", "")).strip()
+        if not created_at:
+            created_at = datetime.now(timezone.utc).isoformat()
 
         review_entry = {
             "name": name,
