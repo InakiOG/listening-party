@@ -1028,7 +1028,7 @@ function renderActiveUserBubbles(users) {
         : `<li class="active-user-top-album-item active-user-detail-empty">Sin top albums.</li>`;
 
       return `
-        <article class="active-user-bubble ${expanded ? "expanded" : ""}" data-user-key="${encodedUserKey}" title="${safeName}" style="left:0;top:0;">
+        <article class="active-user-bubble ${expanded ? "expanded" : ""}" data-user-key="${encodedUserKey}" title="${safeName}" style="left:-9999px;top:-9999px;">
           ${hasPhoto
             ? `<img src="${safePhotoUrl}" alt="Foto de ${safeName}" loading="lazy" />`
             : `<span class="active-user-letter" style="background:${color};">${letter}</span>`}
@@ -4085,6 +4085,13 @@ async function saveCurrentReview() {
     return;
   }
 
+  // Capture rating before resetting so the fetch below still uses the right value.
+  const ratingToSave = selectedRating;
+
+  // Close and reset immediately so the UI feels instant.
+  resetReviewInputs();
+  closeReviewPanel();
+
   try {
     const response = await fetch("/api/reviews", {
       method: "POST",
@@ -4099,7 +4106,7 @@ async function saveCurrentReview() {
           name: userName,
           photoDataUrl: String(sessionState.currentUser?.photoDataUrl || "").trim(),
           text,
-          rating: selectedRating,
+          rating: ratingToSave,
           createdAt: new Date().toISOString()
         }
       })
@@ -4110,8 +4117,6 @@ async function saveCurrentReview() {
     }
 
     await response.json();
-    resetReviewInputs();
-    closeReviewPanel();
     void fetchCurrentSongReviews();
   } catch {
     showReviewStatus("No se pudo guardar la reseña.");
@@ -4390,14 +4395,13 @@ function startNowPlayingPolling() {
   const refresh = () => {
     loadNowPlaying()
       .then((data) => {
-        const isActive = !!(data && data.albumTitle && data.coverUrl);
-        if (lastKnownPartyActive && !isActive) {
-          void handlePartyJustEnded();
-        }
-        lastKnownPartyActive = isActive;
+        // Party is active as long as the file exists
+        // Only consider it ended if the file is deleted (404 error caught below)
+        lastKnownPartyActive = true;
         renderNowPlaying(data);
       })
       .catch(() => {
+        // File doesn't exist (404) - party has been ended by admin or server shutdown
         if (lastKnownPartyActive) {
           void handlePartyJustEnded();
         }

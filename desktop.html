@@ -800,10 +800,10 @@
           // Push along minimum-overlap axis of the cover rect
           let nx = 0, ny = 0;
           const m = Math.min(ovL, ovR, ovT, ovB);
-          if (m === ovL) nx =  1;
-          else if (m === ovR) nx = -1;
-          else if (m === ovT) ny =  1;
-          else ny = -1;
+          if (m === ovL) nx = -1;      // bubble came from the left  → push left
+          else if (m === ovR) nx =  1; // bubble came from the right → push right
+          else if (m === ovT) ny = -1; // bubble came from above     → push up
+          else ny =  1;                // bubble came from below     → push down
           e.x += nx * penC; e.y += ny * penC;
           const dot = e.vx * nx + e.vy * ny;
           if (dot < 0) { e.vx -= 2 * dot * nx; e.vy -= 2 * dot * ny; }
@@ -839,12 +839,21 @@
         for (let i = 0; i < active.length; i++) {
           for (let j = i + 1; j < active.length; j++) {
             const a = active[i], b = active[j];
-            const dx = b.x - a.x, dy = b.y - a.y;
-            const dist = Math.hypot(dx, dy) || 0.01;
-            const min = a.r + b.r;
-            if (dist >= min) continue;
-            const nx = dx/dist, ny = dy/dist;
-            const ov = (min - dist) * 0.5;
+            const ahw = a.hw || a.r, ahh = a.hh || a.r;
+            const bhw = b.hw || b.r, bhh = b.hh || b.r;
+            const adx = Math.abs(b.x - a.x), ady = Math.abs(b.y - a.y);
+            const minX = ahw + bhw, minY = ahh + bhh;
+            if (adx >= minX || ady >= minY) continue;
+            // Resolve along the axis with least penetration
+            const ovX = minX - adx, ovY = minY - ady;
+            let nx = 0, ny = 0, ov = 0;
+            if (ovX <= ovY) {
+              nx = b.x > a.x ? 1 : -1;
+              ov = ovX * 0.5;
+            } else {
+              ny = b.y > a.y ? 1 : -1;
+              ov = ovY * 0.5;
+            }
             a.x -= nx*ov; a.y -= ny*ov;
             b.x += nx*ov; b.y += ny*ov;
             const imp = (a.vx-b.vx)*nx + (a.vy-b.vy)*ny;
@@ -852,8 +861,8 @@
               a.vx -= imp*nx; a.vy -= imp*ny;
               b.vx += imp*nx; b.vy += imp*ny;
             }
-            a.el.style.left = `${a.x - (a.hw||a.r)}px`; a.el.style.top = `${a.y - (a.hh||a.r)}px`;
-            b.el.style.left = `${b.x - (b.hw||b.r)}px`; b.el.style.top = `${b.y - (b.hh||b.r)}px`;
+            a.el.style.left = `${a.x - ahw}px`; a.el.style.top = `${a.y - ahh}px`;
+            b.el.style.left = `${b.x - bhw}px`; b.el.style.top = `${b.y - bhh}px`;
           }
         }
       }
