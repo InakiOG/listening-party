@@ -424,7 +424,7 @@
           var(--disc-color);
         box-shadow: 0 0 0 3px var(--disc-border-color), 0 12px 40px rgba(0,0,0,0.6);
         z-index: 1;
-        animation: spinDisc 2.2s linear infinite;
+        animation: spinDisc var(--np-spin-primary, 2.2s) linear infinite;
       }
 
       .vinyl-disc.clear-vinyl {
@@ -453,7 +453,7 @@
         transform: translateY(-50%) scale(0.92);
         z-index: 0;
         opacity: 0;
-        animation: spinDiscSecondary 2.9s linear infinite reverse;
+        animation: spinDiscSecondary var(--np-spin-secondary, 2.9s) linear infinite reverse;
         transition: opacity 0.4s ease;
       }
 
@@ -1314,28 +1314,31 @@
 
       function applyDiscVisual(data) {
         const meta = findAlbumMeta(data.albumTitle, data.albumArtist);
-        const discType       = meta?.discType === 'cd' ? 'cd' : 'vinyl';
-        const primaryColor   = String(meta?.vinylColor || '#0b0b0b').trim() || '#0b0b0b';
+        const discType = meta?.discType === 'cd' ? 'cd' : 'vinyl';
+        const primaryColor = String(meta?.vinylColor || '#0b0b0b').trim() || '#0b0b0b';
         const secondaryColor = String(meta?.vinylColorSecondary || '').trim();
-        const discCount      = Number(meta?.discCount || 1);
-        const showSecond     = discCount > 1 || Boolean(secondaryColor);
-        const isClear        = discType === 'vinyl' && Boolean(meta?.isClearVinyl);
+        const discCount = Number(meta?.discCount || 1);
+        const showSecond = discCount > 1 || Boolean(secondaryColor);
+        const isClear = discType === 'vinyl' && Boolean(meta?.isClearVinyl);
 
         const scope = data.reviewScope === 'album' ? 'album' : 'song';
-        npDisc.style.animationDuration    = scope === 'album' ? '3.8s' : '1.9s';
-        npDiscSec.style.animationDuration = scope === 'album' ? '5.3s' : '2.7s';
+        const playScreen = document.getElementById('playing-screen');
+        if (playScreen) {
+          playScreen.style.setProperty('--np-spin-primary', scope === 'album' ? '3.8s' : '1.9s');
+          playScreen.style.setProperty('--np-spin-secondary', scope === 'album' ? '5.3s' : '2.7s');
+        }
 
         npDisc.style.setProperty('--disc-color', primaryColor);
         npDiscSec.style.setProperty('--disc-color', secondaryColor || primaryColor);
 
-        npDisc.classList.toggle('cd-disc',     discType === 'cd');
-        npDiscSec.classList.toggle('cd-disc',  discType === 'cd');
-        npDisc.classList.toggle('clear-vinyl',    isClear);
+        npDisc.classList.toggle('cd-disc', discType === 'cd');
+        npDiscSec.classList.toggle('cd-disc', discType === 'cd');
+        npDisc.classList.toggle('clear-vinyl', isClear);
         npDiscSec.classList.toggle('clear-vinyl', isClear);
         npDiscSec.classList.toggle('visible', showSecond);
 
         const coverUrl = String(data.coverUrl || '').trim();
-        applyDiscStyle(npDisc,    discType, isClear, primaryColor,              coverUrl);
+        applyDiscStyle(npDisc, discType, isClear, primaryColor, coverUrl);
         applyDiscStyle(npDiscSec, discType, isClear, secondaryColor || primaryColor, coverUrl);
       }
 
