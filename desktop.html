@@ -644,10 +644,16 @@
           const scope = review.scope === 'album' ? 'album' : 'song';
           const key = `${scope}::${getReviewerKey(review.name)}`;
           if (!grouped.has(key)) {
-            grouped.set(key, { key, scope, displayName: (review.name || 'Anonymous').trim(), reviews: [], reviewApiKey: review._reviewKey || '' });
+            const songTitle = scope === 'song'
+              ? (review._songTitle || review._reviewKey?.split('::').slice(1).join('::') || '')
+              : '';
+            grouped.set(key, { key, scope, displayName: (review.name || 'Anonymous').trim(), songTitle, reviews: [], reviewApiKey: review._reviewKey || '' });
           }
           const g = grouped.get(key);
           if (!g.reviewApiKey && review._reviewKey) g.reviewApiKey = review._reviewKey;
+          if (scope === 'song' && !g.songTitle) {
+            g.songTitle = review._songTitle || review._reviewKey?.split('::').slice(1).join('::') || '';
+          }
           g.reviews.push({ ...review, scope });
         }
         return Array.from(grouped.values()).map(g => {
@@ -929,7 +935,8 @@
         const currentHtml = groups.map(g => {
           const id = encodeURIComponent(g.key);
           const name = esc(g.displayName);
-          const scopeLabel = g.scope === 'album' ? 'Album' : 'Cancion';
+          const rawSongTitle = g.songTitle ? g.songTitle.replace(/ - \d+:\d+$/, '') : '';
+          const scopeLabel = g.scope === 'album' ? 'Album' : (rawSongTitle ? esc(rawSongTitle) : 'Cancion');
           const bubbleClass = g.scope === 'album' ? 'album-review' : 'song-review';
 
           // Header: avatar badge or plain name
@@ -980,25 +987,39 @@
           </article>`;
         }).join('');
 
-        let pastHtml = '';
-        if (pastReviews.length) {
-          const sorted = [...pastReviews].sort((a,b) => (Date.parse(a.createdAt)||0)-(Date.parse(b.createdAt)||0));
-          const pastItems = sorted.map(r => {
+        function buildPastBubble(id, label, reviews) {
+          const sorted = [...reviews].sort((a,b) => (Date.parse(a.createdAt)||0)-(Date.parse(b.createdAt)||0));
+          const items = sorted.map(r => {
             const author = esc(String(r.name||'Anonymous').trim());
             const text = String(r.text||'').trim();
-            const scope = r.scope === 'album' ? 'Album' : 'Canción';
             return `<li class="review-history-item">
-              <p class="review-history-meta"><span class="past-review-author">${author}</span> · ${scope} · ${Number(r.rating||0).toFixed(1)}/5</p>
+              <p class="review-history-meta"><span class="past-review-author">${author}</span> · ${Number(r.rating||0).toFixed(1)}/5</p>
               ${text ? `<p class="review-history-text">${esc(text)}</p>` : ''}
             </li>`;
           }).join('');
-          pastHtml = `<article class="review-bubble past-reviews-bubble" data-review-id="${encodeURIComponent('past-reviews')}" style="left:0;top:0;">
+          return `<article class="review-bubble past-reviews-bubble" data-review-id="${encodeURIComponent(id)}" style="left:0;top:0;">
             <div class="review-bubble-summary">
-              <span class="review-bubble-name past-reviews-title">Anteriores</span>
-              <span class="past-reviews-count">${pastReviews.length}</span>
+              <span class="review-bubble-name past-reviews-title">${esc(label)}</span>
+              <span class="past-reviews-count">${reviews.length}</span>
             </div>
-            <ol class="review-history-list">${pastItems}</ol>
+            <ol class="review-history-list">${items}</ol>
           </article>`;
+        }
+
+        let pastHtml = '';
+        if (pastReviews.length) {
+          const pastAlbum = pastReviews.filter(r => r.scope === 'album');
+          const pastSongMap = new Map();
+          for (const r of pastReviews.filter(r => r.scope === 'song')) {
+            const title = r._songTitle || r._reviewKey?.split('::').slice(1).join('::') || 'Canción';
+            if (!pastSongMap.has(title)) pastSongMap.set(title, []);
+            pastSongMap.get(title).push(r);
+          }
+          if (pastAlbum.length) pastHtml += buildPastBubble('past-reviews-album', 'Anteriores · Album', pastAlbum);
+          for (const [songTitle, revs] of pastSongMap) {
+            const displayTitle = songTitle.replace(/ - \d+:\d+$/, '');
+            pastHtml += buildPastBubble(`past-reviews-song::${songTitle}`, `Ant. · ${displayTitle}`, revs);
+          }
         }
 
         layer.innerHTML = pastHtml + currentHtml;
@@ -1031,6 +1052,18 @@
         }
       }
 
+      async function fetchAllReviewsForAlbum(albumTitle) {
+        if (!albumTitle) return {};
+        try {
+          const r = await fetch(`/api/reviews?albumTitle=${encodeURIComponent(albumTitle)}&t=${Date.now()}`, { cache: 'no-store' });
+          if (!r.ok) throw new Error();
+          const p = await r.json();
+          return (p.reviewsByKey && typeof p.reviewsByKey === 'object') ? p.reviewsByKey : {};
+        } catch {
+          return {};
+        }
+      }
+
       async function pollReviews() {
         if (document.hidden || reviewsInFlight) return;
         reviewsInFlight = true;
@@ -1045,17 +1078,31 @@
         const songKey = getSongKey(np);
         const albumKey = getAlbumKey(np);
 
-        // Fetch both album and current song reviews to capture reviews from individual song selections in album mode
         try {
-          const [albumRevs, songRevs] = await Promise.all([
-            fetchReviews(albumKey),
-            songKey ? fetchReviews(songKey) : Promise.resolve([])
-          ]);
+          let all = [];
 
-          const all = [
-            ...albumRevs.map(r => ({ ...r, scope: 'album', _reviewKey: albumKey })),
-            ...songRevs.map(r => ({ ...r, scope: 'song', _reviewKey: songKey }))
-          ];
+          if (scope === 'album') {
+            // Fetch all reviews for the album (album-level + every song) in one call
+            const reviewsByKey = await fetchAllReviewsForAlbum(np.albumTitle);
+            for (const [key, reviews] of Object.entries(reviewsByKey)) {
+              if (!Array.isArray(reviews)) continue;
+              if (key === albumKey || key.startsWith('album::')) {
+                all.push(...reviews.map(r => ({ ...r, scope: 'album', _reviewKey: key })));
+              } else {
+                const songTitle = key.split('::').slice(1).join('::');
+                all.push(...reviews.map(r => ({ ...r, scope: 'song', _reviewKey: key, _songTitle: songTitle })));
+              }
+            }
+          } else {
+            const [albumRevs, songRevs] = await Promise.all([
+              fetchReviews(albumKey),
+              songKey ? fetchReviews(songKey) : Promise.resolve([])
+            ]);
+            all = [
+              ...albumRevs.map(r => ({ ...r, scope: 'album', _reviewKey: albumKey })),
+              ...songRevs.map(r => ({ ...r, scope: 'song', _reviewKey: songKey, _songTitle: np.songTitle }))
+            ];
+          }
 
           const partyId = np.partyId || null;
           const current = partyId ? all.filter(r => r.partyId === partyId) : all;

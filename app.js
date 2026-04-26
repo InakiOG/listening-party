@@ -3193,6 +3193,40 @@ async function fetchReviewsForKey(reviewKey) {
   }
 }
 
+async function fetchAllReviewsForAlbum(albumTitle) {
+  if (!albumTitle) return {};
+  try {
+    const response = await fetch(`/api/reviews?albumTitle=${encodeURIComponent(albumTitle)}&t=${Date.now()}`, {
+      cache: "no-store"
+    });
+    if (!response.ok) return {};
+    const payload = await response.json();
+    return payload.reviewsByKey && typeof payload.reviewsByKey === "object" ? payload.reviewsByKey : {};
+  } catch {
+    try {
+      const response = await fetch(`./reviews-db.json?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) return {};
+      const store = await response.json();
+      if (!store || typeof store !== "object") return {};
+      const albumTitleLower = albumTitle.toLowerCase();
+      const result = {};
+      for (const [key, reviews] of Object.entries(store)) {
+        if (!Array.isArray(reviews)) continue;
+        const keyStr = String(key);
+        if (keyStr.includes("::") && !keyStr.startsWith("album::")) {
+          if (keyStr.split("::")[0].trim().toLowerCase() === albumTitleLower) result[key] = reviews;
+        } else if (keyStr.startsWith("album::")) {
+          const segs = keyStr.split("::");
+          if (segs[segs.length - 1].trim().toLowerCase() === albumTitleLower) result[key] = reviews;
+        }
+      }
+      return result;
+    } catch {
+      return {};
+    }
+  }
+}
+
 async function getUserPhotoByName(name) {
   const normalizedName = normalizeUserName(name);
 
@@ -3309,33 +3343,33 @@ async function fetchCurrentSongReviews() {
   }
 
   try {
-    // Build list of keys to fetch
-    const keysToFetch = [albumKey];
-    
-    if (reviewScope === "song" && songKey) {
-      keysToFetch.push(songKey);
-    } else if (reviewScope === "album" && selectedSongForReview) {
-      // When in album mode but a specific song is selected for review, also fetch that song's reviews
-      const selectedSongKey = getSongKey({ ...currentNowPlaying, songTitle: selectedSongForReview });
-      if (selectedSongKey && selectedSongKey !== albumKey) {
-        keysToFetch.push(selectedSongKey);
-      }
-    }
-
-    const results = await Promise.all(keysToFetch.map((key) => fetchReviewsForKey(key)));
-    console.log("Fetched reviews:", { keysToFetch, results, selectedSongForReview });
-
     const rawItems = [];
-    for (let i = 0; i < results.length; i++) {
-      const reviews = results[i];
-      const key = keysToFetch[i];
-      
-      if (key === albumKey) {
-        rawItems.push(...reviews.map((r) => ({ ...r, scope: "album", _reviewKey: albumKey })));
-      } else {
-        // Song reviews
-        const songTitle = key === songKey ? currentNowPlaying.songTitle : selectedSongForReview;
-        rawItems.push(...reviews.map((r) => ({ ...r, scope: "song", _reviewKey: key, _songTitle: songTitle })));
+
+    if (reviewScope === "album") {
+      // Fetch all reviews for the album (album-level + every song) in one call
+      const reviewsByKey = await fetchAllReviewsForAlbum(currentNowPlaying?.albumTitle || "");
+      for (const [key, reviews] of Object.entries(reviewsByKey)) {
+        if (!Array.isArray(reviews)) continue;
+        if (key === albumKey || key.startsWith("album::")) {
+          rawItems.push(...reviews.map((r) => ({ ...r, scope: "album", _reviewKey: key })));
+        } else {
+          const songTitle = key.split("::").slice(1).join("::");
+          rawItems.push(...reviews.map((r) => ({ ...r, scope: "song", _reviewKey: key, _songTitle: songTitle })));
+        }
+      }
+    } else {
+      // Song mode: fetch album key + the specific song key
+      const keysToFetch = [albumKey];
+      if (songKey) keysToFetch.push(songKey);
+      const results = await Promise.all(keysToFetch.map((key) => fetchReviewsForKey(key)));
+      for (let i = 0; i < results.length; i++) {
+        const reviews = results[i];
+        const key = keysToFetch[i];
+        if (key === albumKey) {
+          rawItems.push(...reviews.map((r) => ({ ...r, scope: "album", _reviewKey: albumKey })));
+        } else {
+          rawItems.push(...reviews.map((r) => ({ ...r, scope: "song", _reviewKey: key, _songTitle: currentNowPlaying.songTitle })));
+        }
       }
     }
 

@@ -1313,7 +1313,44 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/reviews":
             params = parse_qs(parsed.query)
             song_key = (params.get("songKey", [""])[0] or "").strip()
+            album_title_param = (params.get("albumTitle", [""])[0] or "").strip()
             party_id_filter = (params.get("partyId", [""])[0] or "").strip()
+
+            # Album-wide fetch: return all reviews (album-level + every song) for the album
+            if album_title_param and not song_key:
+                cache_key = f"reviews::album_title::{album_title_param}"
+                cached_payload = _read_cache_get(cache_key)
+                if cached_payload is not None:
+                    self._send_json(cached_payload)
+                    return
+
+                with REVIEWS_LOCK:
+                    store = read_reviews_store()
+
+                album_title_lower = album_title_param.lower()
+                reviews_by_key = {}
+                for key, review_list in store.items():
+                    if not isinstance(review_list, list):
+                        continue
+                    key_str = str(key)
+                    include = False
+                    # Song review key: "AlbumTitle::SongTitle"
+                    if "::" in key_str and not key_str.startswith("album::"):
+                        if key_str.split("::", 1)[0].strip().lower() == album_title_lower:
+                            include = True
+                    # Album review key: "album::artist::AlbumTitle"
+                    elif key_str.startswith("album::"):
+                        segments = key_str.split("::")
+                        if segments and segments[-1].strip().lower() == album_title_lower:
+                            include = True
+                    if include:
+                        reviews_by_key[key_str] = review_list
+
+                response_payload = {"albumTitle": album_title_param, "reviewsByKey": reviews_by_key}
+                _read_cache_set(cache_key, response_payload, _READ_CACHE_TTLS_SECONDS["reviews"])
+                self._send_json(response_payload)
+                return
+
             cache_key = f"reviews::{song_key}::party::{party_id_filter}"
             cached_payload = _read_cache_get(cache_key)
             if cached_payload is not None:
