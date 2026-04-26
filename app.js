@@ -337,6 +337,7 @@ function showAuthOverlay(message = "") {
     overlay.hidden = false;
   }
   setAuthStatus(message);
+  updateScrollTopButtonVisibility();
 }
 
 function hideAuthOverlay() {
@@ -345,6 +346,66 @@ function hideAuthOverlay() {
     overlay.hidden = true;
   }
   setAuthStatus("");
+  updateScrollTopButtonVisibility();
+}
+
+let scrollTopButtonTicking = false;
+
+function updateScrollTopButtonVisibility() {
+  const button = document.getElementById("scroll-top-button");
+  const mainView = document.getElementById("main-view");
+  const authOverlay = document.getElementById("auth-overlay");
+  const mainScroller = document.querySelector("main");
+
+  if (!button) {
+    return;
+  }
+
+  const scrollTop = mainScroller ? mainScroller.scrollTop : window.scrollY;
+
+  const shouldShow =
+    Boolean(mainView) &&
+    !mainView.hidden &&
+    (!authOverlay || authOverlay.hidden) &&
+    scrollTop > 260;
+
+  button.hidden = !shouldShow;
+}
+
+function setupScrollTopButton() {
+  const button = document.getElementById("scroll-top-button");
+  const mainScroller = document.querySelector("main");
+  if (!button) {
+    return;
+  }
+
+  const requestVisibilityUpdate = () => {
+    if (scrollTopButtonTicking) {
+      return;
+    }
+    scrollTopButtonTicking = true;
+    window.requestAnimationFrame(() => {
+      scrollTopButtonTicking = false;
+      updateScrollTopButtonVisibility();
+    });
+  };
+
+  button.addEventListener("click", () => {
+    if (mainScroller) {
+      mainScroller.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  if (mainScroller) {
+    mainScroller.addEventListener("scroll", requestVisibilityUpdate, { passive: true });
+  } else {
+    window.addEventListener("scroll", requestVisibilityUpdate, { passive: true });
+  }
+  window.addEventListener("resize", requestVisibilityUpdate);
+  document.addEventListener("visibilitychange", requestVisibilityUpdate);
+  requestVisibilityUpdate();
 }
 
 function readFileAsDataUrl(file) {
@@ -1607,6 +1668,7 @@ function showMainView() {
   if (partyRecordsView) partyRecordsView.hidden = true;
   if (usersBoardView) usersBoardView.hidden = true;
   if (myPartiesView) myPartiesView.hidden = true;
+  updateScrollTopButtonVisibility();
 }
 
 function openProfileView() {
@@ -1624,6 +1686,7 @@ function openProfileView() {
   if (usersBoardView) usersBoardView.hidden = true;
   if (myPartiesView) myPartiesView.hidden = true;
   renderProfileAlbums();
+  updateScrollTopButtonVisibility();
 }
 
 function renderMyReviews(reviews) {
@@ -1920,6 +1983,7 @@ async function openPartyRecordsView() {
   if (profileView) profileView.hidden = true;
   if (partyRecordsView) partyRecordsView.hidden = false;
   if (myPartiesView) myPartiesView.hidden = true;
+  updateScrollTopButtonVisibility();
 
   const list = document.getElementById("party-records-list");
   if (list) list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">Cargando...</p>";
@@ -1951,6 +2015,7 @@ async function openMyPartiesView() {
   if (partyRecordsView) partyRecordsView.hidden = true;
   if (usersBoardView) usersBoardView.hidden = true;
   if (myPartiesView) myPartiesView.hidden = false;
+  updateScrollTopButtonVisibility();
 
   const list = document.getElementById("my-parties-list");
   if (list) list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">Cargando...</p>";
@@ -2151,6 +2216,7 @@ async function openUsersBoardView() {
   if (partyRecordsView) partyRecordsView.hidden = true;
   if (myPartiesView) myPartiesView.hidden = true;
   if (usersBoardView) usersBoardView.hidden = false;
+  updateScrollTopButtonVisibility();
 
   const list = document.getElementById("users-board-list");
   if (list) list.innerHTML = "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0\">Cargando...</p>";
@@ -2184,6 +2250,7 @@ async function openMyReviewsView() {
     if (profileView) profileView.hidden = true;
     if (myPartiesView) myPartiesView.hidden = true;
     if (reviewsView) reviewsView.hidden = false;
+    updateScrollTopButtonVisibility();
   } catch (error) {
     showReviewStatus(error instanceof Error ? error.message : "No se pudieron cargar tus reseñas.");
   }
@@ -5320,6 +5387,7 @@ function startSessionWatchdog() {
   setupAuthInteractions();
   setupAddAlbumModal();
   setupLogoGravity();
+  setupScrollTopButton();
   startNowPlayingPolling();
   startReviewPolling();
   startActiveUsersPolling();
