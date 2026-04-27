@@ -308,16 +308,32 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 1.5rem;
         opacity: 1;
         transition: opacity 0.5s ease;
+        overflow: hidden;
       }
 
       #idle-screen.hidden {
         opacity: 0;
         pointer-events: none;
         position: absolute;
+      }
+
+      #vinyl-shelf {
+        position: relative;
+        width: calc(100vw - 4rem);
+        height: 120px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        pointer-events: none;
       }
 
       .idle-logo-wrap {
@@ -355,6 +371,114 @@
         letter-spacing: 0.05em;
         color: #94a3b8;
         text-transform: uppercase;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── VINYL SHELF ── */
+      .vinyl-shelf {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        margin-top: 2rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        display: flex;
+        align-items: flex-end;
+        gap: 0;
+        padding: 0 2rem;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0.6) 100%);
+        border-top: 2px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+      }
+
+      /* ── VINYL SHELF ── */
+      .vinyl-shelf {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        pointer-events: none;
+      }
+
+      .vinyl-spine {
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        position: relative;
+        overflow: hidden;
+        cursor: default;
+        transition: none;
+        background-size: 5000% 100%;
+        background-position: 100% center;
+        background-repeat: no-repeat;
+        border: none;
+        pointer-events: none;
+      }
+
+      .vinyl-spine:hover {
+        flex: 1;
+        z-index: auto;
+        transform: none;
+      }
+
+      .vinyl-spine-label {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+        padding: 0.4rem;
+        background: rgba(0, 0, 0, 0.6);
+        color: #e2e8f0;
+        font-size: 0.55rem;
+        font-weight: 600;
+        text-align: center;
+        line-height: 1.2;
+        word-break: break-word;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .vinyl-spine-label span {
+        display: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+      }
+
+      .vinyl-spine-label span:first-child {
+        font-weight: 700;
+        color: #7dd3fc;
+        font-size: 0.5rem;
+      }
+
+      .vinyl-spine-label span:last-child {
+        font-size: 0.48rem;
+        color: #cbd5e1;
+      }
+
+      .vinyl-spine:hover .vinyl-spine-label {
+        opacity: 0;
       }
 
       /* ── NOW PLAYING STATE ── */
@@ -585,6 +709,7 @@
         <span class="idle-logo-text">Listening Party</span>
       </div>
       <h1 class="idle-title">Listening Party</h1>
+      <div id="vinyl-shelf" class="vinyl-shelf" hidden></div>
     </div>
 
     <!-- Playing: shown when a record is on -->
@@ -1188,6 +1313,10 @@
             const descriptor = buildReleaseDescriptor(item);
             const [vinylColor, vinylColorSecondary] = detectVinylColors(descriptor);
             const meta = {
+              title: item.title || '',
+              artist: item.artist || '',
+              year: item.year || 0,
+              imageUrl: item.imageUrl || '',
               vinylColor,
               vinylColorSecondary,
               discType:    detectDiscType(descriptor),
@@ -1376,6 +1505,58 @@
 
         idleScreen.classList.add('hidden');
         playScreen.classList.add('visible');
+        const shelf = document.getElementById('vinyl-shelf');
+        if (shelf) shelf.setAttribute('hidden', '');
+      }
+
+      function populateVinylShelf() {
+        const shelf = document.getElementById('vinyl-shelf');
+        if (!shelf || !albumCollection || albumCollection.size === 0) return;
+
+        shelf.innerHTML = '';
+
+        // Collect all albums from the collection
+        const albums = [];
+        for (const [key, meta] of albumCollection.entries()) {
+          albums.push({
+            title: meta.title,
+            artist: meta.artist,
+            year: meta.year,
+            meta
+          });
+        }
+
+        // Sort by artist (alphabetically), then by year (chronologically)
+        albums.sort((a, b) => {
+          const artistCmp = a.artist.localeCompare(b.artist);
+          if (artistCmp !== 0) return artistCmp;
+          return a.year - b.year;
+        });
+
+        // Create vinyl spine elements
+        for (const album of albums) {
+          const spine = document.createElement('div');
+          spine.className = 'vinyl-spine';
+          
+          // Set background image to show the rightmost edge of the cover (2%)
+          const imageUrl = album.meta.imageUrl || '';
+          if (imageUrl) {
+            spine.style.backgroundImage = `url(${imageUrl})`;
+          }
+
+          // Create label with proper text wrapping
+          const label = document.createElement('div');
+          label.className = 'vinyl-spine-label';
+          label.innerHTML = `<span>${esc(album.artist)}</span><span>${esc(album.title)}</span>`;
+          spine.appendChild(label);
+
+          shelf.appendChild(spine);
+        }
+
+        // Show the shelf if there are albums
+        if (albums.length > 0) {
+          shelf.removeAttribute('hidden');
+        }
       }
 
       function showIdle() {
@@ -1387,6 +1568,7 @@
         playScreen.classList.remove('visible');
         renderReviews([], []);
         clearFunFacts();
+        populateVinylShelf();
       }
 
       async function pollNowPlaying() {
