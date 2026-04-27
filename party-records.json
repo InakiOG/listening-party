@@ -1142,6 +1142,26 @@
         }
       ],
       "reviews": []
+    },
+    {
+      "id": "2026-04-27T22:10:55.128771+00:00",
+      "date": "2026-04-27T22:10:55.128771+00:00",
+      "startedAt": "2026-04-27T22:10:55.128771+00:00",
+      "savedAt": "2026-04-27T22:26:52.112490+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Future Past",
+          "artist": "Duran Duran",
+          "coverUrl": "https://i.discogs.com/o7uM7QirUKJHpJZcH2yD4ppHbqKDjX5KDREWl-D_mKI/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIwNjg2/NTA0LTE2MzQ5MzUx/ODgtNzU0Mi5qcGVn.jpeg"
+        }
+      ],
+      "reviews": [],
+      "endedAt": "2026-04-27T22:26:52.112490+00:00",
+      "finalizedAt": "2026-04-27T22:26:52.112490+00:00"
     }
   ]
 }
