@@ -322,18 +322,22 @@
       }
 
       #vinyl-shelf {
-        position: relative;
-        width: calc(100vw - 4rem);
-        height: 120px;
+        position: fixed;
+        bottom: 1.5rem;
+        left: 2rem;
+        right: 2rem;
+        width: auto;
+        height: 260px;
         overflow: hidden;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 4px;
         padding: 0;
         background: transparent;
         border: none;
         box-shadow: none;
         pointer-events: none;
+        z-index: 20;
       }
 
       .idle-logo-wrap {
@@ -639,6 +643,23 @@
 
       .track-thanks[hidden] { display: none; }
 
+      /* ── Top title ── */
+      #top-title {
+        position: fixed;
+        top: 1.2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        font-size: clamp(1rem, 1.6vw, 1.5rem);
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(248, 250, 252, 0.7);
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+      }
+
       /* ── Fullscreen button ── */
       #fs-btn {
         position: fixed;
@@ -692,6 +713,25 @@
         text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
         animation: bubble-float var(--dur) ease-in-out var(--delay) infinite;
       }
+
+      /* ── Collection ↔ Now-playing transition ── */
+      .vinyl-spine {
+        transition: opacity 0.7s ease, filter 0.7s ease;
+      }
+      .vinyl-spine.shelf-fade {
+        opacity: 0 !important;
+        filter: blur(4px);
+      }
+
+      #flying-album {
+        position: fixed;
+        z-index: 50;
+        pointer-events: none;
+        object-fit: cover;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+        will-change: left, top, width, height;
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -700,15 +740,15 @@
     <div id="active-users-layer" aria-hidden="true"></div>
     <div id="bubble-layer" aria-hidden="true"></div>
 
+    <div id="top-title">Listening Party</div>
     <button id="fs-btn" title="Fullscreen" aria-label="Toggle fullscreen">⛶</button>
+    <img id="flying-album" alt="" />
 
     <!-- Idle: shown when nothing is playing -->
     <div id="idle-screen">
       <div class="idle-logo-wrap">
         <img src="./graff.png" alt="Listening Party" class="idle-logo" />
-        <span class="idle-logo-text">Listening Party</span>
       </div>
-      <h1 class="idle-title">Listening Party</h1>
       <div id="vinyl-shelf" class="vinyl-shelf" hidden></div>
     </div>
 
@@ -1160,6 +1200,20 @@
       /* ─────────────── data fetching ─────────────── */
       let currentNowPlaying = null;
       let lastNpSig = '';
+      let displayState = 'idle'; // 'idle' | 'transitioning-in' | 'playing' | 'transitioning-out'
+      let lastPlayingSpineKey = '';
+      let lastCoverSrc = '';
+      let shelfCollectionSig = '';
+      const flyingAlbum = document.getElementById('flying-album');
+
+      function getCenterTargetRect() {
+        const coverSize = Math.max(220, Math.min(380, 0.28 * window.innerWidth));
+        return {
+          left: (window.innerWidth  - coverSize) / 2,
+          top:  (window.innerHeight - coverSize) / 2,
+          width: coverSize, height: coverSize
+        };
+      }
 
       function getSongKey(np) {
         if (!np?.albumTitle || !np?.songTitle) return '';
@@ -1471,29 +1525,114 @@
         applyDiscStyle(npDiscSec, discType, isClear, secondaryColor || primaryColor, coverUrl);
       }
 
-      function showPlaying(data) {
-        const coverUrl = String(data.coverUrl || '').trim() || albumCoverFallbackUrl;
-        const sig = `${data.albumTitle}|${data.songTitle}|${coverUrl}`;
-        const changed = sig !== lastNpSig;
-        lastNpSig = sig;
+      function revealPlayScreen() {
+        // Crossfade: playing screen fades in while flying album fades out
+        idleScreen.classList.add('hidden');
+        playScreen.style.opacity = '0';
+        playScreen.classList.add('visible');
+        void playScreen.offsetWidth;
+        playScreen.style.transition = 'opacity 0.35s ease';
+        playScreen.style.opacity = '1';
+        flyingAlbum.style.transition = 'opacity 0.35s ease';
+        flyingAlbum.style.opacity = '0';
+        setTimeout(() => {
+          playScreen.style.transition = '';
+          playScreen.style.opacity = '';
+          flyingAlbum.style.display = 'none';
+          flyingAlbum.style.opacity = '1';
+        }, 400);
+      }
 
+      function flyInFromSpine(spineEl, shelf, coverUrl, onDone) {
+        const spineRect = spineEl.getBoundingClientRect();
+        const targetRect = getCenterTargetRect();
+
+        for (const s of shelf.querySelectorAll('.vinyl-spine')) {
+          if (s !== spineEl) s.classList.add('shelf-fade');
+        }
+        spineEl.style.opacity = '0';
+
+        Object.assign(flyingAlbum.style, {
+          display: 'block', left: spineRect.left + 'px', top: spineRect.top + 'px',
+          width: spineRect.width + 'px', height: spineRect.height + 'px',
+          borderRadius: '2px', opacity: '1', transition: 'none'
+        });
+        flyingAlbum.src = coverUrl;
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const tr = 'cubic-bezier(0.22,1,0.36,1) 1.5s';
+          flyingAlbum.style.transition = `left ${tr}, top ${tr}, width ${tr}, height ${tr}, border-radius ${tr}`;
+          Object.assign(flyingAlbum.style, {
+            left: targetRect.left + 'px', top: targetRect.top + 'px',
+            width: targetRect.width + 'px', height: targetRect.height + 'px',
+            borderRadius: '0.75rem'
+          });
+        }));
+
+        setTimeout(() => {
+          spineEl.style.opacity = '';
+          shelf.setAttribute('hidden', '');
+          for (const s of shelf.querySelectorAll('.vinyl-spine')) s.classList.remove('shelf-fade');
+          onDone();
+        }, 1560);
+      }
+
+      function flyOutToSpine(spineEl, shelf, coverSrc, onDone) {
+        const coverRect = npCover.getBoundingClientRect();
+
+        idleScreen.classList.remove('hidden');
+        shelf.removeAttribute('hidden');
+        shelf.style.opacity = '0';
+        shelf.style.transition = 'none';
+        for (const s of shelf.querySelectorAll('.vinyl-spine')) s.style.opacity = '0';
+        const spineRect = spineEl.getBoundingClientRect();
+
+        playScreen.classList.remove('visible');
+
+        Object.assign(flyingAlbum.style, {
+          display: 'block', left: coverRect.left + 'px', top: coverRect.top + 'px',
+          width: coverRect.width + 'px', height: coverRect.height + 'px',
+          borderRadius: '0.75rem', opacity: '1', transition: 'none'
+        });
+        flyingAlbum.src = coverSrc;
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const tr = 'cubic-bezier(0.55,0,1,0.45) 0.9s';
+          flyingAlbum.style.transition = `left ${tr}, top ${tr}, width ${tr}, height ${tr}, border-radius ${tr}, opacity 0.4s ease 0.65s`;
+          Object.assign(flyingAlbum.style, {
+            left: spineRect.left + 'px', top: spineRect.top + 'px',
+            width: spineRect.width + 'px', height: spineRect.height + 'px',
+            borderRadius: '2px', opacity: '0'
+          });
+          shelf.style.transition = 'opacity 0.6s ease 0.3s';
+          shelf.style.opacity = '1';
+          setTimeout(() => {
+            for (const s of shelf.querySelectorAll('.vinyl-spine')) {
+              if (s !== spineEl) { s.style.transition = 'opacity 0.5s ease'; s.style.opacity = '1'; }
+            }
+          }, 320);
+        }));
+
+        setTimeout(() => {
+          flyingAlbum.style.display = 'none';
+          flyingAlbum.style.opacity = '1';
+          shelf.style.opacity = '';
+          shelf.style.transition = '';
+          for (const s of shelf.querySelectorAll('.vinyl-spine')) { s.style.opacity = ''; s.style.transition = ''; }
+          onDone();
+        }, 1100);
+      }
+
+      function applyPlayingContent(data, coverUrl) {
         ambientBg.style.backgroundImage = `url(${coverUrl})`;
         ambientBg.style.opacity = '1';
-
-        if (changed) {
-          npCover.classList.remove('arriving');
-          void npCover.offsetWidth;
-          npCover.onerror = () => {
-            npCover.onerror = null;
-            npCover.src = albumCoverFallbackUrl;
-          };
-          npCover.src = coverUrl;
-          npCover.classList.add('arriving');
-          fetchAndRenderFunFacts(data.albumTitle, data.albumArtist);
-        }
-
+        lastCoverSrc = coverUrl;
+        npCover.classList.remove('arriving');
+        void npCover.offsetWidth;
+        npCover.onerror = () => { npCover.onerror = null; npCover.src = albumCoverFallbackUrl; };
+        npCover.src = coverUrl;
+        npCover.classList.add('arriving');
         applyDiscVisual(data);
-
         npAlbum.textContent = data.albumTitle || '';
         npArtist.textContent = data.albumArtist || '';
         const hasSong = data.reviewScope === 'song' && data.songTitle;
@@ -1502,73 +1641,195 @@
         const hasThanks = Boolean(data.adminThanks);
         npThanks.hidden = !hasThanks;
         if (hasThanks) npThanks.textContent = data.adminThanks;
+        fetchAndRenderFunFacts(data.albumTitle, data.albumArtist);
+      }
 
-        idleScreen.classList.add('hidden');
-        playScreen.classList.add('visible');
+      function doAlbumChange(oldKey, oldCoverSrc, newKey, newCoverUrl, newData) {
         const shelf = document.getElementById('vinyl-shelf');
-        if (shelf) shelf.setAttribute('hidden', '');
+
+        // Find both spine elements while shelf is hidden-but-measurable
+        if (shelf) { shelf.style.visibility = 'hidden'; shelf.removeAttribute('hidden'); }
+        const oldSpineEl = shelf?.querySelector(`[data-album-key="${CSS.escape(oldKey)}"]`);
+        const newSpineEl = shelf?.querySelector(`[data-album-key="${CSS.escape(newKey)}"]`);
+        if (shelf) { shelf.setAttribute('hidden', ''); shelf.style.visibility = ''; }
+
+        const startFlyIn = () => {
+          // Update playing screen content AFTER fly-out, before fly-in
+          applyPlayingContent(newData, newCoverUrl);
+          displayState = 'transitioning-in';
+          lastPlayingSpineKey = newKey;
+
+          if (newSpineEl && shelf) {
+            flyInFromSpine(newSpineEl, shelf, newCoverUrl, () => {
+              revealPlayScreen();
+              displayState = 'playing';
+            });
+          } else {
+            idleScreen.classList.add('hidden');
+            playScreen.classList.add('visible');
+            if (shelf) shelf.setAttribute('hidden', '');
+            displayState = 'playing';
+          }
+        };
+
+        if (oldSpineEl && shelf) {
+          flyOutToSpine(oldSpineEl, shelf, oldCoverSrc, startFlyIn);
+        } else {
+          playScreen.classList.remove('visible');
+          idleScreen.classList.remove('hidden');
+          setTimeout(startFlyIn, 300);
+        }
+      }
+
+      function showPlaying(data) {
+        const coverUrl = String(data.coverUrl || '').trim() || albumCoverFallbackUrl;
+        const sig = `${data.albumTitle}|${data.songTitle}|${coverUrl}`;
+        const changed = sig !== lastNpSig;
+        const newAlbumKey = `${normalizeAlbumIdentityPart(data.albumTitle)}::${normalizeAlbumIdentityPart(data.albumArtist)}`;
+
+        // Ignore polls during animations
+        if (displayState === 'transitioning-in' || displayState === 'transitioning-out') return;
+
+        // Album changed while playing → finish current, then start next
+        if (displayState === 'playing' && changed && newAlbumKey !== lastPlayingSpineKey) {
+          const oldKey = lastPlayingSpineKey;
+          const oldCoverSrc = lastCoverSrc || npCover.src;
+          lastNpSig = sig;
+          displayState = 'transitioning-out';
+          doAlbumChange(oldKey, oldCoverSrc, newAlbumKey, coverUrl, data);
+          return;
+        }
+
+        // Same album or repeat poll: update content and ensure visibility
+        if (!changed && displayState === 'playing') {
+          idleScreen.classList.add('hidden');
+          playScreen.classList.add('visible');
+          const shelf = document.getElementById('vinyl-shelf');
+          if (shelf) shelf.setAttribute('hidden', '');
+          return;
+        }
+
+        lastNpSig = sig;
+
+        applyPlayingContent(data, coverUrl);
+
+        if (displayState === 'playing') {
+          idleScreen.classList.add('hidden');
+          playScreen.classList.add('visible');
+          const shelf = document.getElementById('vinyl-shelf');
+          if (shelf) shelf.setAttribute('hidden', '');
+          return;
+        }
+
+        // Idle → Playing
+        displayState = 'transitioning-in';
+        lastPlayingSpineKey = newAlbumKey;
+
+        const shelf = document.getElementById('vinyl-shelf');
+        const spineEl = shelf && !shelf.hasAttribute('hidden')
+          ? shelf.querySelector(`[data-album-key="${CSS.escape(newAlbumKey)}"]`)
+          : null;
+
+        if (spineEl) {
+          flyInFromSpine(spineEl, shelf, coverUrl, () => {
+            revealPlayScreen();
+            displayState = 'playing';
+          });
+        } else {
+          idleScreen.classList.add('hidden');
+          playScreen.classList.add('visible');
+          if (shelf) shelf.setAttribute('hidden', '');
+          displayState = 'playing';
+        }
       }
 
       function populateVinylShelf() {
         const shelf = document.getElementById('vinyl-shelf');
         if (!shelf || !albumCollection || albumCollection.size === 0) return;
 
+        const sig = [...albumCollection.keys()].join('|');
+        if (sig === shelfCollectionSig && shelf.children.length > 0) return;
+        shelfCollectionSig = sig;
+
         shelf.innerHTML = '';
 
-        // Collect all albums from the collection
         const albums = [];
         for (const [key, meta] of albumCollection.entries()) {
-          albums.push({
-            title: meta.title,
-            artist: meta.artist,
-            year: meta.year,
-            meta
-          });
+          albums.push({ title: meta.title, artist: meta.artist, year: meta.year, meta });
         }
 
-        // Sort by artist (alphabetically), then by year (chronologically)
         albums.sort((a, b) => {
           const artistCmp = a.artist.localeCompare(b.artist);
           if (artistCmp !== 0) return artistCmp;
           return a.year - b.year;
         });
 
-        // Create vinyl spine elements
         for (const album of albums) {
           const spine = document.createElement('div');
           spine.className = 'vinyl-spine';
-          
-          // Set background image to show the rightmost edge of the cover (2%)
-          const imageUrl = album.meta.imageUrl || '';
-          if (imageUrl) {
-            spine.style.backgroundImage = `url(${imageUrl})`;
-          }
+          spine.dataset.albumKey = `${normalizeAlbumIdentityPart(album.title)}::${normalizeAlbumIdentityPart(album.artist)}`;
 
-          // Create label with proper text wrapping
+          const imageUrl = album.meta.imageUrl || '';
+          if (imageUrl) spine.style.backgroundImage = `url(${imageUrl})`;
+
           const label = document.createElement('div');
           label.className = 'vinyl-spine-label';
           label.innerHTML = `<span>${esc(album.artist)}</span><span>${esc(album.title)}</span>`;
           spine.appendChild(label);
-
           shelf.appendChild(spine);
         }
 
-        // Show the shelf if there are albums
-        if (albums.length > 0) {
-          shelf.removeAttribute('hidden');
-        }
+        if (albums.length > 0) shelf.removeAttribute('hidden');
       }
 
       function showIdle() {
         lastNpSig = '';
         lastFactsSig = '';
+        lastCoverSrc = '';
         currentNowPlaying = null;
         ambientBg.style.opacity = '0';
-        idleScreen.classList.remove('hidden');
-        playScreen.classList.remove('visible');
         renderReviews([], []);
         clearFunFacts();
+
+        if (displayState === 'idle') {
+          populateVinylShelf();
+          return;
+        }
+
+        if (displayState === 'transitioning-in' || displayState === 'transitioning-out') {
+          flyingAlbum.style.display = 'none';
+          flyingAlbum.style.opacity = '1';
+          playScreen.style.transition = '';
+          playScreen.style.opacity = '';
+          idleScreen.classList.remove('hidden');
+          playScreen.classList.remove('visible');
+          populateVinylShelf();
+          displayState = 'idle';
+          lastPlayingSpineKey = '';
+          return;
+        }
+
+        // Playing → Idle transition
+        displayState = 'transitioning-out';
         populateVinylShelf();
+
+        const shelf = document.getElementById('vinyl-shelf');
+        const spineEl = shelf && lastPlayingSpineKey
+          ? shelf.querySelector(`[data-album-key="${CSS.escape(lastPlayingSpineKey)}"]`)
+          : null;
+
+        if (spineEl && shelf) {
+          flyOutToSpine(spineEl, shelf, npCover.src, () => {
+            displayState = 'idle';
+            lastPlayingSpineKey = '';
+          });
+        } else {
+          idleScreen.classList.remove('hidden');
+          playScreen.classList.remove('visible');
+          populateVinylShelf();
+          displayState = 'idle';
+          lastPlayingSpineKey = '';
+        }
       }
 
       async function pollNowPlaying() {

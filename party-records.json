@@ -1162,6 +1162,99 @@
       "reviews": [],
       "endedAt": "2026-04-27T22:26:52.112490+00:00",
       "finalizedAt": "2026-04-27T22:26:52.112490+00:00"
+    },
+    {
+      "id": "2026-04-28T01:36:14.553671+00:00",
+      "date": "2026-04-28T01:36:14.553671+00:00",
+      "startedAt": "2026-04-28T01:36:14.553671+00:00",
+      "savedAt": "2026-04-28T01:57:39.707508+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Alvvays",
+          "artist": "Alvvays",
+          "coverUrl": "https://i.discogs.com/w6WuufZh44G_DAEVKkPxHwEoZngyhpmOxxEQs_H1WLM/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyMzAx/MjU3LTE3MzE3MDgw/MTctNTQ0MC5qcGVn.jpeg"
+        },
+        {
+          "title": "Weezer",
+          "artist": "Weezer",
+          "coverUrl": "https://i.discogs.com/YU-clSn8xVOsO1-mISsfzwtceXRB5HvpXpJg8K6GEcs/rs:fit/g:sm/q:90/h:600/w:597/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM1NjY3/ODA4LTE3NjMxODg4/MTctMjU0Ny5qcGVn.jpeg"
+        }
+      ],
+      "reviews": [],
+      "endedAt": "2026-04-28T01:57:39.707508+00:00",
+      "finalizedAt": "2026-04-28T01:57:39.707508+00:00"
+    },
+    {
+      "id": "2026-04-28T01:57:47.484398+00:00",
+      "date": "2026-04-28T01:57:47.484398+00:00",
+      "startedAt": "2026-04-28T01:57:47.484398+00:00",
+      "savedAt": "2026-04-28T01:57:58.532567+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "MTV Unplugged 1993",
+          "artist": "Stone Temple Pilots",
+          "coverUrl": "https://i.discogs.com/vfZELT9zKyj4LRpCqVEGrvlLEW3MUm1A39kJPjY9qMk/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIwMzE5/MDYxLTE2MzIyNTI2/NzQtODUxOS5qcGVn.jpeg"
+        }
+      ],
+      "reviews": [],
+      "endedAt": "2026-04-28T01:57:58.532567+00:00",
+      "finalizedAt": "2026-04-28T01:57:58.532567+00:00"
+    },
+    {
+      "id": "2026-04-28T02:03:33.435681+00:00",
+      "date": "2026-04-28T02:03:33.435681+00:00",
+      "startedAt": "2026-04-28T02:03:33.435681+00:00",
+      "savedAt": "2026-04-28T02:04:21.337149+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Siamese Dream",
+          "artist": "The Smashing Pumpkins",
+          "coverUrl": "https://i.discogs.com/EofuWUwBWnBSYy-_Ss9jolzVOE6YBzXL5YcNOqvQ3L0/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNTU0/NzMtMTUxODgyNzk3/MS0xOTg3LmpwZWc.jpeg"
+        },
+        {
+          "title": "Floral Green",
+          "artist": "Title Fight",
+          "coverUrl": "https://i.discogs.com/KFYMdXGRxBnajOlxwLuNT8n_b2Ax3osW03UDx-tzFa8/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQxNDYy/MDQtMTc0OTQ4NzA5/OS02MDkwLmpwZWc.jpeg"
+        },
+        {
+          "title": "Tomorrow Comes Today",
+          "artist": "Gorillaz",
+          "coverUrl": "https://i.discogs.com/tYdr3rZC9dZPMWoqPcVU_UyLpJBKo61XUSmu7kHkeVc/rs:fit/g:sm/q:90/h:596/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM0MzA1/Mzg4LTE3NTA1MjEw/NDktNzAzMC5qcGVn.jpeg"
+        }
+      ],
+      "reviews": [],
+      "endedAt": "2026-04-28T02:04:21.337149+00:00",
+      "finalizedAt": "2026-04-28T02:04:21.337149+00:00"
+    },
+    {
+      "id": "2026-04-28T02:21:15.174875+00:00",
+      "date": "2026-04-28T02:21:15.174875+00:00",
+      "startedAt": "2026-04-28T02:21:15.174875+00:00",
+      "savedAt": "2026-04-28T02:21:15.266387+00:00",
+      "attendees": [],
+      "listeners": [
+        "I\u00f1aki"
+      ],
+      "albumsPlayed": [
+        {
+          "title": "Skinty Fia",
+          "artist": "Fontaines D.C.",
+          "coverUrl": "https://i.discogs.com/_AouFMVA1qRdEBr7eJg9llGwyHbH7vH6AFql8aAch-4/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIzMzg5/MDA3LTE2OTg0Njk2/ODYtNjk1My5qcGVn.jpeg"
+        }
+      ],
+      "reviews": []
     }
   ]
 }
