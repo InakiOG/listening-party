@@ -553,6 +553,7 @@
         box-shadow: 0 0 0 3px var(--disc-border-color), 0 12px 40px rgba(0,0,0,0.6);
         z-index: 1;
         animation: spinDisc var(--np-spin-primary, 2.2s) linear infinite;
+        will-change: transform;
       }
 
       .vinyl-disc.clear-vinyl {
@@ -716,11 +717,10 @@
 
       /* ── Collection ↔ Now-playing transition ── */
       .vinyl-spine {
-        transition: opacity 0.7s ease, filter 0.7s ease;
+        transition: opacity 0.7s ease;
       }
       .vinyl-spine.shelf-fade {
         opacity: 0 !important;
-        filter: blur(4px);
       }
 
       #flying-album {
@@ -729,7 +729,8 @@
         pointer-events: none;
         object-fit: cover;
         box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-        will-change: left, top, width, height;
+        /* Fixed size set once in JS; position driven by transform only */
+        will-change: transform, opacity;
         display: none;
       }
     </style>
@@ -1204,7 +1205,41 @@
       let lastPlayingSpineKey = '';
       let lastCoverSrc = '';
       let shelfCollectionSig = '';
+      let transitionDeadline = 0; // ms timestamp; 0 = no active transition
+      const MAX_TRANSITION_MS = 5000;
       const flyingAlbum = document.getElementById('flying-album');
+
+      function forceResetTransition() {
+        flyingAlbum.style.display = 'none';
+        flyingAlbum.style.opacity = '1';
+        flyingAlbum.style.transition = 'none';
+        flyingAlbum.style.transform = '';
+        playScreen.style.transition = '';
+        playScreen.style.opacity = '';
+        const shelf = document.getElementById('vinyl-shelf');
+        if (shelf) {
+          shelf.style.opacity = '';
+          shelf.style.transition = '';
+          for (const s of shelf.querySelectorAll('.vinyl-spine')) {
+            s.style.opacity = '';
+            s.style.transition = '';
+            s.classList.remove('shelf-fade');
+          }
+        }
+        displayState = 'idle';
+        lastPlayingSpineKey = '';
+        transitionDeadline = 0;
+      }
+
+      function checkTransitionWatchdog() {
+        if (transitionDeadline > 0 && Date.now() > transitionDeadline) {
+          forceResetTransition();
+        }
+      }
+
+      function startTransition(durationMs) {
+        transitionDeadline = Date.now() + durationMs + 1500;
+      }
 
       function getCenterTargetRect() {
         const coverSize = Math.max(220, Math.min(380, 0.28 * window.innerWidth));
@@ -1543,38 +1578,60 @@
         }, 400);
       }
 
+      // Place the flying album at a fixed size anchored to top-left of viewport,
+      // then drive position purely via transform: translate(x, y) scale(s).
+      // This keeps layout/paint out of the animation loop entirely.
+      const FA_SIZE = 400; // fixed render size of the flying album element
+
+      function setFlyingAlbumTransform(rect) {
+        // Center of target rect, expressed as translate from FA_SIZE/2 origin
+        const tx = rect.left + rect.width  / 2 - FA_SIZE / 2;
+        const ty = rect.top  + rect.height / 2 - FA_SIZE / 2;
+        const sc = rect.width / FA_SIZE;
+        flyingAlbum.style.transform = `translate(${tx}px, ${ty}px) scale(${sc})`;
+      }
+
       function flyInFromSpine(spineEl, shelf, coverUrl, onDone) {
-        const spineRect = spineEl.getBoundingClientRect();
         const targetRect = getCenterTargetRect();
+
+        // Always show shelf so getBoundingClientRect returns real values
+        shelf.removeAttribute('hidden');
+        shelf.style.opacity = '0';
+        shelf.style.transition = 'none';
 
         for (const s of shelf.querySelectorAll('.vinyl-spine')) {
           if (s !== spineEl) s.classList.add('shelf-fade');
         }
         spineEl.style.opacity = '0';
 
+        const spineRect = spineEl.getBoundingClientRect(); // correct now that shelf is in layout
+
+        flyingAlbum.src = coverUrl;
         Object.assign(flyingAlbum.style, {
-          display: 'block', left: spineRect.left + 'px', top: spineRect.top + 'px',
-          width: spineRect.width + 'px', height: spineRect.height + 'px',
+          display: 'block',
+          width: FA_SIZE + 'px', height: FA_SIZE + 'px',
+          top: '0', left: '0',
           borderRadius: '2px', opacity: '1', transition: 'none'
         });
-        flyingAlbum.src = coverUrl;
+        setFlyingAlbumTransform(spineRect);
 
-        requestAnimationFrame(() => requestAnimationFrame(() => {
+        setTimeout(() => {
+          shelf.style.transition = 'opacity 0.4s ease';
+          shelf.style.opacity = '1';
           const tr = 'cubic-bezier(0.22,1,0.36,1) 1.5s';
-          flyingAlbum.style.transition = `left ${tr}, top ${tr}, width ${tr}, height ${tr}, border-radius ${tr}`;
-          Object.assign(flyingAlbum.style, {
-            left: targetRect.left + 'px', top: targetRect.top + 'px',
-            width: targetRect.width + 'px', height: targetRect.height + 'px',
-            borderRadius: '0.75rem'
-          });
-        }));
+          flyingAlbum.style.transition = `transform ${tr}, border-radius ${tr}`;
+          flyingAlbum.style.borderRadius = '0.75rem';
+          setFlyingAlbumTransform(targetRect);
+        }, 20);
 
         setTimeout(() => {
           spineEl.style.opacity = '';
           shelf.setAttribute('hidden', '');
+          shelf.style.opacity = '';
+          shelf.style.transition = '';
           for (const s of shelf.querySelectorAll('.vinyl-spine')) s.classList.remove('shelf-fade');
           onDone();
-        }, 1560);
+        }, 1580);
       }
 
       function flyOutToSpine(spineEl, shelf, coverSrc, onDone) {
@@ -1589,21 +1646,22 @@
 
         playScreen.classList.remove('visible');
 
+        flyingAlbum.src = coverSrc;
         Object.assign(flyingAlbum.style, {
-          display: 'block', left: coverRect.left + 'px', top: coverRect.top + 'px',
-          width: coverRect.width + 'px', height: coverRect.height + 'px',
+          display: 'block',
+          width: FA_SIZE + 'px', height: FA_SIZE + 'px',
+          top: '0', left: '0',
           borderRadius: '0.75rem', opacity: '1', transition: 'none'
         });
-        flyingAlbum.src = coverSrc;
+        setFlyingAlbumTransform(coverRect);
 
-        requestAnimationFrame(() => requestAnimationFrame(() => {
+        setTimeout(() => {
           const tr = 'cubic-bezier(0.55,0,1,0.45) 0.9s';
-          flyingAlbum.style.transition = `left ${tr}, top ${tr}, width ${tr}, height ${tr}, border-radius ${tr}, opacity 0.4s ease 0.65s`;
-          Object.assign(flyingAlbum.style, {
-            left: spineRect.left + 'px', top: spineRect.top + 'px',
-            width: spineRect.width + 'px', height: spineRect.height + 'px',
-            borderRadius: '2px', opacity: '0'
-          });
+          flyingAlbum.style.transition = `transform ${tr}, border-radius ${tr}, opacity 0.4s ease 0.65s`;
+          flyingAlbum.style.borderRadius = '2px';
+          flyingAlbum.style.opacity = '0';
+          setFlyingAlbumTransform(spineRect);
+
           shelf.style.transition = 'opacity 0.6s ease 0.3s';
           shelf.style.opacity = '1';
           setTimeout(() => {
@@ -1611,7 +1669,7 @@
               if (s !== spineEl) { s.style.transition = 'opacity 0.5s ease'; s.style.opacity = '1'; }
             }
           }, 320);
-        }));
+        }, 20);
 
         setTimeout(() => {
           flyingAlbum.style.display = 'none';
@@ -1620,7 +1678,7 @@
           shelf.style.transition = '';
           for (const s of shelf.querySelectorAll('.vinyl-spine')) { s.style.opacity = ''; s.style.transition = ''; }
           onDone();
-        }, 1100);
+        }, 1120);
       }
 
       function applyPlayingContent(data, coverUrl) {
@@ -1657,6 +1715,7 @@
           // Update playing screen content AFTER fly-out, before fly-in
           applyPlayingContent(newData, newCoverUrl);
           displayState = 'transitioning-in';
+          startTransition(2000);
           lastPlayingSpineKey = newKey;
 
           if (newSpineEl && shelf) {
@@ -1682,6 +1741,8 @@
       }
 
       function showPlaying(data) {
+        checkTransitionWatchdog();
+
         const coverUrl = String(data.coverUrl || '').trim() || albumCoverFallbackUrl;
         const sig = `${data.albumTitle}|${data.songTitle}|${coverUrl}`;
         const changed = sig !== lastNpSig;
@@ -1696,6 +1757,7 @@
           const oldCoverSrc = lastCoverSrc || npCover.src;
           lastNpSig = sig;
           displayState = 'transitioning-out';
+          startTransition(3500);
           doAlbumChange(oldKey, oldCoverSrc, newAlbumKey, coverUrl, data);
           return;
         }
@@ -1723,23 +1785,29 @@
 
         // Idle → Playing
         displayState = 'transitioning-in';
+        startTransition(2000);
         lastPlayingSpineKey = newAlbumKey;
 
         const shelf = document.getElementById('vinyl-shelf');
-        const spineEl = shelf && !shelf.hasAttribute('hidden')
+        // Populate shelf even if it was never shown (e.g. page loaded mid-playback)
+        populateVinylShelf();
+        // Find spine regardless of hidden state — flyInFromSpine will show the shelf
+        const spineEl = shelf
           ? shelf.querySelector(`[data-album-key="${CSS.escape(newAlbumKey)}"]`)
           : null;
 
-        if (spineEl) {
+        if (spineEl && shelf) {
           flyInFromSpine(spineEl, shelf, coverUrl, () => {
             revealPlayScreen();
             displayState = 'playing';
+            transitionDeadline = 0;
           });
         } else {
           idleScreen.classList.add('hidden');
           playScreen.classList.add('visible');
           if (shelf) shelf.setAttribute('hidden', '');
           displayState = 'playing';
+          transitionDeadline = 0;
         }
       }
 
@@ -1783,6 +1851,8 @@
       }
 
       function showIdle() {
+        checkTransitionWatchdog();
+
         lastNpSig = '';
         lastFactsSig = '';
         lastCoverSrc = '';
@@ -1811,6 +1881,7 @@
 
         // Playing → Idle transition
         displayState = 'transitioning-out';
+        startTransition(1500);
         populateVinylShelf();
 
         const shelf = document.getElementById('vinyl-shelf');

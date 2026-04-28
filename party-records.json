@@ -1242,7 +1242,7 @@
       "id": "2026-04-28T02:21:15.174875+00:00",
       "date": "2026-04-28T02:21:15.174875+00:00",
       "startedAt": "2026-04-28T02:21:15.174875+00:00",
-      "savedAt": "2026-04-28T02:21:15.266387+00:00",
+      "savedAt": "2026-04-28T02:38:21.141469+00:00",
       "attendees": [],
       "listeners": [
         "I\u00f1aki"
@@ -1252,6 +1252,61 @@
           "title": "Skinty Fia",
           "artist": "Fontaines D.C.",
           "coverUrl": "https://i.discogs.com/_AouFMVA1qRdEBr7eJg9llGwyHbH7vH6AFql8aAch-4/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIzMzg5/MDA3LTE2OTg0Njk2/ODYtNjk1My5qcGVn.jpeg"
+        },
+        {
+          "title": "Thriller",
+          "artist": "Michael Jackson",
+          "coverUrl": "https://i.discogs.com/fkCCRxN5lIT722_U1rW6C8WT0roht0sHNP1ll_4IM40/rs:fit/g:sm/q:90/h:376/w:380/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMzNDg4/MzAwLTE3NDI3MTc3/NzQtNzg1OC5wbmc.jpeg"
+        },
+        {
+          "title": "Led Zeppelin III",
+          "artist": "Led Zeppelin",
+          "coverUrl": "https://i.discogs.com/7b1yoLFRIO1c0sk_Hcf9YhQbXcEmkYn37dgc9Rq_IAQ/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU3NzA0/MzItMTYzNzI2MjQx/Mi04MzYwLnBuZw.jpeg"
+        },
+        {
+          "title": "Fleetwood Mac",
+          "artist": "Fleetwood Mac",
+          "coverUrl": "https://i.discogs.com/O9w_H1TEiZ-s-ZzPtO24VfgfskW6NU7dpmWCnjkKlfk/rs:fit/g:sm/q:90/h:600/w:573/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwNzc5/MTI3LTE3NDQ1ODA4/NjItODU2NC5qcGVn.jpeg"
+        },
+        {
+          "title": "Deftones",
+          "artist": "Deftones",
+          "coverUrl": "https://i.discogs.com/CqElSO-j1gLbV5A5uwCiTMAd-6-xHEh_kxm5Mj_h6ug/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI3NjYw/MTY1LTE2ODkyNDc1/NDctNTc5Ny5qcGVn.jpeg"
+        },
+        {
+          "title": "Meteora",
+          "artist": "Linkin Park",
+          "coverUrl": "https://i.discogs.com/8EC1Tjp-XTasbKuPS_vsZeMJ2CukqCjiqjBOHQ9DvjA/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMxMzEx/MTM4LTE3MjE4NzA5/NjUtOTY5Ni5qcGVn.jpeg"
+        },
+        {
+          "title": "Rumours",
+          "artist": "Fleetwood Mac",
+          "coverUrl": "https://i.discogs.com/olZ_Wjd_bWC53WNkGrjE57KAVo0gwQM04jVwZWKVjm4/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwNzcx/MTUzLTE3NTEyNDQ3/NDUtMjIwNC5qcGVn.jpeg"
+        },
+        {
+          "title": "Random Access Memories",
+          "artist": "Daft Punk",
+          "coverUrl": "https://i.discogs.com/yqa-5yyG0qMNoiEuoIr3i826YpWl-NwUXwg0EZ_6Y3k/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI2NzI0/NTg0LTE2ODEyMTcx/MTMtMzIwOC5qcGVn.jpeg"
+        },
+        {
+          "title": "From Zero",
+          "artist": "Linkin Park",
+          "coverUrl": "https://i.discogs.com/iY40RVOLm70Tr-wAZqxIF8Ea3KlMCkV2ZIAXvp-yt5A/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyMzEy/MzE5LTE3NjQwMjQ5/NTItMjc3NC5qcGVn.jpeg"
+        },
+        {
+          "title": "Tomorrow Comes Today",
+          "artist": "Gorillaz",
+          "coverUrl": "https://i.discogs.com/tYdr3rZC9dZPMWoqPcVU_UyLpJBKo61XUSmu7kHkeVc/rs:fit/g:sm/q:90/h:596/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM0MzA1/Mzg4LTE3NTA1MjEw/NDktNzAzMC5qcGVn.jpeg"
+        },
+        {
+          "title": "Bocanada",
+          "artist": "Gustavo Cerati",
+          "coverUrl": "https://i.discogs.com/q25J5DragCGIHnt12nJ3ong0N9mpPjFPWAzSMb9S9N4/rs:fit/g:sm/q:90/h:581/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxMDgx/MzE5LTE2NDE4MzE5/MTYtODczMC5qcGVn.jpeg"
+        },
+        {
+          "title": "Future Past",
+          "artist": "Duran Duran",
+          "coverUrl": "https://i.discogs.com/o7uM7QirUKJHpJZcH2yD4ppHbqKDjX5KDREWl-D_mKI/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIwNjg2/NTA0LTE2MzQ5MzUx/ODgtNzU0Mi5qcGVn.jpeg"
         }
       ],
       "reviews": []
