@@ -1,0 +1,14 @@
+services:
+  wiki-mcp:
+    build: ./mcp-server
+    container_name: listening-party-wiki-mcp
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/project:rw
+    environment:
+      PROJECT_DIR: /project
+      WIKI_DIR: /project/wiki
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8080"
+    restart: unless-stopped

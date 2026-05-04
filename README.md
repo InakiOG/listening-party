@@ -21,7 +21,8 @@ A local-network web app for hosting vinyl listening parties. Guests join on thei
 13. [Testing](#testing)
 14. [Maintenance Utility](#maintenance-utility)
 15. [Environment Variables](#environment-variables)
-16. [Known Limitations & Security Notes](#known-limitations--security-notes)
+16. [Wiki & MCP Server](#wiki--mcp-server)
+17. [Known Limitations & Security Notes](#known-limitations--security-notes)
 
 ---
 
@@ -567,6 +568,102 @@ Loaded from `.env` in the project root at server startup (never overwrites a rea
 | `GROQ_API_KEY` | No | Groq API key used as Gemini fallback |
 
 The server starts and operates normally without these keys — fun facts will simply return empty arrays.
+
+---
+
+## Wiki & MCP Server
+
+The project ships with an LLM-maintained knowledge wiki and a Docker-based MCP server that exposes wiki tools directly to Claude Code.
+
+### Wiki
+
+The wiki lives in `wiki/` and is a structured, interlinked collection of markdown files documenting every feature, API, data schema, and design decision in the codebase. It is written and maintained by the LLM — never by hand. You read it; Claude writes it.
+
+```
+wiki/
+├── CLAUDE.md        ← Operating manual for the LLM (conventions, workflows)
+├── index.md         ← Catalog of all pages
+├── log.md           ← Append-only history of changes
+├── raw/             ← Drop source documents here for ingestion
+└── pages/           ← All wiki pages (25+ covering every feature)
+```
+
+**Key pages:** `overview`, `architecture`, `api-reference`, `party-lifecycle`, `feature-review-system`, `feature-active-users`, `feature-vinyl-disc-renderer`, and more. See `wiki/index.md` for the full catalog.
+
+### MCP Server
+
+The MCP server is a Docker container that gives Claude Code a set of tools to search, read, write, and maintain the wiki without leaving the conversation.
+
+**Prerequisites:** Docker Desktop (or Docker Engine + Compose).
+
+#### Start the server
+
+```bash
+# Build image and start in the background
+docker compose up --build -d
+
+# View logs
+docker compose logs -f wiki-mcp
+
+# Stop
+docker compose down
+```
+
+The server runs at `http://localhost:8080`. Claude Code connects to it automatically when you open this project — the connection is configured in `.claude/settings.json`.
+
+#### Available tools
+
+| Tool | Description |
+|------|-------------|
+| `search_wiki` | Ranked full-text search across all wiki pages with scored excerpts |
+| `list_pages` | Table of all pages with tags and last-updated date |
+| `read_page` | Read any wiki page (or `index`, `log`, `CLAUDE`) by name |
+| `write_page` | Create or overwrite a wiki page |
+| `delete_page` | Delete a page and remove it from the index |
+| `regenerate_index` | Rebuild `wiki/index.md` from page frontmatter and first sentences |
+| `append_log` | Append a structured entry to `wiki/log.md` |
+| `lint_wiki` | Health check: broken links, orphans, missing frontmatter, index gaps |
+| `read_source_file` | Read any project source file (for researching code) |
+| `read_source_file_range` | Read a specific line range from a source file |
+| `list_source_files` | List project files matching a glob pattern |
+
+#### Connecting manually (non-Claude Code clients)
+
+Any MCP client that supports SSE transport can connect:
+
+```json
+{
+  "mcpServers": {
+    "wiki": {
+      "transport": "sse",
+      "url": "http://localhost:8080/sse"
+    }
+  }
+}
+```
+
+#### How it works
+
+The container mounts the project root as `/project` (read-write). All tool operations — reading pages, writing pages, regenerating the index — work directly on your local files. No sync step, no copy. Changes made by Claude through the MCP tools appear immediately on disk.
+
+```
+Claude Code
+    │  SSE — localhost:8080/sse
+    ▼
+Docker: wiki-mcp
+    │  bind mount (read/write)
+    ▼
+wiki/pages/*.md, wiki/index.md, wiki/log.md, server.py, app.js …
+```
+
+#### Typical workflow
+
+1. Start the MCP server: `docker compose up -d`
+2. Open the project in Claude Code — tools are available immediately.
+3. Ask Claude questions about the codebase — it searches the wiki first.
+4. Add a source document to `wiki/raw/` and ask Claude to ingest it.
+5. After code changes, ask Claude to update the affected wiki pages.
+6. Periodically run `lint_wiki` to catch broken links and orphan pages.
 
 ---
 
