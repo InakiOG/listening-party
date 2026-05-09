@@ -50,7 +50,17 @@ _auto_detect_stop_event: "threading.Event | None" = None
 _auto_detect_thread: "threading.Thread | None" = None
 _auto_detect_last_detection: "dict | None" = None  # {albumTitle, songTitle, reviewScope, detectedAt, rawTitle, rawArtist}
 _auto_detect_error: "str | None" = None
+_auto_detect_searching = False          # True while mic is recording
+_auto_detect_not_in_library: "dict | None" = None  # {title, artist, detectedAt}
 _auto_detect_lock = threading.Lock()
+
+# ── Spotify state ─────────────────────────────────────────────────────────────
+SPOTIFY_TOKENS_PATH = ROOT / ".spotify-tokens.json"
+_spotify_enabled = False   # True = mirror every now-playing change to Spotify
+_spotify_error: "str | None" = None
+_spotify_lock = threading.Lock()
+_server_port = 8000  # updated in run_server(); used to build OAuth redirect URI
+
 ADMIN_USER_KEY = "iñaki"
 ADMIN_DEFAULT_NAME = "Iñaki"
 ADMIN_DEFAULT_PASSWORD = "14agosto"
@@ -893,6 +903,26 @@ def _get_collection_items() -> list:
         return []
 
 
+def _read_spotify_tokens() -> "dict | None":
+    try:
+        with SPOTIFY_TOKENS_PATH.open(encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _save_spotify_tokens(tokens: dict) -> None:
+    with SPOTIFY_TOKENS_PATH.open("w", encoding="utf-8") as f:
+        json.dump(tokens, f, indent=2)
+
+
+def _spotify_redirect_uri() -> str:
+    override = os.environ.get("SPOTIFY_REDIRECT_URI", "").strip()
+    if override:
+        return override
+    return f"http://127.0.0.1:{_server_port}/api/spotify/callback"
+
+
 def _apply_now_playing_internal(
     album_title: str,
     album_artist: str,
@@ -963,6 +993,7 @@ def _apply_now_playing_internal(
         write_now_playing_payload(payload)
         _priority_album = (album_title, album_artist)
         increment_album_times_played(album_title, album_artist)
+        _trigger_spotify_if_enabled(album_title, album_artist, song_title, review_scope)
 
         already_tracked = any(
             str(a.get("title", "")).lower() == album_title.lower()
@@ -1045,6 +1076,11 @@ def _start_auto_detect():
         thread = threading.Thread(
             target=audio_detect.run_detection_loop,
             args=(stop_event, _on_auto_detection, _get_collection_items),
+            kwargs={
+                "on_search_start": _on_auto_detect_search_start,
+                "on_search_end": _on_auto_detect_search_end,
+                "on_no_match": _on_auto_detect_no_match,
+            },
             daemon=True,
             name="audio-detect",
         )
@@ -1067,6 +1103,97 @@ def _stop_auto_detect():
         _auto_detect_active = False
         _auto_detect_stop_event = None
         _auto_detect_thread = None
+
+
+def _on_auto_detect_search_start():
+    global _auto_detect_searching
+    _auto_detect_searching = True
+
+
+def _on_auto_detect_search_end():
+    global _auto_detect_searching
+    _auto_detect_searching = False
+
+
+def _on_auto_detect_no_match(title: str, artist: str):
+    global _auto_detect_not_in_library
+    with _auto_detect_lock:
+        _auto_detect_not_in_library = {
+            "title": title,
+            "artist": artist,
+            "detectedAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+
+# ── Spotify playback control ──────────────────────────────────────────────────
+
+def _set_spotify_enabled(val: bool) -> None:
+    global _spotify_enabled
+    _spotify_enabled = val
+
+
+def _set_spotify_error(val: "str | None") -> None:
+    global _spotify_error
+    _spotify_error = val
+
+
+def _trigger_spotify_if_enabled(album_title: str, album_artist: str, song_title: str, review_scope: str) -> None:
+    """
+    Fire-and-forget: if Spotify is enabled, search and start playback in a
+    background thread so the HTTP response isn't delayed.
+    """
+    with _spotify_lock:
+        if not _spotify_enabled:
+            return
+
+    client_id = os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET", "").strip()
+    if not client_id or not client_secret:
+        return
+
+    def _run():
+        global _spotify_error
+        try:
+            import spotify_client as _sc  # type: ignore
+        except ImportError:
+            return
+
+        tokens = _read_spotify_tokens()
+        if not tokens:
+            return
+
+        if time.time() >= tokens.get("expires_at", 0) - 30:
+            try:
+                r = _sc.refresh_access_token(client_id, client_secret, tokens["refresh_token"])
+                tokens["access_token"] = r["access_token"]
+                tokens["expires_at"] = time.time() + r.get("expires_in", 3600)
+                if r.get("refresh_token"):
+                    tokens["refresh_token"] = r["refresh_token"]
+                _save_spotify_tokens(tokens)
+            except Exception as exc:
+                with _spotify_lock:
+                    _spotify_error = f"Token refresh failed: {exc}"
+                return
+
+        try:
+            _sc.trigger_playback(tokens["access_token"], album_title, album_artist, song_title, review_scope)
+            with _spotify_lock:
+                _spotify_error = None
+        except Exception as exc:
+            # 401 = token revoked or wrong scopes — clear tokens and force re-auth
+            if "401" in str(exc):
+                try:
+                    SPOTIFY_TOKENS_PATH.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                with _spotify_lock:
+                    _set_spotify_enabled(False)
+                    _spotify_error = "Autorización expirada — reconecta Spotify"
+            else:
+                with _spotify_lock:
+                    _spotify_error = str(exc)
+
+    threading.Thread(target=_run, daemon=True, name="spotify-trigger").start()
 
 
 def _to_non_negative_int(value, default=0):
@@ -1356,6 +1483,14 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             self.send_header(key, value)
         self.end_headers()
         self.wfile.write(response)
+
+    def _send_html(self, html: str, status_code: int = 200) -> None:
+        body = html.encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -1710,9 +1845,77 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 self._send_json({
                     "available": available,
                     "active": _auto_detect_active,
+                    "searching": _auto_detect_searching,
                     "lastDetection": _auto_detect_last_detection,
+                    "notInLibrary": _auto_detect_not_in_library,
                     "error": _auto_detect_error,
                 })
+            return
+
+        if parsed.path == "/api/spotify/status":
+            client_id = os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
+            client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET", "").strip()
+            configured = bool(client_id and client_secret)
+            connected = configured and _read_spotify_tokens() is not None
+            auth_url = ""
+            if configured and not connected:
+                try:
+                    import spotify_client as _sc  # type: ignore
+                    auth_url = _sc.build_auth_url(client_id, _spotify_redirect_uri())
+                except ImportError:
+                    pass
+            with _spotify_lock:
+                self._send_json({
+                    "configured": configured,
+                    "connected": connected,
+                    "enabled": _spotify_enabled,
+                    "error": _spotify_error,
+                    "authUrl": auth_url,
+                })
+            return
+
+        if parsed.path == "/api/spotify/callback":
+            params = parse_qs(parsed.query)
+            code = (params.get("code", [""])[0] or "").strip()
+            error_param = (params.get("error", [""])[0] or "").strip()
+
+            if error_param or not code:
+                self._send_html(
+                    "<h2>Spotify authorization denied.</h2><p>You can close this window.</p>",
+                    status_code=400,
+                )
+                return
+
+            client_id = os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
+            client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET", "").strip()
+            if not client_id or not client_secret:
+                self._send_html(
+                    "<h2>SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET not configured.</h2>",
+                    status_code=500,
+                )
+                return
+
+            try:
+                import spotify_client as _sc  # type: ignore
+                tokens = _sc.exchange_code(client_id, client_secret, code, _spotify_redirect_uri())
+                tokens["expires_at"] = time.time() + tokens.get("expires_in", 3600)
+                _save_spotify_tokens(tokens)
+            except Exception as exc:
+                self._send_html(
+                    f"<h2>OAuth exchange failed.</h2><pre>{exc}</pre><p>You can close this window.</p>",
+                    status_code=500,
+                )
+                return
+
+            with _spotify_lock:
+                _set_spotify_enabled(True)
+                _set_spotify_error(None)
+            self._send_html(
+                "<h2 style='font-family:system-ui;color:#1db954'>&#10003; Spotify connected!</h2>"
+                "<p style='font-family:system-ui'>Listening Party will mirror now-playing to Spotify.</p>"
+                "<p style='font-family:system-ui'>You can close this window.</p>"
+                "<script>setTimeout(()=>window.close(),2000)</script>",
+            )
             return
 
         super().do_GET()
@@ -1761,6 +1964,61 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
             with _auto_detect_lock:
                 self._send_json({"ok": True, "active": _auto_detect_active, "error": _auto_detect_error})
+            return
+
+        if parsed.path in ("/api/spotify/start", "/api/spotify/stop", "/api/spotify/disconnect"):
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            actor_name = str(payload.get("actorName", "")).strip()
+            if not actor_name:
+                self._send_json({"error": "actorName is required"}, status_code=400)
+                return
+
+            actor_key = normalize_user_key(actor_name)
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                actor_profile = sanitize_user_profile(users_store.get(actor_key))
+
+            if not actor_profile:
+                self._send_json({"error": "actor user not found"}, status_code=404)
+                return
+
+            if actor_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                self._send_json({"error": "only administrador can control Spotify"}, status_code=403)
+                return
+
+            with _spotify_lock:
+                if parsed.path == "/api/spotify/start":
+                    if not _read_spotify_tokens():
+                        self._send_json({"error": "Not connected to Spotify — complete OAuth first"}, status_code=400)
+                        return
+                    _set_spotify_enabled(True)
+                    _set_spotify_error(None)
+                elif parsed.path == "/api/spotify/stop":
+                    _set_spotify_enabled(False)
+                    _set_spotify_error(None)
+                else:  # /disconnect
+                    _set_spotify_enabled(False)
+                    _set_spotify_error(None)
+                    try:
+                        SPOTIFY_TOKENS_PATH.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+
+            with _spotify_lock:
+                self._send_json({"ok": True, "enabled": _spotify_enabled, "error": _spotify_error})
             return
 
         if parsed.path == "/api/now-playing/clear":
@@ -2014,6 +2272,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                 global _priority_album
                 _priority_album = (album_title, album_artist)
                 increment_album_times_played(album_title, album_artist)
+                _trigger_spotify_if_enabled(album_title, album_artist, song_title, review_scope)
                 already_tracked = any(
                     str(a.get("title", "")).lower() == album_title.lower()
                     for a in _current_session["albumsPlayed"]
@@ -2639,6 +2898,9 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
 
 
 def run_server(port=8000, refresh_discogs=False):
+    global _server_port
+    _server_port = port
+
     clear_now_playing()
 
     if refresh_discogs:
@@ -2670,17 +2932,39 @@ def run_server(port=8000, refresh_discogs=False):
 
     handler = partial(ListeningPartyHandler, directory=str(ROOT))
 
+    _CONN_ERRORS = (ConnectionAbortedError, ConnectionResetError, BrokenPipeError, OSError)
+
     class _QuietServer(ThreadingHTTPServer):
         def handle_error(self, request, client_address):
             import sys
             exc = sys.exc_info()[1]
-            if isinstance(exc, (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)):
+            if isinstance(exc, _CONN_ERRORS):
                 return  # phone dropped the connection — not worth printing
             super().handle_error(request, client_address)
+
+        def process_request_thread(self, request, client_address):
+            # Override to prevent secondary connection errors during socket
+            # shutdown from leaking through threading.excepthook (Python 3.12+).
+            try:
+                self.finish_request(request, client_address)
+            except _CONN_ERRORS:
+                pass
+            except Exception:
+                self.handle_error(request, client_address)
+            finally:
+                try:
+                    self.shutdown_request(request)
+                except _CONN_ERRORS:
+                    pass
 
     server = _QuietServer(("", port), handler)
     print(f"Listening Party server running on http://0.0.0.0:{port}")
     print("Press Ctrl+C to stop.")
+
+    # Auto-enable Spotify if tokens are already stored from a previous session
+    if os.environ.get("SPOTIFY_CLIENT_ID") and os.environ.get("SPOTIFY_CLIENT_SECRET"):
+        if SPOTIFY_TOKENS_PATH.exists():
+            _set_spotify_enabled(True)
 
     try:
         server.serve_forever()

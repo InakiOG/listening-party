@@ -138,25 +138,52 @@ def check_dependencies() -> bool:
 
 # ── detection loop ────────────────────────────────────────────────────────────
 
-def run_detection_loop(stop_event, on_detection, get_collection_items):
+def run_detection_loop(
+    stop_event,
+    on_detection,
+    get_collection_items,
+    on_search_start=None,
+    on_search_end=None,
+    on_no_match=None,
+):
     """
     Background detection loop.  Runs until stop_event is set.
 
-    stop_event        – threading.Event; set it to stop the loop.
-    on_detection      – callable(album, track_index, track_name, raw)
-                        called each time a new song is matched.
+    stop_event           – threading.Event; set it to stop the loop.
+    on_detection         – callable(album, track_index, track_name, raw)
     get_collection_items – callable() → list of album dicts from the collection.
+    on_search_start      – optional callable(); fired just before recording starts.
+    on_search_end        – optional callable(); fired when recording+recognition ends.
+    on_no_match          – optional callable(title, artist); fired when Shazam
+                           finds a song that isn't in the collection.
     """
     last_key = None
     last_time = 0.0
 
     while not stop_event.is_set():
+        if on_search_start:
+            try:
+                on_search_start()
+            except Exception:
+                pass
+
         try:
             result = record_and_recognize()
         except Exception as exc:
             logger.warning("record_and_recognize error: %s", exc)
+            if on_search_end:
+                try:
+                    on_search_end()
+                except Exception:
+                    pass
             stop_event.wait(RETRY_DELAY_NO_MATCH)
             continue
+        finally:
+            if on_search_end:
+                try:
+                    on_search_end()
+                except Exception:
+                    pass
 
         if not result or not result.get("title"):
             stop_event.wait(RETRY_DELAY_NO_MATCH)
@@ -180,6 +207,11 @@ def run_detection_loop(stop_event, on_detection, get_collection_items):
                 result["title"],
                 result["artist"],
             )
+            if on_no_match:
+                try:
+                    on_no_match(result["title"], result["artist"])
+                except Exception:
+                    pass
             stop_event.wait(RETRY_DELAY_NO_MATCH)
             continue
 

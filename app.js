@@ -63,6 +63,9 @@ let nowPlayingPollTimerId = null;
 let nowPlayingPollInFlight = false;
 let autoDetectPollTimerId = null;
 let autoDetectLastDetectionKey = null;  // tracks last detection to fire toast only once
+let spotifyPollTimerId = null;
+let spotifyLastDetectionKey = null;
+let spotifyOAuthWindow = null;
 
 let knownServerBootId = "";
 const nativeFetch = window.fetch.bind(window);
@@ -1069,6 +1072,9 @@ function setCurrentUser(user) {
     if (addAlbumFabLogout) addAlbumFabLogout.hidden = true;
     const autoDetectFabLogout = document.getElementById("auto-detect-button");
     if (autoDetectFabLogout) autoDetectFabLogout.hidden = true;
+    const spotifyFabLogout = document.getElementById("spotify-button");
+    if (spotifyFabLogout) spotifyFabLogout.hidden = true;
+    if (spotifyPollTimerId) { clearInterval(spotifyPollTimerId); spotifyPollTimerId = null; }
     renderAlbums();
     return;
   }
@@ -1165,6 +1171,14 @@ function setCurrentUser(user) {
     autoDetectFab.hidden = !isAdminUser();
     if (isAdminUser() && !autoDetectPollTimerId) {
       startAutoDetectPolling();
+    }
+  }
+
+  const spotifyFab = document.getElementById("spotify-button");
+  if (spotifyFab) {
+    spotifyFab.hidden = !isAdminUser();
+    if (isAdminUser() && !spotifyPollTimerId) {
+      startSpotifyPolling();
     }
   }
 
@@ -4518,7 +4532,9 @@ function startNowPlayingPolling() {
   });
 }
 
-function showAutoDetectToast(message) {
+let autoDetectLastNoMatchKey = null;
+
+function showAutoDetectToast(message, durationMs = 4000) {
   let toast = document.getElementById("auto-detect-toast");
   if (!toast) {
     toast = document.createElement("div");
@@ -4535,7 +4551,7 @@ function showAutoDetectToast(message) {
   toast.textContent = message;
   toast.style.opacity = "1";
   clearTimeout(toast._hideTimer);
-  toast._hideTimer = setTimeout(() => { toast.style.opacity = "0"; }, 4000);
+  toast._hideTimer = setTimeout(() => { toast.style.opacity = "0"; }, durationMs);
 }
 
 function startAutoDetectPolling() {
@@ -4551,12 +4567,20 @@ function startAutoDetectPolling() {
       const data = await res.json();
 
       if (fab) {
-        fab.classList.toggle("active", !!data.active);
-        fab.title = data.active
-          ? "Detectando... (toca para detener)"
-          : data.available
+        if (data.searching) {
+          fab.classList.add("searching");
+          fab.classList.remove("active");
+          fab.title = "Escuchando... identificando canción";
+        } else if (data.active) {
+          fab.classList.remove("searching");
+          fab.classList.add("active");
+          fab.title = "Detectando... (toca para detener)";
+        } else {
+          fab.classList.remove("searching", "active");
+          fab.title = data.available
             ? "Detectar cancion (toca para activar)"
             : "Auto-detect no disponible (instalar sounddevice numpy shazamio)";
+        }
       }
 
       if (data.lastDetection) {
@@ -4567,6 +4591,17 @@ function startAutoDetectPolling() {
             ? `Album: ${data.lastDetection.albumTitle}`
             : `${data.lastDetection.albumTitle} — ${data.lastDetection.songTitle}`;
           showAutoDetectToast(`🎵 ${label}`);
+        }
+      }
+
+      if (data.notInLibrary) {
+        const key = data.notInLibrary.detectedAt;
+        if (key !== autoDetectLastNoMatchKey) {
+          autoDetectLastNoMatchKey = key;
+          showAutoDetectToast(
+            `⚠️ "${data.notInLibrary.title}" de ${data.notInLibrary.artist} no está en la biblioteca`,
+            10000
+          );
         }
       }
     } catch {
@@ -4581,7 +4616,7 @@ function startAutoDetectPolling() {
 async function toggleAutoDetect() {
   if (!isAdminUser() || !sessionState.currentUser?.name) return;
   const fab = document.getElementById("auto-detect-button");
-  const isActive = fab?.classList.contains("active");
+  const isActive = fab?.classList.contains("active") || fab?.classList.contains("searching");
 
   try {
     const res = await fetch(isActive ? "/api/auto-detect/stop" : "/api/auto-detect/start", {
@@ -4597,6 +4632,17 @@ async function toggleAutoDetect() {
     if (data.error) {
       showAutoDetectToast(`⚠️ ${data.error}`);
     }
+    // Update button immediately
+    if (fab) {
+      if (data.active) {
+        fab.classList.add("active");
+        fab.classList.remove("searching");
+        fab.title = "Detectando... (toca para detener)";
+      } else {
+        fab.classList.remove("active", "searching");
+        fab.title = "Detectar cancion (toca para activar)";
+      }
+    }
   } catch {
     showAutoDetectToast("⚠️ No se pudo cambiar auto-detect.");
   }
@@ -4606,6 +4652,144 @@ function setupAutoDetect() {
   const fab = document.getElementById("auto-detect-button");
   if (!fab) return;
   fab.addEventListener("click", () => void toggleAutoDetect());
+}
+
+// ── Spotify ───────────────────────────────────────────────────────────────────
+
+let _spotifyLastErrorShown = null;
+
+function startSpotifyPolling() {
+  if (spotifyPollTimerId) return;
+
+  const fab = document.getElementById("spotify-button");
+
+  async function poll() {
+    try {
+      const res = await fetch(`/api/spotify/status?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (!fab) return;
+
+      if (!data.configured) {
+        fab.classList.add("disconnected");
+        fab.classList.remove("active");
+        fab.title = "Spotify: configura SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET en .env";
+        return;
+      }
+
+      if (!data.connected) {
+        fab.classList.add("disconnected");
+        fab.classList.remove("active");
+        fab.title = "Spotify: no conectado — haz clic para conectar";
+        return;
+      }
+
+      fab.classList.remove("disconnected");
+      if (data.enabled) {
+        fab.classList.add("active");
+        fab.title = "Spotify activo — now-playing se refleja en Spotify. Haz clic para pausar";
+      } else {
+        fab.classList.remove("active");
+        fab.title = "Spotify conectado — haz clic para activar";
+      }
+
+      // Show new errors once
+      if (data.error && data.error !== _spotifyLastErrorShown) {
+        _spotifyLastErrorShown = data.error;
+        showAutoDetectToast(`⚠️ Spotify: ${data.error}`);
+      } else if (!data.error) {
+        _spotifyLastErrorShown = null;
+      }
+
+      // Close the OAuth popup once connected
+      if (data.connected && spotifyOAuthWindow && !spotifyOAuthWindow.closed) {
+        spotifyOAuthWindow.close();
+        spotifyOAuthWindow = null;
+      }
+    } catch {
+      // Network error — silent, will retry
+    }
+  }
+
+  void poll();
+  spotifyPollTimerId = window.setInterval(poll, 5000);
+}
+
+async function toggleSpotify() {
+  const fab = document.getElementById("spotify-button");
+
+  let statusRes;
+  try {
+    statusRes = await fetch(`/api/spotify/status?t=${Date.now()}`, { cache: "no-store" });
+  } catch {
+    showAutoDetectToast("⚠️ Spotify: no se puede contactar al servidor.");
+    return;
+  }
+
+  let status;
+  try {
+    status = await statusRes.json();
+  } catch {
+    showAutoDetectToast("⚠️ Spotify: respuesta inesperada del servidor.");
+    return;
+  }
+
+  if (!status.configured) {
+    showAutoDetectToast("⚠️ Configura SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET en .env");
+    return;
+  }
+
+  if (!status.connected) {
+    if (!status.authUrl) {
+      showAutoDetectToast("⚠️ No se pudo generar el enlace de autorización de Spotify.");
+      return;
+    }
+    spotifyOAuthWindow = window.open(status.authUrl, "spotify-oauth", "width=500,height=700");
+    if (!spotifyOAuthWindow) {
+      showAutoDetectToast("⚠️ El navegador bloqueó el popup. Permite popups para este sitio e intenta de nuevo.");
+    } else if (fab) {
+      fab.title = "Esperando autorización de Spotify…";
+    }
+    return;
+  }
+
+  // Toggle enabled/disabled
+  const action = status.enabled ? "/api/spotify/stop" : "/api/spotify/start";
+  try {
+    const res = await fetch(action, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actorName: sessionState.currentUser?.name }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showAutoDetectToast(`⚠️ Spotify: ${data.error || "Error al cambiar estado."}`);
+      return;
+    }
+    if (data.error) {
+      showAutoDetectToast(`⚠️ Spotify: ${data.error}`);
+    }
+    // Update button immediately without waiting for next poll
+    if (fab) {
+      if (data.enabled) {
+        fab.classList.remove("disconnected");
+        fab.classList.add("active");
+        fab.title = "Spotify activo — now-playing se refleja en Spotify. Haz clic para pausar";
+      } else {
+        fab.classList.remove("active");
+        fab.title = "Spotify conectado — haz clic para activar";
+      }
+    }
+  } catch {
+    showAutoDetectToast("⚠️ Spotify: error al enviar comando al servidor.");
+  }
+}
+
+function setupSpotify() {
+  const fab = document.getElementById("spotify-button");
+  if (!fab) return;
+  fab.addEventListener("click", () => void toggleSpotify());
 }
 
 function setupAuthInteractions() {
@@ -5466,6 +5650,7 @@ function startSessionWatchdog() {
   setupAuthInteractions();
   setupAddAlbumModal();
   setupAutoDetect();
+  setupSpotify();
   setupLogoGravity();
   setupScrollTopButton();
   startNowPlayingPolling();
