@@ -61,6 +61,8 @@ let reviewPollTimerId = null;
 let reviewPollInFlight = false;
 let nowPlayingPollTimerId = null;
 let nowPlayingPollInFlight = false;
+let autoDetectPollTimerId = null;
+let autoDetectLastDetectionKey = null;  // tracks last detection to fire toast only once
 
 let knownServerBootId = "";
 const nativeFetch = window.fetch.bind(window);
@@ -1065,6 +1067,8 @@ function setCurrentUser(user) {
     }
     const addAlbumFabLogout = document.getElementById("add-album-button");
     if (addAlbumFabLogout) addAlbumFabLogout.hidden = true;
+    const autoDetectFabLogout = document.getElementById("auto-detect-button");
+    if (autoDetectFabLogout) autoDetectFabLogout.hidden = true;
     renderAlbums();
     return;
   }
@@ -1155,6 +1159,14 @@ function setCurrentUser(user) {
 
   const addAlbumFab = document.getElementById("add-album-button");
   if (addAlbumFab) addAlbumFab.hidden = !isAdminUser();
+
+  const autoDetectFab = document.getElementById("auto-detect-button");
+  if (autoDetectFab) {
+    autoDetectFab.hidden = !isAdminUser();
+    if (isAdminUser() && !autoDetectPollTimerId) {
+      startAutoDetectPolling();
+    }
+  }
 
   const openUsersBoardButton = document.getElementById("open-users-board");
   if (openUsersBoardButton) {
@@ -4498,6 +4510,96 @@ function startNowPlayingPolling() {
   });
 }
 
+function showAutoDetectToast(message) {
+  let toast = document.getElementById("auto-detect-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "auto-detect-toast";
+    toast.style.cssText = [
+      "position:fixed", "bottom:12.5rem", "right:0.65rem", "z-index:200",
+      "background:#14532d", "color:#bbf7d0", "border:1.5px solid #22c55e",
+      "border-radius:0.6rem", "padding:0.5rem 0.75rem", "font-size:0.8rem",
+      "max-width:220px", "box-shadow:0 4px 14px rgba(0,0,0,0.5)",
+      "transition:opacity 0.4s", "pointer-events:none",
+    ].join(";");
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.style.opacity = "1";
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => { toast.style.opacity = "0"; }, 4000);
+}
+
+function startAutoDetectPolling() {
+  if (autoDetectPollTimerId) return;
+
+  const fab = document.getElementById("auto-detect-button");
+
+  const poll = async () => {
+    if (document.hidden || !isAdminUser()) return;
+    try {
+      const res = await fetch(`/api/auto-detect/status?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (fab) {
+        fab.classList.toggle("active", !!data.active);
+        fab.title = data.active
+          ? "Detectando... (toca para detener)"
+          : data.available
+            ? "Detectar cancion (toca para activar)"
+            : "Auto-detect no disponible (instalar sounddevice numpy shazamio)";
+      }
+
+      if (data.lastDetection) {
+        const key = data.lastDetection.detectedAt + data.lastDetection.rawTitle;
+        if (key !== autoDetectLastDetectionKey) {
+          autoDetectLastDetectionKey = key;
+          const label = data.lastDetection.reviewScope === "album"
+            ? `Album: ${data.lastDetection.albumTitle}`
+            : `${data.lastDetection.albumTitle} — ${data.lastDetection.songTitle}`;
+          showAutoDetectToast(`🎵 ${label}`);
+        }
+      }
+    } catch {
+      // network errors are silent
+    }
+  };
+
+  void poll();
+  autoDetectPollTimerId = window.setInterval(poll, 3000);
+}
+
+async function toggleAutoDetect() {
+  if (!isAdminUser() || !sessionState.currentUser?.name) return;
+  const fab = document.getElementById("auto-detect-button");
+  const isActive = fab?.classList.contains("active");
+
+  try {
+    const res = await fetch(isActive ? "/api/auto-detect/stop" : "/api/auto-detect/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actorName: sessionState.currentUser.name }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showAutoDetectToast(data.error || "Error al cambiar auto-detect.");
+      return;
+    }
+    if (data.error) {
+      showAutoDetectToast(`⚠️ ${data.error}`);
+    }
+  } catch {
+    showAutoDetectToast("⚠️ No se pudo cambiar auto-detect.");
+  }
+}
+
+function setupAutoDetect() {
+  const fab = document.getElementById("auto-detect-button");
+  if (!fab) return;
+  fab.addEventListener("click", () => void toggleAutoDetect());
+}
+
 function setupAuthInteractions() {
   const authName = document.getElementById("auth-name");
   const authPassword = document.getElementById("auth-password");
@@ -5354,6 +5456,7 @@ function startSessionWatchdog() {
   setupProfileHub();
   setupAuthInteractions();
   setupAddAlbumModal();
+  setupAutoDetect();
   setupLogoGravity();
   setupScrollTopButton();
   startNowPlayingPolling();

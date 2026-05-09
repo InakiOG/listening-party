@@ -43,6 +43,14 @@ _priority_album = None    # (album_title, album_artist) — set on each now-play
 _gemini_rate_lock = threading.Lock()
 _gemini_last_call = 0.0   # epoch seconds of last Gemini request
 _GEMINI_MIN_INTERVAL = 5.0  # seconds between calls → max 12/min, safely under 15/min limit
+
+# ── auto-detect state ─────────────────────────────────────────────────────────
+_auto_detect_active = False
+_auto_detect_stop_event: "threading.Event | None" = None
+_auto_detect_thread: "threading.Thread | None" = None
+_auto_detect_last_detection: "dict | None" = None  # {albumTitle, songTitle, reviewScope, detectedAt, rawTitle, rawArtist}
+_auto_detect_error: "str | None" = None
+_auto_detect_lock = threading.Lock()
 ADMIN_USER_KEY = "iñaki"
 ADMIN_DEFAULT_NAME = "Iñaki"
 ADMIN_DEFAULT_PASSWORD = "14agosto"
@@ -877,6 +885,190 @@ def write_now_playing_payload(payload):
         json.dump(payload, handle, indent=2)
 
 
+def _get_collection_items() -> list:
+    try:
+        with COLLECTION_PATH.open(encoding="utf-8") as cf:
+            return json.load(cf).get("items", [])
+    except Exception:
+        return []
+
+
+def _apply_now_playing_internal(
+    album_title: str,
+    album_artist: str,
+    song_title: str,
+    cover_url: str,
+    review_scope: str,
+    actor_display_name: str,
+) -> dict:
+    """
+    Set now-playing without HTTP auth validation.  Used by the auto-detect
+    background thread.  Acquires REVIEWS_LOCK internally.  Returns the payload.
+    """
+    global _current_session, _priority_album
+
+    with REVIEWS_LOCK:
+        users_store = read_users_store()
+        credentials_store = read_credentials_store()
+        users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+        write_users_store(users_store)
+        write_credentials_store(credentials_store)
+        admin_key = normalize_user_key(ADMIN_DEFAULT_NAME)
+
+        if _current_session is None:
+            _current_session = {
+                "id": datetime.now(timezone.utc).isoformat(),
+                "startedAt": datetime.now(timezone.utc).isoformat(),
+                "albumsPlayed": [],
+                "stickyAttendeeKeys": [],
+            }
+            seed_session_sticky_attendees_from_recent(
+                _current_session,
+                credentials_store,
+                datetime.now(timezone.utc),
+            )
+            add_session_sticky_attendee(_current_session, admin_key)
+            started_attendees = get_session_sticky_attendee_keys(_current_session)
+            if increment_users_listening_parties_attended(users_store, started_attendees):
+                write_users_store(users_store)
+        add_session_sticky_attendee(_current_session, admin_key)
+
+        admin_thanks = ""
+        try:
+            title_l = album_title.strip().lower()
+            artist_l = album_artist.strip().lower()
+            for _item in _get_collection_items():
+                if (
+                    str(_item.get("title", "")).strip().lower() == title_l
+                    and str(_item.get("artist", "")).strip().lower() == artist_l
+                ):
+                    admin_thanks = str(_item.get("admin_thanks", "") or "").strip()
+                    break
+        except Exception:
+            pass
+
+        payload = {
+            "albumNumber": 0,
+            "songNumber": 0,
+            "albumTitle": album_title,
+            "albumArtist": album_artist,
+            "songTitle": song_title,
+            "reviewScope": review_scope,
+            "coverUrl": cover_url,
+            "adminThanks": admin_thanks,
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+            "updatedBy": actor_display_name,
+            "partyId": _current_session["id"],
+        }
+        write_now_playing_payload(payload)
+        _priority_album = (album_title, album_artist)
+        increment_album_times_played(album_title, album_artist)
+
+        already_tracked = any(
+            str(a.get("title", "")).lower() == album_title.lower()
+            for a in _current_session["albumsPlayed"]
+        )
+        if not already_tracked and album_title:
+            _current_session["albumsPlayed"].append(
+                {"title": album_title, "artist": album_artist, "coverUrl": cover_url}
+            )
+
+        reviews_store = read_reviews_store()
+        upsert_party_record_snapshot(
+            _current_session,
+            users_store,
+            credentials_store,
+            reviews_store,
+            finalized=False,
+        )
+        return payload
+
+
+def _on_auto_detection(*, album, track_index, track_name, raw):
+    """Callback fired by audio_detect.run_detection_loop when a song is matched."""
+    global _auto_detect_last_detection, _auto_detect_error
+
+    album_title = str(album.get("title", "")).strip()
+    album_artist = str(album.get("artist", "")).strip()
+    cover_url = str(album.get("imageUrl", "") or album.get("coverUrl", "")).strip()
+    review_scope = "album" if track_index == 0 else "song"
+    song_title = "" if review_scope == "album" else track_name
+
+    import logging as _logging
+    _logging.getLogger(__name__).info(
+        "Auto-detect: '%s' by '%s' — %s (track %d)",
+        track_name, album_artist, review_scope, track_index,
+    )
+
+    try:
+        _apply_now_playing_internal(
+            album_title=album_title,
+            album_artist=album_artist,
+            song_title=song_title,
+            cover_url=cover_url,
+            review_scope=review_scope,
+            actor_display_name=ADMIN_DEFAULT_NAME,
+        )
+        with _auto_detect_lock:
+            _auto_detect_last_detection = {
+                "albumTitle": album_title,
+                "albumArtist": album_artist,
+                "songTitle": song_title,
+                "reviewScope": review_scope,
+                "detectedAt": datetime.now(timezone.utc).isoformat(),
+                "rawTitle": raw.get("title", ""),
+                "rawArtist": raw.get("artist", ""),
+            }
+            _auto_detect_error = None
+    except Exception as exc:
+        with _auto_detect_lock:
+            _auto_detect_error = str(exc)
+
+
+def _start_auto_detect():
+    """Start the audio detection background thread. No-op if already active."""
+    global _auto_detect_active, _auto_detect_stop_event, _auto_detect_thread, _auto_detect_error
+
+    with _auto_detect_lock:
+        if _auto_detect_active:
+            return
+
+        try:
+            import audio_detect  # type: ignore
+            if not audio_detect.check_dependencies():
+                raise ImportError("sounddevice, numpy, or shazamio not installed")
+        except ImportError as exc:
+            _auto_detect_error = str(exc)
+            return
+
+        stop_event = threading.Event()
+        thread = threading.Thread(
+            target=audio_detect.run_detection_loop,
+            args=(stop_event, _on_auto_detection, _get_collection_items),
+            daemon=True,
+            name="audio-detect",
+        )
+        thread.start()
+        _auto_detect_active = True
+        _auto_detect_stop_event = stop_event
+        _auto_detect_thread = thread
+        _auto_detect_error = None
+
+
+def _stop_auto_detect():
+    """Stop the audio detection background thread."""
+    global _auto_detect_active, _auto_detect_stop_event, _auto_detect_thread
+
+    with _auto_detect_lock:
+        if not _auto_detect_active:
+            return
+        if _auto_detect_stop_event:
+            _auto_detect_stop_event.set()
+        _auto_detect_active = False
+        _auto_detect_stop_event = None
+        _auto_detect_thread = None
+
+
 def _to_non_negative_int(value, default=0):
     try:
         parsed = int(value)
@@ -1507,11 +1699,69 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
             self._send_json({"facts": facts})
             return
 
+        if parsed.path == "/api/auto-detect/status":
+            try:
+                import audio_detect as _ad  # type: ignore
+                available = _ad.check_dependencies()
+            except ImportError:
+                available = False
+
+            with _auto_detect_lock:
+                self._send_json({
+                    "available": available,
+                    "active": _auto_detect_active,
+                    "lastDetection": _auto_detect_last_detection,
+                    "error": _auto_detect_error,
+                })
+            return
+
         super().do_GET()
 
     def do_POST(self):
         global _current_session
         parsed = urlparse(self.path)
+
+        if parsed.path in ("/api/auto-detect/start", "/api/auto-detect/stop"):
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body"}, status_code=400)
+                return
+
+            actor_name = str(payload.get("actorName", "")).strip()
+            if not actor_name:
+                self._send_json({"error": "actorName is required"}, status_code=400)
+                return
+
+            actor_key = normalize_user_key(actor_name)
+
+            with REVIEWS_LOCK:
+                users_store = read_users_store()
+                credentials_store = read_credentials_store()
+                users_store, credentials_store = reconcile_auth_stores(users_store, credentials_store)
+                write_users_store(users_store)
+                write_credentials_store(credentials_store)
+                actor_profile = sanitize_user_profile(users_store.get(actor_key))
+
+            if not actor_profile:
+                self._send_json({"error": "actor user not found"}, status_code=404)
+                return
+
+            if actor_profile.get("accountName") != ADMIN_ACCOUNT_NAME:
+                self._send_json({"error": "only administrador can control auto-detect"}, status_code=403)
+                return
+
+            if parsed.path == "/api/auto-detect/start":
+                _start_auto_detect()
+            else:
+                _stop_auto_detect()
+
+            with _auto_detect_lock:
+                self._send_json({"ok": True, "active": _auto_detect_active, "error": _auto_detect_error})
+            return
 
         if parsed.path == "/api/now-playing/clear":
             content_length = int(self.headers.get("Content-Length", "0"))
@@ -2419,7 +2669,16 @@ def run_server(port=8000, refresh_discogs=False):
     write_credentials_store(credentials_store)
 
     handler = partial(ListeningPartyHandler, directory=str(ROOT))
-    server = ThreadingHTTPServer(("", port), handler)
+
+    class _QuietServer(ThreadingHTTPServer):
+        def handle_error(self, request, client_address):
+            import sys
+            exc = sys.exc_info()[1]
+            if isinstance(exc, (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)):
+                return  # phone dropped the connection — not worth printing
+            super().handle_error(request, client_address)
+
+    server = _QuietServer(("", port), handler)
     print(f"Listening Party server running on http://0.0.0.0:{port}")
     print("Press Ctrl+C to stop.")
 

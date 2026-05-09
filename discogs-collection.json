@@ -1,7 +1,7 @@
 {
   "source": "Discogs public collection API",
   "profile": "InakiOG",
-  "updatedAt": "2026-05-04T23:36:00.515972+00:00",
+  "updatedAt": "2026-05-09T19:00:07.103621+00:00",
   "items": [
     {
       "title": "Four-Calendar Café",
@@ -1804,6 +1804,41 @@
       ]
     },
     {
+      "title": "Minecraft Volume Beta",
+      "artist": "C418",
+      "releaseUrl": "https://www.discogs.com/release/15764805",
+      "artistUrl": "https://www.discogs.com/artist/2090278",
+      "imageUrl": "https://i.discogs.com/hec8cpuOL523rYHtFto_OWWv23qrH9lPOKhVLouZBo4/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NzY0/ODA1LTE2NzE3MzE3/MjgtMjY5NC5qcGVn.jpeg",
+      "imageAlt": "Minecraft Volume Beta cover",
+      "year": 2020,
+      "sourcePage": 1,
+      "rawText": "Vinyl (x2, Red With Yellow Splatter [Fire Splatter]); Electronic, Stage & Screen, Ambient, Soundtrack, Chiptune, Video Game Music, IDM, Score",
+      "discogsId": 15764805,
+      "instanceId": 2143700924,
+      "dateAdded": "2026-05-09T11:59:52-07:00",
+      "rating": 0,
+      "timesPlayed": 0,
+      "tracks": [
+        "Ki - 1:27",
+        "Alpha - 9:49",
+        "Blind Spots - 5:28",
+        "Mutation - 2:56",
+        "Biome Fest - 6:09",
+        "Aria Math - 5:09",
+        "Taswell - 8:35",
+        "Beginning 2 - 2:48",
+        "Moog City 2 - 2:52",
+        "The End - 15:04",
+        "Kyoto - 4:03",
+        "Chirp - 3:03",
+        "Mellohi - 1:36",
+        "Stal - 2:30",
+        "Eleven - 1:05",
+        "Far - 3:12",
+        "Intro - 4:36"
+      ]
+    },
+    {
       "title": "Dummy",
       "artist": "Portishead",
       "releaseUrl": "https://www.discogs.com/release/23730188",
@@ -3025,7 +3060,7 @@
       "imageUrl": "https://i.discogs.com/o5B1ExlTGbrs0UC8BkCdSVt4XIOhxphrKQpDoiiZJAE/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg5NTc3/MjktMTQ3NzIzNzMy/Ni04Nzg3LmpwZWc.jpeg",
       "imageAlt": "The Wall cover",
       "year": 2016,
-      "sourcePage": 1,
+      "sourcePage": 2,
       "rawText": "Vinyl (x2, 180 Gram, Gatefold); Rock, Art Rock, Prog Rock",
       "discogsId": 8957729,
       "instanceId": 2137853338,
@@ -4087,7 +4122,7 @@
       "instanceId": 1884955722,
       "dateAdded": "2025-01-02T22:57:32-08:00",
       "rating": 0,
-      "timesPlayed": 0,
+      "timesPlayed": 1,
       "tracks": [
         "Myth - 4:19",
         "Wild - 4:58",
@@ -4667,5 +4702,5 @@
       ]
     }
   ],
-  "totalItems": 152
+  "totalItems": 153
 }

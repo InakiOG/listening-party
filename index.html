@@ -2628,6 +2628,43 @@
       }
 
 
+      .auto-detect-fab {
+        position: fixed;
+        right: 0.65rem;
+        bottom: 8.2rem;
+        z-index: 80;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 2px solid #6366f1;
+        background: #1e1b4b;
+        color: #c7d2fe;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+        padding: 0;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .auto-detect-fab[hidden] {
+        display: none;
+      }
+
+      .auto-detect-fab.active {
+        border-color: #22c55e;
+        background: #14532d;
+        color: #bbf7d0;
+        animation: autoDetectPulse 1.8s ease-in-out infinite;
+      }
+
+      @keyframes autoDetectPulse {
+        0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 0 rgba(34,197,94,0.45); }
+        50%       { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 8px rgba(34,197,94,0); }
+      }
+
       .add-album-fab {
         position: fixed;
         right: 0.65rem;
@@ -3067,6 +3104,7 @@
     <section id="active-users-layer" class="active-users-layer" aria-hidden="true"></section>
     <section id="bubble-layer" class="bubble-layer" aria-hidden="true"></section>
 
+    <button id="auto-detect-button" class="auto-detect-fab" hidden type="button" aria-label="Detectar cancion en el microfono">🎤</button>
     <button id="add-album-button" class="add-album-fab" hidden type="button" aria-label="Agregar album">+</button>
     <button id="scroll-top-button" class="scroll-top-fab" hidden type="button" aria-label="Volver arriba">&#8593;</button>
 
