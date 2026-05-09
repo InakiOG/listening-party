@@ -2234,6 +2234,17 @@
         text-align: left;
       }
 
+      .party-brief-photo {
+        width: 100%;
+        border-radius: 0.65rem;
+        object-fit: cover;
+        max-height: 220px;
+      }
+
+      .party-brief-photo[hidden] {
+        display: none;
+      }
+
       .party-brief-heading {
         margin: 0;
         font-size: 1.05rem;
@@ -3310,6 +3321,7 @@
     <p class="page-credit">Amo la música, y amo compartirla con la gente que tengo cerca de mi corazón. 4/19/2026</p>
     <section id="party-brief-popup" class="party-brief-overlay" hidden>
       <div class="party-brief-card">
+        <img id="party-brief-photo" class="party-brief-photo" alt="Foto de la listening party" hidden />
         <p class="party-brief-heading">Listening party terminada</p>
         <p id="party-brief-date" class="party-brief-date"></p>
         <div id="party-brief-content" class="party-brief-content"></div>

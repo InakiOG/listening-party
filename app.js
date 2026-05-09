@@ -1924,7 +1924,14 @@ function showPartyBriefPopup(party) {
   const popup = document.getElementById("party-brief-popup");
   const dateEl = document.getElementById("party-brief-date");
   const contentEl = document.getElementById("party-brief-content");
+  const photoEl = document.getElementById("party-brief-photo");
   if (!popup || !dateEl || !contentEl) return;
+
+  if (photoEl) {
+    const pic = String(party.partyPicture || "").trim();
+    photoEl.src = pic;
+    photoEl.hidden = !pic;
+  }
 
   dateEl.textContent = formatPartyDate(party.date || "");
 
@@ -1954,17 +1961,22 @@ function hidePartyBriefPopup() {
   if (popup) popup.hidden = true;
 }
 
-async function handlePartyJustEnded() {
+async function handlePartyJustEnded({ requireRecent = false } = {}) {
   if (!sessionState.currentUser) return;
   await new Promise((resolve) => setTimeout(resolve, 800));
   try {
     const parties = await apiGetMyParties();
     if (!parties.length) return;
     const latest = parties[0];
-    if (latest.id && latest.id !== partyBriefShownId) {
-      partyBriefShownId = latest.id;
-      showPartyBriefPopup(latest);
+    if (!latest.id || latest.id === partyBriefShownId) return;
+    if (requireRecent) {
+      const endedAt = latest.endedAt || latest.finalizedAt;
+      if (!endedAt) return;
+      const msSinceEnd = Date.now() - new Date(endedAt).getTime();
+      if (msSinceEnd > 4 * 60 * 60 * 1000) return;
     }
+    partyBriefShownId = latest.id;
+    showPartyBriefPopup(latest);
   } catch {
     // ignore
   }
@@ -4489,10 +4501,6 @@ function startNowPlayingPolling() {
       lastKnownPartyActive = true;
       renderNowPlaying(data);
     } catch {
-      // File doesn't exist (404) - party has been ended by admin or server shutdown
-      if (lastKnownPartyActive) {
-        void handlePartyJustEnded();
-      }
       lastKnownPartyActive = false;
       hideNowPlaying();
     } finally {
@@ -5376,6 +5384,7 @@ async function bootSession() {
     const sessionUser = await apiGetCurrentUser();
     if (sessionUser) {
       setCurrentUser(sessionUser);
+      void handlePartyJustEnded({ requireRecent: true });
       return;
     }
   } catch {
