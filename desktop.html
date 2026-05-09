@@ -1561,7 +1561,10 @@
       }
 
       function revealPlayScreen() {
-        // Crossfade: playing screen fades in while flying album fades out
+        // Crossfade: playing screen fades in while flying album fades out.
+        // The fly-in already serves as the arrival animation — drop the CSS
+        // arriving class so it doesn't replay when the reflow runs below.
+        npCover.classList.remove('arriving');
         idleScreen.classList.add('hidden');
         playScreen.style.opacity = '0';
         playScreen.classList.add('visible');
