@@ -1476,9 +1476,8 @@ function applyNowPlayingDiscVisual(nowPlaying) {
   nowPlayingSection.style.setProperty("--np-spin-primary", primarySpeed);
   nowPlayingSection.style.setProperty("--np-spin-secondary", secondarySpeed);
 
-  // Use --vinyl-color like the grid does, not --disc-color
-  primaryDisc.style.setProperty("--vinyl-color", primaryColor);
-  secondaryDisc.style.setProperty("--vinyl-color", secondaryColor || primaryColor);
+  primaryDisc.style.setProperty("--disc-color", primaryColor);
+  secondaryDisc.style.setProperty("--disc-color", secondaryColor || primaryColor);
 
   primaryDisc.classList.toggle("cd-disc", discType === "cd");
   secondaryDisc.classList.toggle("cd-disc", discType === "cd");
