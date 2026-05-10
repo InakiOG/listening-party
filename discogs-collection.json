@@ -1,7 +1,7 @@
 {
   "source": "Discogs public collection API",
   "profile": "InakiOG",
-  "updatedAt": "2026-05-09T19:00:07.103621+00:00",
+  "updatedAt": "2026-05-10T00:21:29.805827+00:00",
   "items": [
     {
       "title": "Four-Calendar Café",
@@ -1817,7 +1817,7 @@
       "instanceId": 2143700924,
       "dateAdded": "2026-05-09T11:59:52-07:00",
       "rating": 0,
-      "timesPlayed": 3,
+      "timesPlayed": 4,
       "tracks": [
         "Ki - 1:27",
         "Alpha - 9:49",
@@ -2534,6 +2534,38 @@
       ]
     },
     {
+      "title": "Submarine",
+      "artist": "The Marías",
+      "releaseUrl": "https://www.discogs.com/release/30832662",
+      "artistUrl": "https://www.discogs.com/artist/6866527",
+      "imageUrl": "https://i.discogs.com/0EnpV0arppleVRSmidPVR0gETUJnG4l9bKM_XXgfFYw/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwODMy/NjYyLTE3MTcxNjI3/MTktNTU2Ni5qcGVn.jpeg",
+      "imageAlt": "Submarine cover",
+      "year": 2024,
+      "sourcePage": 1,
+      "rawText": "Vinyl (Ultra Clear); Rock, Pop, Indie Pop, Alt-Pop",
+      "discogsId": 30832662,
+      "instanceId": 2143794943,
+      "dateAdded": "2026-05-09T17:16:21-07:00",
+      "rating": 0,
+      "timesPlayed": 11,
+      "tracks": [
+        "Ride - 1:21",
+        "Hamptons - 3:08",
+        "Echo - 3:29",
+        "Run Your Mouth - 2:40",
+        "Real Life - 3:27",
+        "Blur - 3:45",
+        "Paranoia - 3:52",
+        "Lejos De Ti - 3:00",
+        "Love You Anyway - 3:57",
+        "Ay No Puedo - 3:02",
+        "No One Noticed - 3:57",
+        "Vicious Sensitive Robot - 3:14",
+        "If Only - 2:36",
+        "Sienna - 3:45"
+      ]
+    },
+    {
       "title": "Humanz",
       "artist": "Gorillaz",
       "releaseUrl": "https://www.discogs.com/release/16074392",
@@ -3037,7 +3069,7 @@
       "imageUrl": "https://i.discogs.com/T3dHh5EMgqD8zKGg2Viern-Oaba7xj89tAj76PXhOTw/rs:fit/g:sm/q:90/h:598/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk0MzE3/MDUtMTQ4MDQ1OTcw/NS05NTA2LmpwZWc.jpeg",
       "imageAlt": "Animals cover",
       "year": 2016,
-      "sourcePage": 1,
+      "sourcePage": 2,
       "rawText": "Vinyl (Gatefold, 180 Gram, \"17203\"); Rock, Prog Rock, Psychedelic Rock, Classic Rock",
       "discogsId": 9431705,
       "instanceId": 2137853286,
@@ -4702,5 +4734,5 @@
       ]
     }
   ],
-  "totalItems": 153
+  "totalItems": 154
 }
