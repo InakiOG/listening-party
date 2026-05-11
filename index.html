@@ -2682,6 +2682,24 @@
         50%       { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 8px rgba(29,185,84,0); }
       }
 
+      .spotify-fab.pending {
+        border-color: #f59e0b;
+        background: #451a03;
+        color: #fcd34d;
+        animation: spotifyPendingPulse 1s ease-in-out infinite;
+      }
+
+      .spotify-fab.error {
+        border-color: #ef4444;
+        background: #450a0a;
+        color: #fca5a5;
+      }
+
+      @keyframes spotifyPendingPulse {
+        0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 0 rgba(245,158,11,0.5); }
+        50%       { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 8px rgba(245,158,11,0); }
+      }
+
       .auto-detect-fab {
         position: fixed;
         right: 0.65rem;
@@ -2729,6 +2747,18 @@
       @keyframes searchingPulse {
         0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 0 rgba(245,158,11,0.6); }
         50%       { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 10px rgba(245,158,11,0); }
+      }
+
+      .auto-detect-fab.no-match {
+        border-color: #ef4444;
+        background: #450a0a;
+        color: #fca5a5;
+        animation: noMatchPulse 0.7s ease-in-out 4;
+      }
+
+      @keyframes noMatchPulse {
+        0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 0 rgba(239,68,68,0.6); }
+        50%       { box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 10px rgba(239,68,68,0); }
       }
 
       .add-album-fab {

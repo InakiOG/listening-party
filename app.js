@@ -4568,10 +4568,10 @@ function startAutoDetectPolling() {
       if (fab) {
         if (data.searching) {
           fab.classList.add("searching");
-          fab.classList.remove("active");
+          fab.classList.remove("active", "no-match");
           fab.title = "Escuchando... identificando canción";
         } else if (data.active) {
-          fab.classList.remove("searching");
+          fab.classList.remove("searching", "no-match");
           fab.classList.add("active");
           fab.title = "Detectando... (toca para detener)";
         } else {
@@ -4590,6 +4590,8 @@ function startAutoDetectPolling() {
             ? `Album: ${data.lastDetection.albumTitle}`
             : `${data.lastDetection.albumTitle} — ${data.lastDetection.songTitle}`;
           showAutoDetectToast(`🎵 ${label}`);
+          // One-shot: stop listening after a successful detection
+          void stopAutoDetect();
         }
       }
 
@@ -4597,6 +4599,12 @@ function startAutoDetectPolling() {
         const key = data.notInLibrary.detectedAt;
         if (key !== autoDetectLastNoMatchKey) {
           autoDetectLastNoMatchKey = key;
+          if (fab) {
+            fab.classList.add("no-match");
+            fab.classList.remove("searching", "active");
+          }
+          // One-shot: stop listening, stay red until user retries
+          void stopAutoDetect();
           showAutoDetectToast(
             `⚠️ "${data.notInLibrary.title}" de ${data.notInLibrary.artist} no está en la biblioteca`,
             10000
@@ -4612,10 +4620,23 @@ function startAutoDetectPolling() {
   autoDetectPollTimerId = window.setInterval(poll, 3000);
 }
 
+async function stopAutoDetect() {
+  if (!isAdminUser() || !sessionState.currentUser?.name) return;
+  try {
+    await fetch("/api/auto-detect/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actorName: sessionState.currentUser.name }),
+    });
+  } catch { /* silent */ }
+}
+
 async function toggleAutoDetect() {
   if (!isAdminUser() || !sessionState.currentUser?.name) return;
   const fab = document.getElementById("auto-detect-button");
-  const isActive = fab?.classList.contains("active") || fab?.classList.contains("searching");
+  // If in no-match state, treat as retry (start fresh)
+  const isNoMatch = fab?.classList.contains("no-match");
+  const isActive = !isNoMatch && (fab?.classList.contains("active") || fab?.classList.contains("searching"));
 
   try {
     const res = await fetch(isActive ? "/api/auto-detect/stop" : "/api/auto-detect/start", {
@@ -4635,10 +4656,10 @@ async function toggleAutoDetect() {
     if (fab) {
       if (data.active) {
         fab.classList.add("active");
-        fab.classList.remove("searching");
+        fab.classList.remove("searching", "no-match");
         fab.title = "Detectando... (toca para detener)";
       } else {
-        fab.classList.remove("active", "searching");
+        fab.classList.remove("active", "searching", "no-match");
         fab.title = "Detectar cancion (toca para activar)";
       }
     }
@@ -4684,12 +4705,23 @@ function startSpotifyPolling() {
         return;
       }
 
-      fab.classList.remove("disconnected");
       if (data.enabled) {
-        fab.classList.add("active");
-        fab.title = "Spotify activo — now-playing se refleja en Spotify. Haz clic para pausar";
+        if (data.error) {
+          fab.classList.remove("disconnected", "active", "pending");
+          fab.classList.add("error");
+          fab.title = "Spotify falló — haz clic para reintentar";
+        } else if (data.pending) {
+          fab.classList.remove("disconnected", "active", "error");
+          fab.classList.add("pending");
+          fab.title = "Spotify: enviando a reproducir…";
+        } else {
+          fab.classList.remove("disconnected", "pending", "error");
+          fab.classList.add("active");
+          fab.title = "Spotify activo — now-playing se refleja en Spotify. Haz clic para pausar";
+        }
       } else {
-        fab.classList.remove("active");
+        fab.classList.remove("active", "pending", "error");
+        fab.classList.add("disconnected");
         fab.title = "Spotify conectado — haz clic para activar";
       }
 
@@ -4753,8 +4785,8 @@ async function toggleSpotify() {
     return;
   }
 
-  // Toggle enabled/disabled
-  const action = status.enabled ? "/api/spotify/stop" : "/api/spotify/start";
+  // If in error state, retry (re-enable); otherwise toggle normally
+  const action = (status.enabled && !status.error) ? "/api/spotify/stop" : "/api/spotify/start";
   try {
     const res = await fetch(action, {
       method: "POST",
@@ -4772,11 +4804,12 @@ async function toggleSpotify() {
     // Update button immediately without waiting for next poll
     if (fab) {
       if (data.enabled) {
-        fab.classList.remove("disconnected");
-        fab.classList.add("active");
-        fab.title = "Spotify activo — now-playing se refleja en Spotify. Haz clic para pausar";
+        fab.classList.remove("disconnected", "error", "active");
+        fab.classList.add("pending");
+        fab.title = "Spotify: esperando próxima canción…";
       } else {
-        fab.classList.remove("active");
+        fab.classList.remove("active", "pending", "error");
+        fab.classList.add("disconnected");
         fab.title = "Spotify conectado — haz clic para activar";
       }
     }

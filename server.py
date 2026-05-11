@@ -58,6 +58,7 @@ _auto_detect_lock = threading.Lock()
 SPOTIFY_TOKENS_PATH = ROOT / ".spotify-tokens.json"
 _spotify_enabled = False   # True = mirror every now-playing change to Spotify
 _spotify_error: "str | None" = None
+_spotify_pending = False   # True while a trigger thread is in flight
 _spotify_lock = threading.Lock()
 _server_port = 8000  # updated in run_server(); used to build OAuth redirect URI
 
@@ -1137,6 +1138,11 @@ def _set_spotify_error(val: "str | None") -> None:
     _spotify_error = val
 
 
+def _set_spotify_pending(val: bool) -> None:
+    global _spotify_pending
+    _spotify_pending = val
+
+
 def _trigger_spotify_if_enabled(album_title: str, album_artist: str, song_title: str, review_scope: str) -> None:
     """
     Fire-and-forget: if Spotify is enabled, search and start playback in a
@@ -1145,10 +1151,13 @@ def _trigger_spotify_if_enabled(album_title: str, album_artist: str, song_title:
     with _spotify_lock:
         if not _spotify_enabled:
             return
+        _set_spotify_pending(True)
 
     client_id = os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
     client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET", "").strip()
     if not client_id or not client_secret:
+        with _spotify_lock:
+            _set_spotify_pending(False)
         return
 
     def _run():
@@ -1156,10 +1165,14 @@ def _trigger_spotify_if_enabled(album_title: str, album_artist: str, song_title:
         try:
             import spotify_client as _sc  # type: ignore
         except ImportError:
+            with _spotify_lock:
+                _set_spotify_pending(False)
             return
 
         tokens = _read_spotify_tokens()
         if not tokens:
+            with _spotify_lock:
+                _set_spotify_pending(False)
             return
 
         if time.time() >= tokens.get("expires_at", 0) - 30:
@@ -1173,12 +1186,14 @@ def _trigger_spotify_if_enabled(album_title: str, album_artist: str, song_title:
             except Exception as exc:
                 with _spotify_lock:
                     _spotify_error = f"Token refresh failed: {exc}"
+                    _set_spotify_pending(False)
                 return
 
         try:
             _sc.trigger_playback(tokens["access_token"], album_title, album_artist, song_title, review_scope)
             with _spotify_lock:
                 _spotify_error = None
+                _set_spotify_pending(False)
         except Exception as exc:
             # 401 = token revoked or wrong scopes — clear tokens and force re-auth
             if "401" in str(exc):
@@ -1189,9 +1204,11 @@ def _trigger_spotify_if_enabled(album_title: str, album_artist: str, song_title:
                 with _spotify_lock:
                     _set_spotify_enabled(False)
                     _spotify_error = "Autorización expirada — reconecta Spotify"
+                    _set_spotify_pending(False)
             else:
                 with _spotify_lock:
                     _spotify_error = str(exc)
+                    _set_spotify_pending(False)
 
     threading.Thread(target=_run, daemon=True, name="spotify-trigger").start()
 
@@ -1869,6 +1886,7 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                     "configured": configured,
                     "connected": connected,
                     "enabled": _spotify_enabled,
+                    "pending": _spotify_pending,
                     "error": _spotify_error,
                     "authUrl": auth_url,
                 })
@@ -2006,6 +2024,18 @@ class ListeningPartyHandler(SimpleHTTPRequestHandler):
                         return
                     _set_spotify_enabled(True)
                     _set_spotify_error(None)
+                    # Immediately play whatever is currently now-playing
+                    try:
+                        with NOW_PLAYING_PATH.open(encoding="utf-8") as _f:
+                            _np = json.load(_f)
+                        _trigger_spotify_if_enabled(
+                            _np.get("albumTitle", ""),
+                            _np.get("albumArtist", ""),
+                            _np.get("songTitle", ""),
+                            _np.get("reviewScope", "song"),
+                        )
+                    except Exception:
+                        pass
                 elif parsed.path == "/api/spotify/stop":
                     _set_spotify_enabled(False)
                     _set_spotify_error(None)
